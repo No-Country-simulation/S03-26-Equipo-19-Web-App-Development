@@ -1,4 +1,4 @@
-type ButtonVariant = 'primary' | 'secondary' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -8,9 +8,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-sky-500 hover:bg-sky-600 text-white',
-  secondary: 'bg-gray-700 hover:bg-gray-600 text-gray-200',
-  danger: 'bg-red-500 hover:bg-red-600 text-white',
+  primary: 'bg-primary hover:bg-secondary text-white',
+  secondary: 'bg-accent hover:bg-secondary text-white',
+  outline: "",
+  danger: 'bg-error hover:bg-red-600 text-white',
 };
 
 const sizes: Record<ButtonSize, string> = {
