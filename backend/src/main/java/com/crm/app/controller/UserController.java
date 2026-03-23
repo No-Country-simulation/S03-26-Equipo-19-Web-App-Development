@@ -14,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/salespersons")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")   // All endpoints in this controller require ADMIN
+@PreAuthorize("hasRole('ADMIN')")
 public class UserController {
 
     private final UserService service;
@@ -42,10 +42,6 @@ public class UserController {
         return ResponseEntity.ok(service.updateSalesperson(id, request));
     }
 
-    /**
-     * Soft delete — the salesperson record remains in the database.
-     * Their assigned contacts are preserved with intact foreign keys.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
         service.deactivateSalesperson(id);

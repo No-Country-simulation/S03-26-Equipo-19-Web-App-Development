@@ -33,8 +33,6 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        // Delegates credential verification to Spring Security
-        // Throws BadCredentialsException on failure → handled by GlobalExceptionHandler → 401
         authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );

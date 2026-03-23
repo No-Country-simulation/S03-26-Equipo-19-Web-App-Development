@@ -12,13 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * Runs once on application startup.
- * Creates the admin account and 5 initial salespersons if they do not already exist.
- * Idempotent: safe to run on every restart.
- *
- * For production environments, replace this with Flyway or Liquibase migrations.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

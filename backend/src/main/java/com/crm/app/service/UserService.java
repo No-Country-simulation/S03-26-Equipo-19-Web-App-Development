@@ -21,7 +21,6 @@ public class UserService {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
 
-    /** Returns all active salespersons */
     public List<UserDTOs.UserResponse> listSalespersons() {
         return repository.findByRoleAndActiveTrue(Role.SALESPERSON)
                 .stream()
@@ -29,7 +28,6 @@ public class UserService {
                 .toList();
     }
 
-    /** Returns a salesperson by id — throws 404 if not found or not a salesperson */
     public UserDTOs.UserResponse getSalesperson(Long id) {
         User user = repository.findById(id)
                 .filter(u -> u.getRole() == Role.SALESPERSON)
@@ -37,7 +35,6 @@ public class UserService {
         return UserDTOs.UserResponse.from(user);
     }
 
-    /** Creates a new salesperson. Only Admin can invoke this. */
     @Transactional
     public UserDTOs.UserResponse createSalesperson(UserDTOs.CreateSalespersonRequest request) {
         if (repository.existsByEmail(request.email())) {
@@ -53,7 +50,6 @@ public class UserService {
         return UserDTOs.UserResponse.from(repository.save(user));
     }
 
-    /** Updates the name or password of an existing salesperson */
     @Transactional
     public UserDTOs.UserResponse updateSalesperson(Long id, UserDTOs.UpdateSalespersonRequest request) {
         User user = repository.findById(id)
@@ -69,10 +65,6 @@ public class UserService {
         return UserDTOs.UserResponse.from(repository.save(user));
     }
 
-    /**
-     * Soft delete — marks the salesperson as inactive instead of deleting the record.
-     * Preserves referential integrity with assigned contacts.
-     */
     @Transactional
     public void deactivateSalesperson(Long id) {
         User user = repository.findById(id)

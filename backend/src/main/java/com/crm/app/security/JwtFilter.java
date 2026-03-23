@@ -32,7 +32,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
-        // No header or wrong prefix — pass through and let Spring Security handle it
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
@@ -56,7 +55,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception ignored) {
-            // Invalid token — Spring Security will return 401 automatically
         }
 
         chain.doFilter(request, response);

@@ -7,13 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
-/**
- * All DTOs for the User domain as Java records.
- * The User entity is never exposed directly from any controller.
- */
 public class UserDTOs {
 
-    /** What the API returns — never includes passwordHash */
     public record UserResponse(
             Long id,
             String name,
@@ -34,7 +29,6 @@ public class UserDTOs {
         }
     }
 
-    /** Payload to create a new salesperson (Admin only) */
     public record CreateSalespersonRequest(
             @NotBlank(message = "Name is required")
             String name,
@@ -48,7 +42,6 @@ public class UserDTOs {
             String password
     ) {}
 
-    /** Payload to update a salesperson's name or password */
     public record UpdateSalespersonRequest(
             String name,
 
