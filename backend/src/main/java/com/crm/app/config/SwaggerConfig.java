@@ -29,14 +29,14 @@ public class SwaggerConfig {
                                 .name("Equipo 19 / CRM-Cross-Industry")
                         )
                 )
-                // Servidores
-                .addServersItem(new Server()
-                        .url("https://cross-industry-backend.onrender.com") // URL real de producción
-                        .description("Servidor de Producción (Render)"))
                 .addServersItem(new Server()
                         .url("http://localhost:8080") // URL de desarrollo local
                         .description("Servidor de Desarrollo Local"))
-                // Seguridad JWT
+
+                .addServersItem(new Server()
+                        .url("https://cross-industry-backend.onrender.com") // URL real de producción
+                        .description("Servidor de Producción (Render)"))
+
                 .addSecurityItem(new SecurityRequirement().addList("TOKEN"))
                 .components(new Components()
                         .addSecuritySchemes("TOKEN",
