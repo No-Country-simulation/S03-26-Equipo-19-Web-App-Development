@@ -13,5 +13,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
+    // Todos los vendedores activos — usado por el Admin para el CRUD
     List<User> findByRoleAndActiveTrue(Role role);
+
+    // Todos los usuarios activos de cualquier rol
+    List<User> findByActiveTrue();
 }

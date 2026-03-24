@@ -8,13 +8,17 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * Representa a cualquier persona que accede al sistema.
+ * El rol determina absolutamente todo lo que puede ver y hacer.
+ * El soft delete (active = false) preserva la trazabilidad histórica.
+ */
 @Entity
 @Table(
         name = "users",
         uniqueConstraints = @UniqueConstraint(columnNames = "email")
 )
-@Getter
-@Setter
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -37,6 +41,10 @@ public class User {
     @Column(nullable = false, length = 20)
     private Role role;
 
+    /**
+     * Soft delete: nunca se borra físicamente un usuario.
+     * Sus contactos, conversaciones y tareas históricas se preservan.
+     */
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
