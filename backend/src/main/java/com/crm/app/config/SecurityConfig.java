@@ -30,15 +30,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // REST API — CSRF protection not needed
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Stateless — every request is authenticated via JWT, no sessions
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
+
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        // Fine-grained access control is handled by @PreAuthorize on controllers
+
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
 

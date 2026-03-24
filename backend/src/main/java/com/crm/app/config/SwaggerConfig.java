@@ -26,7 +26,7 @@ public class SwaggerConfig {
                                   Frontend Deploy: [CRM-Cross-Industry Frontend](https://cross-industry.vercel.app/)
                                 """)
                         .contact(new Contact()
-                                .name("Equipo 9 / CRM-Cross-Industry")
+                                .name("Equipo 19 / CRM-Cross-Industry")
                         )
                 )
                 // Servidores
