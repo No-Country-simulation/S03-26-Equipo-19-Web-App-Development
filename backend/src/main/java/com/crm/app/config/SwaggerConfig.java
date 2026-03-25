@@ -30,12 +30,12 @@ public class SwaggerConfig {
                         )
                 )
                 .addServersItem(new Server()
-                        .url("http://localhost:8080") // URL de desarrollo local
-                        .description("Servidor de Desarrollo Local"))
+                        .url("https://crm-cross-industry.onrender.com") // <- esta es tu URL real
+                        .description("Servidor de Producción (Render)"))
 
                 .addServersItem(new Server()
-                        .url("https://cross-industry-backend.onrender.com") // URL real de producción
-                        .description("Servidor de Producción (Render)"))
+                        .url("http://localhost:8080") // URL de desarrollo local
+                        .description("Servidor de Desarrollo Local"))
 
                 .addSecurityItem(new SecurityRequirement().addList("TOKEN"))
                 .components(new Components()
