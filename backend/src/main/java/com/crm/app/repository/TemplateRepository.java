@@ -6,6 +6,7 @@ import com.crm.app.model.enums.Channel;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TemplateRepository extends JpaRepository<Template, Long> {
 
@@ -22,4 +23,6 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
 
     // Plantillas de un canal ordenadas por nombre — para el selector de la UI
     List<Template> findByChannelOrderByNameAsc(Channel channel);
+
+    Optional<Template> findByName(String name);
 }
