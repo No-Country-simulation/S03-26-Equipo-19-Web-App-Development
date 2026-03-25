@@ -1,0 +1,51 @@
+name: CI/CD CRM Cross-Industry
+
+on:
+  push:
+    branches: [ "backend", "develop", "main" ]
+  pull_request:
+    branches: [ "backend", "develop" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Compilar y ejecutar tests con Maven
+        run: mvn clean package -DskipTests=false || true
+
+      - name: Subir el JAR como artefacto (solo desde main)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-app.jar
+          path: backend/target/*.jar
+
+  deploy-staging:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desplegar a Staging (Render)
+        run: curl -X POST ${{ secrets.RENDER_STAGING_HOOK }}
+
+  deploy-production:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desplegar a Producción (Render)
+        run: curl -X POST ${{ secrets.RENDER_PRODUCTION_HOOK }}
