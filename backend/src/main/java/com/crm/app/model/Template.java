@@ -58,12 +58,7 @@ public class Template {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    /**
-     * Definición de variables dinámicas en formato JSON.
-     * Ejemplo: {"nombre": "string", "empresa": "string", "fecha": "date"}
-     * Se usa para validar que todas las variables estén completas antes de enviar.
-     */
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")  // Cambiar de jsonb a TEXT
     private String variables;
 
     /**

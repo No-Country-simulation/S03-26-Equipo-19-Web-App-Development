@@ -1,33 +1,79 @@
 package com.crm.app.config;
 
-import com.crm.app.model.User;
-import com.crm.app.model.enums.Role;
-import com.crm.app.repository.UserRepository;
+import com.crm.app.model.*;
+import com.crm.app.model.enums.*;
+import com.crm.app.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements ApplicationRunner {
 
-    private final UserRepository repository;
+    private final UserRepository userRepository;
+    private final ContactRepository contactRepository;
+    private final TagRepository tagRepository;
+    private final TemplateRepository templateRepository;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
+    private final TaskRepository taskRepository;
+    private final SavedViewRepository savedViewRepository;
     private final PasswordEncoder encoder;
 
     @Override
+    @Transactional
     public void run(ApplicationArguments args) {
+        if (alreadySeeded()) {
+            log.info("Data already seeded. Skipping...");
+            return;
+        }
+
+        log.info("Starting data seeding...");
+
+        // 1. Seed users (ya lo tenés)
         seedAdmin();
         seedSalespersons();
+
+        // 2. Seed tags
+        List<Tag> tags = seedTags();
+
+        // 3. Get users
+        User admin = userRepository.findByEmail("admin@crm.com").orElseThrow();
+        List<User> salespersons = userRepository.findByRole(Role.SALESPERSON);
+
+        // 4. Seed templates
+        List<Template> templates = seedTemplates(admin);
+
+        // 5. Seed contacts with relationships
+        List<Contact> contacts = seedContacts(salespersons, tags);
+
+        // 6. Seed conversations and messages
+        seedConversationsAndMessages(contacts, salespersons, templates);
+
+        // 7. Seed tasks
+        seedTasks(contacts, salespersons);
+
+        // 8. Seed saved views
+        seedSavedViews(admin, salespersons.getFirst());
+
+        log.info("Data seeding completed successfully!");
+    }
+
+    private boolean alreadySeeded() {
+        return contactRepository.count() > 0;
     }
 
     private void seedAdmin() {
-        if (repository.existsByEmail("admin@crm.com")) return;
+        if (userRepository.existsByEmail("admin@crm.com")) return;
 
         User admin = User.builder()
                 .name("Administrator")
@@ -37,7 +83,7 @@ public class DataSeeder implements ApplicationRunner {
                 .active(true)
                 .build();
 
-        repository.save(admin);
+        userRepository.save(admin);
         log.info("Admin seeded: admin@crm.com / Admin1234!");
     }
 
@@ -53,7 +99,7 @@ public class DataSeeder implements ApplicationRunner {
         );
 
         salespersons.forEach(s -> {
-            if (repository.existsByEmail(s.email())) return;
+            if (userRepository.existsByEmail(s.email())) return;
 
             User user = User.builder()
                     .name(s.name())
@@ -63,8 +109,296 @@ public class DataSeeder implements ApplicationRunner {
                     .active(true)
                     .build();
 
-            repository.save(user);
+            userRepository.save(user);
             log.info("Salesperson seeded: {} / {}", s.email(), s.password());
         });
+    }
+
+    private List<Tag> seedTags() {
+        List<Tag> tags = Arrays.asList(
+                Tag.builder().name("Alta prioridad").color("#EF4444").description("Clientes con urgencia de compra").build(),
+                Tag.builder().name("Lead caliente").color("#F59E0B").description("Alto interés, cerca de cerrar").build(),
+                Tag.builder().name("Fintech").color("#10B981").description("Industria financiera/tecnológica").build(),
+                Tag.builder().name("E-commerce").color("#3B82F6").description("Tiendas online").build(),
+                Tag.builder().name("Lead frío").color("#6B7280").description("Poco interés, seguimiento largo").build(),
+                Tag.builder().name("Referido").color("#8B5CF6").description("Llegó por recomendación").build()
+        );
+
+        List<Tag> savedTags = new ArrayList<>();
+        for (Tag tag : tags) {
+            if (!tagRepository.existsByName(tag.getName())) {
+                savedTags.add(tagRepository.save(tag));
+                log.info("Tag seeded: {}", tag.getName());
+            } else {
+                savedTags.add(tagRepository.findByName(tag.getName()).orElseThrow());
+            }
+        }
+        return savedTags;
+    }
+
+    private List<Template> seedTemplates(User admin) {
+        List<Template> templates = Arrays.asList(
+                Template.builder()
+                        .name("Email de bienvenida")
+                        .channel(Channel.EMAIL)
+                        .subject("Bienvenido a {{company}}, {{name}}!")
+                        .body("Hola {{name}},\n\nGracias por contactarnos. Soy {{salesperson}} y estaré ayudándote.\n\n¿Qué te gustaría saber sobre nuestros servicios?\n\nSaludos,\nEquipo CRM")
+                        .variables("{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}")
+                        .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("Seguimiento post-reunión")
+                        .channel(Channel.EMAIL)
+                        .subject("Seguimiento reunión - {{date}}")
+                        .body("Hola {{name}},\n\nFue un placer reunirnos. Como quedamos, te envío la propuesta en archivo adjunto.\n\nQuedo atento a tus comentarios.\n\nSaludos,\n{{salesperson}}")
+                        .variables("{\"name\":\"string\",\"date\":\"string\",\"salesperson\":\"string\"}")
+                        .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("WhatsApp - Primer contacto")
+                        .channel(Channel.WHATSAPP)
+                        .body("Hola {{name}}! Soy {{salesperson}} de CRM Cross-Industry. ¿Cómo estás? Quería contarte cómo podemos ayudar a {{company}} a mejorar sus ventas. ¿Te parece si coordinamos una breve llamada?")
+                        .variables("{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}")
+                        .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("WhatsApp - Recordatorio demo")
+                        .channel(Channel.WHATSAPP)
+                        .body("Hola {{name}}! Te recuerdo que tenemos la demo agendada para mañana a las {{time}}. ¿Confirmás?")
+                        .variables("{\"name\":\"string\",\"time\":\"string\"}")
+                        .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("Email - Propuesta comercial")
+                        .channel(Channel.EMAIL)
+                        .subject("Propuesta comercial para {{company}}")
+                        .body("Hola {{name}},\n\nAdjunto encontrarás la propuesta comercial para {{company}}.\n\nEl valor total es de {{amount}} con un descuento del {{discount}}%.\n\nQuedo atento a tu confirmación.\n\nSaludos,\n{{salesperson}}")
+                        .variables("{\"name\":\"string\",\"company\":\"string\",\"amount\":\"string\",\"discount\":\"string\",\"salesperson\":\"string\"}")
+                        .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("WhatsApp - Cierre ganado")
+                        .channel(Channel.WHATSAPP)
+                        .body("🎉 Excelente {{name}}! Bienvenido a CRM Cross-Industry. En las próximas horas recibirás los accesos. Cualquier duda, estoy acá. 🚀")
+                        .variables("{\"name\":\"string\"}")
+                        .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("Email - Newsletter mensual")
+                        .channel(Channel.EMAIL)
+                        .subject("Newsletter {{month}} - Novedades CRM")
+                        .body("Hola {{name}},\n\nEste mes lanzamos:\n• Nueva integración con WhatsApp\n• Reportes avanzados\n• Plantillas dinámicas\n\n¿Querés una demo? Respondé este mail.\n\nSaludos,\nEquipo CRM")
+                        .variables("{\"name\":\"string\",\"month\":\"string\"}")
+                        .createdBy(admin)
+                        .build()
+        );
+
+        List<Template> savedTemplates = new ArrayList<>();
+        for (Template template : templates) {
+            if (!templateRepository.existsByName(template.getName())) {
+                savedTemplates.add(templateRepository.save(template));
+                log.info("Template seeded: {}", template.getName());
+            } else {
+                savedTemplates.add(templateRepository.findByName(template.getName()).orElseThrow());
+            }
+        }
+        return savedTemplates;
+    }
+
+    private List<Contact> seedContacts(List<User> salespersons, List<Tag> tags) {
+        List<Contact> contacts = new ArrayList<>();
+
+        // Contact data: name, email, phone, company, source, funnelStatus, preferredChannel, ownerIndex, tagIndices
+        Object[][] contactData = {
+                {"Carlos Rodríguez", "carlos@techcorp.com", "+5491123456701", "TechCorp", "Formulario web", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 0, new int[]{0, 1}},
+                {"Ana Martínez", "ana@ecomstore.com", "+5491123456702", "EcomStore", "LinkedIn", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{1, 3}},
+                {"Martín González", "martin@fintech.io", "+5491123456703", "Fintech IO", "Referido", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 1, new int[]{0, 2}},
+                {"Laura Fernández", "laura@startup.com", "+5491123456704", "StartupX", "Evento", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{4}},
+                {"Javier López", "javier@saas.com", "+5491123456705", "SaaS Solutions", "Formulario web", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 2, new int[]{1, 5}},
+                {"Sofía Díaz", "sofia@retail.com", "+5491123456706", "Retail Plus", "LinkedIn", FunnelStatus.CLOSED_LOST, Channel.EMAIL, 2, new int[]{4}},
+                {"Diego Sánchez", "diego@logistica.com", "+5491123456707", "Logística Express", "Referido", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 3, new int[]{0, 2}},
+                {"Valentina Pérez", "valentina@health.com", "+5491123456708", "Health Tech", "Formulario web", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{2, 5}},
+                {"Nicolás Romero", "nico@marketing.com", "+5491123456709", "Marketing Pro", "LinkedIn", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 4, new int[]{3, 4}},
+                {"Camila Morales", "camila@consulting.com", "+5491123456710", "Consulting Group", "Referido", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{0, 1, 2}}
+        };
+
+        for (Object[] data : contactData) {
+            User owner = salespersons.get((Integer) data[7]);
+
+            Contact contact = Contact.builder()
+                    .name((String) data[0])
+                    .email((String) data[1])
+                    .phone((String) data[2])
+                    .company((String) data[3])
+                    .source((String) data[4])
+                    .funnelStatus((FunnelStatus) data[5])
+                    .preferredChannel((Channel) data[6])
+                    .owner(owner)
+                    .build();
+
+            // Add tags
+            int[] tagIndices = (int[]) data[8];
+            Set<Tag> contactTags = new HashSet<>();
+            for (int idx : tagIndices) {
+                contactTags.add(tags.get(idx));
+            }
+            contact.setTags(contactTags);
+
+            contacts.add(contactRepository.save(contact));
+            log.info("Contact seeded: {}", contact.getName());
+        }
+
+        return contacts;
+    }
+
+    private void seedConversationsAndMessages(List<Contact> contacts, List<User> salespersons, List<Template> templates) {
+        Random random = new Random();
+
+        for (Contact contact : contacts) {
+            // Create WhatsApp conversation
+            Conversation whatsappConv = Conversation.builder()
+                    .contact(contact)
+                    .channel(Channel.WHATSAPP)
+                    .status(ConversationStatus.OPEN)
+                    .assignedTo(contact.getOwner())
+                    .lastInteraction(LocalDateTime.now().minusDays(random.nextInt(10)))
+                    .build();
+            conversationRepository.save(whatsappConv);
+
+            // Create Email conversation
+            Conversation emailConv = Conversation.builder()
+                    .contact(contact)
+                    .channel(Channel.EMAIL)
+                    .status(ConversationStatus.OPEN)
+                    .assignedTo(contact.getOwner())
+                    .lastInteraction(LocalDateTime.now().minusDays(random.nextInt(10)))
+                    .build();
+            conversationRepository.save(emailConv);
+
+            // Add messages to WhatsApp conversation
+            Template whatsappTemplate = templates.stream()
+                    .filter(t -> t.getChannel() == Channel.WHATSAPP)
+                    .findFirst()
+                    .orElse(null);
+
+            Message outbound = Message.builder()
+                    .conversation(whatsappConv)
+                    .direction(MessageDirection.OUTBOUND)
+                    .body("Hola " + contact.getName() + "! Soy " + contact.getOwner().getName() + " de CRM. ¿Cómo estás? Me contacto para conocer más sobre " + contact.getCompany() + ".")
+                    .deliveryStatus(DeliveryStatus.DELIVERED)
+                    .template(whatsappTemplate)
+                    .sender(contact.getOwner())
+                    .sentAt(LocalDateTime.now().minusDays(5))
+                    .build();
+            messageRepository.save(outbound);
+
+            Message inbound = Message.builder()
+                    .conversation(whatsappConv)
+                    .direction(MessageDirection.INBOUND)
+                    .body("Hola! Gracias por contactarte. Me interesa saber más sobre sus servicios.")
+                    .deliveryStatus(DeliveryStatus.READ)
+                    .sentAt(LocalDateTime.now().minusDays(4))
+                    .build();
+            messageRepository.save(inbound);
+
+            // Add messages to Email conversation
+            Template emailTemplate = templates.stream()
+                    .filter(t -> t.getChannel() == Channel.EMAIL && t.getName().contains("Bienvenida"))
+                    .findFirst()
+                    .orElse(null);
+
+            Message emailOutbound = Message.builder()
+                    .conversation(emailConv)
+                    .direction(MessageDirection.OUTBOUND)
+                    .body("Hola " + contact.getName() + ",\n\nTe escribo para presentarte nuestras soluciones. Quedo atento a tu respuesta.\n\nSaludos,\n" + contact.getOwner().getName())
+                    .deliveryStatus(DeliveryStatus.DELIVERED)
+                    .template(emailTemplate)
+                    .sender(contact.getOwner())
+                    .sentAt(LocalDateTime.now().minusDays(3))
+                    .build();
+            messageRepository.save(emailOutbound);
+
+            log.info("Conversations and messages seeded for contact: {}", contact.getName());
+        }
+    }
+
+    private void seedTasks(List<Contact> contacts, List<User> salespersons) {
+        Random random = new Random();
+
+        for (int i = 0; i < 15; i++) {
+            Contact contact = contacts.get(random.nextInt(contacts.size()));
+            User assignedTo = contact.getOwner();
+
+            TaskType[] taskTypes = {TaskType.CALL, TaskType.EMAIL, TaskType.MEETING, TaskType.DEMO, TaskType.OTHER};
+            TaskStatus[] taskStatuses = {TaskStatus.PENDING, TaskStatus.COMPLETED, TaskStatus.OVERDUE};
+
+            Task task = Task.builder()
+                    .title(getRandomTaskTitle(taskTypes[random.nextInt(taskTypes.length)]))
+                    .description("Seguimiento con " + contact.getName() + " de " + contact.getCompany())
+                    .type(taskTypes[random.nextInt(taskTypes.length)])
+                    .status(taskStatuses[random.nextInt(3)])
+                    .dueDate(LocalDateTime.now().plusDays(random.nextInt(10) - 3))
+                    .contact(contact)
+                    .assignedTo(assignedTo)
+                    .build();
+
+            if (task.getStatus() == TaskStatus.COMPLETED) {
+                task.setCompletedAt(LocalDateTime.now().minusDays(random.nextInt(5)));
+            }
+
+            taskRepository.save(task);
+            log.info("Task seeded: {} for contact {}", task.getTitle(), contact.getName());
+        }
+    }
+
+    private String getRandomTaskTitle(TaskType type) {
+        return switch (type) {
+            case CALL -> "Llamada de seguimiento";
+            case EMAIL -> "Enviar propuesta por email";
+            case MEETING -> "Coordinar reunión";
+            case DEMO -> "Agendar demo del producto";
+            default -> "Contactar para actualizar información";
+        };
+    }
+
+    private void seedSavedViews(User admin, User salesperson) {
+        // Admin global view
+        SavedView adminView = SavedView.builder()
+                .name("Todos los contactos activos")
+                .filters("{\"funnelStatus\":[\"NEW_LEAD\",\"CONTACTED\",\"IN_NEGOTIATION\",\"PROPOSAL_SENT\"]}")
+                .entity("contacts")
+                .global(true)
+                .createdBy(admin)
+                .build();
+        savedViewRepository.save(adminView);
+        log.info("Saved view seeded (global): {}", adminView.getName());
+
+        // Salesperson personal view
+        SavedView sellerView = SavedView.builder()
+                .name("Mis leads calientes")
+                .filters("{\"tagIds\":[1,2],\"funnelStatus\":\"IN_NEGOTIATION\"}")
+                .entity("contacts")
+                .global(false)
+                .createdBy(salesperson)
+                .build();
+        savedViewRepository.save(sellerView);
+        log.info("Saved view seeded (personal): {}", sellerView.getName());
+
+        // Tasks view
+        SavedView tasksView = SavedView.builder()
+                .name("Tareas vencidas")
+                .filters("{\"status\":\"PENDING\",\"dueDate\":{\"$lt\":\"today\"}}")
+                .entity("tasks")
+                .global(true)
+                .createdBy(admin)
+                .build();
+        savedViewRepository.save(tasksView);
+        log.info("Saved view seeded: {}", tasksView.getName());
     }
 }
