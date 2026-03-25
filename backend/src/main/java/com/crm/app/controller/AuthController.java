@@ -1,20 +1,21 @@
 package com.crm.app.controller;
 
+import com.crm.app.dto.AuthDTOs;
 import com.crm.app.security.JwtUtil;
 import com.crm.app.service.impl.UserDetailsServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,45 +31,49 @@ public class AuthController {
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtUtil jwtUtil;
 
-    @Schema(description = "Solicitud de login")
-    public record LoginRequest(
-            @Email @NotBlank
-            @Schema(description = "Correo electrónico", example = "admin@crm.com")
-            String email,
-
-            @NotBlank
-            @Schema(description = "Contraseña", example = "Admin1234!")
-            String password
-    ) {}
-
-    @Schema(description = "Respuesta de login con token JWT")
-    public record LoginResponse(
-            @Schema(description = "Token JWT para autenticación", example = "eyJhbGciOiJIUzI1NiIs...")
-            String token,
-
-            @Schema(description = "Correo electrónico del usuario", example = "admin@crm.com")
-            String email,
-
-            @Schema(description = "Rol del usuario", example = "ADMIN")
-            String role
-    ) {}
-
-    @Schema(description = "Credenciales de usuario precargado para el selectbox")
-    public record UserCredentials(
-            @Schema(description = "Correo electrónico", example = "admin@crm.com")
-            String email,
-
-            @Schema(description = "Contraseña", example = "Admin1234!")
-            String password,
-
-            @Schema(description = "Rol del usuario", example = "ADMIN")
-            String role
-    ) {}
-
     @PostMapping("/login")
     @Operation(
             summary = "Iniciar sesión",
-            description = "Autentica un usuario con email y contraseña. Devuelve un token JWT para acceder a los endpoints protegidos."
+            description = "Autentica un usuario con email y contraseña. Devuelve un token JWT."
+    )
+    @RequestBody(
+            description = "Credenciales de usuario",
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    examples = {
+                            @ExampleObject(
+                                    name = "Admin",
+                                    description = "Credenciales de administrador",
+                                    value = "{\"email\": \"admin@crm.com\", \"password\": \"Admin1234!\"}"
+                            ),
+                            @ExampleObject(
+                                    name = "Alice (Salesperson)",
+                                    description = "Credenciales de vendedora Alice",
+                                    value = "{\"email\": \"alice@crm.com\", \"password\": \"Sales001!\"}"
+                            ),
+                            @ExampleObject(
+                                    name = "Bob (Salesperson)",
+                                    description = "Credenciales de vendedor Bob",
+                                    value = "{\"email\": \"bob@crm.com\", \"password\": \"Sales002!\"}"
+                            ),
+                            @ExampleObject(
+                                    name = "Carol (Salesperson)",
+                                    description = "Credenciales de vendedora Carol",
+                                    value = "{\"email\": \"carol@crm.com\", \"password\": \"Sales003!\"}"
+                            ),
+                            @ExampleObject(
+                                    name = "David (Salesperson)",
+                                    description = "Credenciales de vendedor David",
+                                    value = "{\"email\": \"david@crm.com\", \"password\": \"Sales004!\"}"
+                            ),
+                            @ExampleObject(
+                                    name = "Emma (Salesperson)",
+                                    description = "Credenciales de vendedora Emma",
+                                    value = "{\"email\": \"emma@crm.com\", \"password\": \"Sales005!\"}"
+                            )
+                    }
+            )
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -76,31 +81,36 @@ public class AuthController {
                     description = "Login exitoso",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = LoginResponse.class),
-                            examples = {
-                                    @ExampleObject(
-                                            name = "Admin Login",
-                                            value = "{\"token\":\"eyJhbGciOiJIUzI1NiIs...\",\"email\":\"admin@crm.com\",\"role\":\"ADMIN\"}"
-                                    ),
-                                    @ExampleObject(
-                                            name = "Seller Login",
-                                            value = "{\"token\":\"eyJhbGciOiJIUzI1NiIs...\",\"email\":\"alice@crm.com\",\"role\":\"SELLER\"}"
-                                    )
-                            }
+                            examples = @ExampleObject(
+                                    name = "Success Response",
+                                    value = "{\"token\": \"eyJhbGciOiJIUzI1NiIs...\", \"email\": \"admin@crm.com\", \"role\": \"ADMIN\"}"
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Datos de entrada inválidos",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "Bad Request",
+                                    value = "{\"email\": \"El email no puede estar vacío\", \"password\": \"La contraseña es obligatoria\"}"
+                            )
                     )
             ),
             @ApiResponse(
                     responseCode = "401",
                     description = "Credenciales inválidas",
-                    content = @Content
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Datos de entrada inválidos",
-                    content = @Content
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "Unauthorized",
+                                    value = "{\"error\": \"Credenciales inválidas\", \"message\": \"Email o contraseña incorrectos\"}"
+                            )
+                    )
             )
     })
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthDTOs.LoginResponse> login(@Valid @RequestBody AuthDTOs.LoginRequest request) {
         authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
@@ -113,7 +123,7 @@ public class AuthController {
                 .map(a -> a.getAuthority().replace("ROLE_", ""))
                 .orElse("");
 
-        return ResponseEntity.ok(new LoginResponse(token, request.email(), role));
+        return ResponseEntity.ok(new AuthDTOs.LoginResponse(token, request.email(), role));
     }
 
     @GetMapping("/available-users")
@@ -128,28 +138,26 @@ public class AuthController {
                     content = @Content(
                             mediaType = "application/json",
                             examples = @ExampleObject(
+                                    name = "Success Response",
                                     value = """
-                    [
-                        {"email": "admin@crm.com", "password": "Admin1234!", "role": "ADMIN"},
-                        {"email": "alice@crm.com", "password": "Sales001!", "role": "SELLER"},
-                        {"email": "bob@crm.com", "password": "Sales002!", "role": "SELLER"},
-                        {"email": "carol@crm.com", "password": "Sales003!", "role": "SELLER"},
-                        {"email": "david@crm.com", "password": "Sales004!", "role": "SELLER"},
-                        {"email": "emma@crm.com", "password": "Sales005!", "role": "SELLER"}
-                    ]
-                    """
+                                    [
+                                        {"email": "admin@crm.com", "password": "Admin1234!", "role": "ADMIN"},
+                                        {"email": "alice@crm.com", "password": "Sales001!", "role": "SALESPERSON"},
+                                        {"email": "bob@crm.com", "password": "Sales002!", "role": "SALESPERSON"}
+                                    ]
+                                    """
                             )
                     )
             )
     })
-    public ResponseEntity<List<UserCredentials>> getAvailableUsers() {
-        List<UserCredentials> users = List.of(
-                new UserCredentials("admin@crm.com", "Admin1234!", "ADMIN"),
-                new UserCredentials("alice@crm.com", "Sales001!", "SELLER"),
-                new UserCredentials("bob@crm.com", "Sales002!", "SELLER"),
-                new UserCredentials("carol@crm.com", "Sales003!", "SELLER"),
-                new UserCredentials("david@crm.com", "Sales004!", "SELLER"),
-                new UserCredentials("emma@crm.com", "Sales005!", "SELLER")
+    public ResponseEntity<List<AuthDTOs.UserCredentials>> getAvailableUsers() {
+        List<AuthDTOs.UserCredentials> users = List.of(
+                new AuthDTOs.UserCredentials("admin@crm.com", "Admin1234!", "ADMIN"),
+                new AuthDTOs.UserCredentials("alice@crm.com", "Sales001!", "SALESPERSON"),
+                new AuthDTOs.UserCredentials("bob@crm.com", "Sales002!", "SALESPERSON"),
+                new AuthDTOs.UserCredentials("carol@crm.com", "Sales003!", "SALESPERSON"),
+                new AuthDTOs.UserCredentials("david@crm.com", "Sales004!", "SALESPERSON"),
+                new AuthDTOs.UserCredentials("emma@crm.com", "Sales005!", "SALESPERSON")
         );
         return ResponseEntity.ok(users);
     }

@@ -47,7 +47,7 @@ public class SavedView {
      * El backend interpreta este JSON para construir la query dinámica.
      * Ejemplo: {"funnelStatus":"IN_NEGOTIATION","tagIds":[1,3],"daysInactive":7}
      */
-    @Column(nullable = false, columnDefinition = "jsonb")
+    @Column(nullable = false, columnDefinition = "TEXT")  // <- Cambiar a TEXT
     private String filters;
 
     /**
