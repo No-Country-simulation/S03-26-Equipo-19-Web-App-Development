@@ -18,46 +18,33 @@ import java.util.Optional;
 public interface ContactRepository extends JpaRepository<Contact, Long>,
         JpaSpecificationExecutor<Contact> {
 
-    // Un Vendedor solo puede ver sus propios contactos
+    // Métodos básicos de acceso por owner
     List<Contact> findByOwner(User owner);
+    Optional<Contact> findByIdAndOwner(Long id, User owner);
 
-    // Filtro por estado del funnel para un vendedor específico
+    // Métodos para evitar duplicados
+    boolean existsByEmailAndOwner(String email, User owner);
+    boolean existsByPhoneAndOwner(String phone, User owner);
+
+    // Búsqueda por identificadores externos (webhooks)
+    Optional<Contact> findByPhone(String phone);
+    Optional<Contact> findByEmail(String email);
+
+    // Filtros para segmentación
     List<Contact> findByOwnerAndFunnelStatus(User owner, FunnelStatus funnelStatus);
-
-    // Todos los contactos en un estado del funnel — usado por el Admin
     List<Contact> findByFunnelStatus(FunnelStatus funnelStatus);
 
-    // Verificar si ya existe un contacto con ese email para ese vendedor
-    boolean existsByEmailAndOwner(String email, User owner);
-
-    // Contactos que tienen una etiqueta específica — para segmentación
-    @Query("SELECT c FROM Contact c JOIN c.tags t WHERE t.id = :tagId")
-    List<Contact> findByTagId(@Param("tagId") Long tagId);
-
-    // Contactos de un vendedor que tienen una etiqueta específica
-    @Query("SELECT c FROM Contact c JOIN c.tags t WHERE c.owner = :owner AND t.id = :tagId")
-    List<Contact> findByOwnerAndTagId(@Param("owner") User owner, @Param("tagId") Long tagId);
-
-    // Cantidad de contactos por estado del funnel — usado por métricas
-    @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c GROUP BY c.funnelStatus")
-    List<Object[]> countByFunnelStatus();
-
-    // Cantidad de contactos por estado del funnel para un vendedor — métricas propias
-    @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c WHERE c.owner = :owner GROUP BY c.funnelStatus")
-    List<Object[]> countByFunnelStatusAndOwner(@Param("owner") User owner);
-
-    // Búsqueda por nombre o email para la barra de búsqueda de la UI
+    // Búsqueda con texto
     @Query("SELECT c FROM Contact c WHERE c.owner = :owner AND " +
             "(LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(c.email) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<Contact> searchByOwner(@Param("owner") User owner, @Param("query") String query);
 
-    // Búsqueda global — solo Admin
-    @Query("SELECT c FROM Contact c WHERE " +
-            "LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(c.email) LIKE LOWER(CONCAT('%', :query, '%'))")
-    List<Contact> searchAll(@Param("query") String query);
+    // Métricas
+    @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c GROUP BY c.funnelStatus")
+    List<Object[]> countByFunnelStatus();
 
-    // Contacto por id restringido al owner — evita acceso cruzado entre vendedores
-    Optional<Contact> findByIdAndOwner(Long id, User owner);
+    @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c WHERE c.owner = :owner GROUP BY c.funnelStatus")
+    List<Object[]> countByFunnelStatusAndOwner(@Param("owner") User owner);
+
 }
