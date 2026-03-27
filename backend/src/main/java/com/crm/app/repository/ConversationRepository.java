@@ -29,6 +29,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     // Conversaciones de un contacto específico asignadas a un vendedor
     List<Conversation> findByContactAndAssignedTo(Contact contact, User assignedTo);
 
+    // Buscar una conversación por ID y por vendedor asignado (para validar acceso)
+    Optional<Conversation> findByIdAndAssignedTo(Long id, User assignedTo);
+
     // Todas las conversaciones abiertas — vista del Admin
     List<Conversation> findByStatus(ConversationStatus status);
 
@@ -42,6 +45,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             "WHERE c.assignedTo = :user GROUP BY c")
     List<Object[]> countMessagesByConversationForUser(@Param("user") User user);
 
-    // Verificar que la conversación pertenece al vendedor antes de operar
-    Optional<Conversation> findByIdAndAssignedTo(Long id, User assignedTo);
+    @Query("SELECT c FROM Conversation c ORDER BY c.lastInteraction DESC NULLS LAST")
+    List<Conversation> findAllByOrderByLastInteractionDesc();
 }
