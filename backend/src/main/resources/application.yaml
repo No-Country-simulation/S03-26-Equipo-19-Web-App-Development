@@ -15,3 +15,19 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+# WhatsApp Cloud API Configuration
+whatsapp:
+  api:
+    url: ${WHATSAPP_API_URL:https://graph.facebook.com/v18.0}
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+    token: ${WHATSAPP_API_TOKEN:}
+
+# Brevo (Email) Configuration
+brevo:
+  api:
+    url: ${BREVO_API_URL:https://api.brevo.com/v3}
+    key: ${BREVO_API_KEY:}
+  sender:
+    email: ${BREVO_SENDER_EMAIL:}
+    name: ${BREVO_SENDER_NAME:CRM System}
