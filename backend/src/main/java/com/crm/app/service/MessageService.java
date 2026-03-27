@@ -69,14 +69,14 @@ public class MessageService {
                         content.body()
                 );
             } else {
-                providerId = emailService.sendMessage(
+                /*providerId = emailService.sendMessage(
                         conversation.getContact().getEmail(),
                         content.body(),
-                        conversation.getContact().getName()
-                );
+                        conversation.getContact().getName()*//*
+                );*/
             }
 
-            message.setProviderId(providerId);
+          /*  message.setProviderId(providerId);*/
             message = messageRepository.save(message);
 
             // Actualizar última interacción

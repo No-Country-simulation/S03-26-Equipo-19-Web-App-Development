@@ -18,7 +18,7 @@ import java.util.Map;
 @Service
 public class EmailService {
 
-    private final RestTemplate restTemplate;
+   /* private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     @Value("${brevo.api.url:https://api.brevo.com/v3}")
@@ -38,9 +38,9 @@ public class EmailService {
         this.objectMapper = new ObjectMapper();
     }
 
-    /**
+    *//**
      * Envía un email simple
-     */
+     *//*
     public String sendMessage(String toEmail, String message, String recipientName) {
         log.info("Enviando email a: {}", toEmail);
 
@@ -83,9 +83,9 @@ public class EmailService {
         }
     }
 
-    /**
+    *//**
      * Envía un email con asunto personalizado
-     */
+     *//*
     public String sendMessageWithSubject(String toEmail, String message, String recipientName, String subject) {
         log.info("Enviando email con asunto a: {}", toEmail);
 
@@ -128,9 +128,9 @@ public class EmailService {
         }
     }
 
-    /**
+    *//**
      * Envía un email usando una plantilla de Brevo
-     */
+     *//*
     public String sendTemplateMessage(String toEmail, Long templateId, Map<String, String> params, String recipientName) {
         log.info("Enviando email con plantilla a: {}, templateId: {}", toEmail, templateId);
 
@@ -179,9 +179,9 @@ public class EmailService {
         }
     }
 
-    /**
+    *//**
      * Construye el cuerpo del email
-     */
+     *//*
     private Map<String, Object> buildEmailBody(String toEmail, String message, String recipientName, String subject) {
         Map<String, Object> body = new HashMap<>();
 
@@ -205,9 +205,9 @@ public class EmailService {
         return body;
     }
 
-    /**
+    *//**
      * Construye el mensaje HTML con formato
-     */
+     *//*
     private String buildHtmlMessage(String message, String recipientName) {
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html>");
@@ -230,9 +230,9 @@ public class EmailService {
         return html.toString();
     }
 
-    /**
+    *//**
      * Extrae el messageId de la respuesta de Brevo
-     */
+     *//*
     private String extractMessageId(String responseBody) {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
@@ -246,11 +246,11 @@ public class EmailService {
         return null;
     }
 
-    /**
+    *//**
      * Verifica si la configuración de Brevo está completa
-     */
+     *//*
     public boolean isConfigured() {
         return apiKey != null && !apiKey.isEmpty()
                 && senderEmail != null && !senderEmail.isEmpty();
-    }
+    }*/
 }
