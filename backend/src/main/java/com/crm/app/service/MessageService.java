@@ -14,12 +14,14 @@ import com.crm.app.repository.MessageRepository;
 import com.crm.app.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -36,6 +38,11 @@ public class MessageService {
     public Message sendMessage(MessageDTOs.SendMessageRequest request, User currentUser) {
         MessageDTOs.MessageContent content = request.content();
 
+        // Validar contenido
+        if (content.body() == null || content.body().trim().isEmpty()) {
+            throw new RuntimeException("El contenido del mensaje no puede estar vacío");
+        }
+
         // Obtener o crear conversación
         Conversation conversation = conversationService.getOrCreateConversation(
                 request.contactId(),
@@ -46,6 +53,15 @@ public class MessageService {
         // Validar que la conversación esté abierta
         if (conversation.getStatus() != ConversationStatus.OPEN) {
             throw new RuntimeException("La conversación está cerrada");
+        }
+
+        // Validar que el contacto tenga la información necesaria
+        Contact contact = conversation.getContact();
+        if (request.channel() == Channel.WHATSAPP && (contact.getPhone() == null || contact.getPhone().isEmpty())) {
+            throw new RuntimeException("El contacto no tiene número de teléfono para enviar mensaje por WhatsApp");
+        }
+        if (request.channel() == Channel.EMAIL && (contact.getEmail() == null || contact.getEmail().isEmpty())) {
+            throw new RuntimeException("El contacto no tiene dirección de email para enviar mensaje por correo");
         }
 
         // Crear mensaje en BD primero
@@ -68,25 +84,33 @@ public class MessageService {
                         conversation.getContact().getPhone(),
                         content.body()
                 );
+                log.info("📱 Mensaje WhatsApp enviado: to={}, providerId={}",
+                        conversation.getContact().getPhone(), providerId);
             } else {
-                /*providerId = emailService.sendMessage(
+                providerId = emailService.sendMessage(
                         conversation.getContact().getEmail(),
                         content.body(),
-                        conversation.getContact().getName()*//*
-                );*/
+                        conversation.getContact().getName()
+                );
+                log.info("📧 Mensaje Email enviado: to={}, providerId={}",
+                        conversation.getContact().getEmail(), providerId);
             }
 
-          /*  message.setProviderId(providerId);*/
+            // Actualizar mensaje con providerId
+            message.setProviderId(providerId);
             message = messageRepository.save(message);
 
-            // Actualizar última interacción
+            // Actualizar última interacción de la conversación
             conversation.setLastInteraction(LocalDateTime.now());
             conversationRepository.save(conversation);
 
+            log.info("✅ Mensaje guardado exitosamente: id={}, providerId={}", message.getId(), providerId);
+
         } catch (Exception e) {
+            log.error("❌ Error al enviar mensaje: {}", e.getMessage(), e);
             message.setDeliveryStatus(DeliveryStatus.FAILED);
             messageRepository.save(message);
-            throw new RuntimeException("Error al enviar mensaje: " + e.getMessage());
+            throw new RuntimeException("Error al enviar mensaje: " + e.getMessage(), e);
         }
 
         return message;
@@ -101,6 +125,9 @@ public class MessageService {
      * Maneja mensajes entrantes desde webhooks (WhatsApp)
      */
     public void handleWhatsAppInbound(WhatsAppWebhookDTO.@Valid IncomingMessage webhook) {
+        log.info("📱 Procesando mensaje entrante de WhatsApp: from={}, messageId={}",
+                webhook.from(), webhook.messageId());
+
         User admin = getDefaultAdmin();
 
         // Buscar contacto por teléfono
@@ -113,6 +140,7 @@ public class MessageService {
                     Channel.WHATSAPP,
                     admin
             );
+            log.info("🆕 Nuevo contacto creado desde webhook WhatsApp: phone={}", webhook.from());
         }
 
         // Obtener o crear conversación
@@ -126,8 +154,15 @@ public class MessageService {
                             .assignedTo(finalContact.getOwner())
                             .lastInteraction(LocalDateTime.now())
                             .build();
+                    log.info("💬 Nueva conversación WhatsApp creada para contacto: id={}", finalContact.getId());
                     return conversationRepository.save(newConv);
                 });
+
+        // Verificar si el mensaje ya fue procesado (evitar duplicados)
+        if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
+            log.warn("⚠️ Mensaje duplicado ignorado: messageId={}", webhook.messageId());
+            return;
+        }
 
         // Crear mensaje entrante
         Message message = Message.builder()
@@ -140,6 +175,7 @@ public class MessageService {
                 .build();
 
         messageRepository.save(message);
+        log.info("💾 Mensaje entrante WhatsApp guardado: id={}, conversationId={}", message.getId(), conversation.getId());
 
         // Actualizar última interacción
         conversation.setLastInteraction(LocalDateTime.now());
@@ -147,9 +183,29 @@ public class MessageService {
     }
 
     /**
+     * Actualiza el estado de entrega de un mensaje (desde message_echoes)
+     */
+    public void updateDeliveryStatus(String providerId, DeliveryStatus newStatus) {
+        log.info("📬 Actualizando estado de mensaje: providerId={}, newStatus={}", providerId, newStatus);
+
+        Message message = messageRepository.findByProviderId(providerId)
+                .orElseThrow(() -> new RuntimeException("Mensaje con providerId no encontrado: " + providerId));
+
+        DeliveryStatus oldStatus = message.getDeliveryStatus();
+        message.setDeliveryStatus(newStatus);
+        messageRepository.save(message);
+
+        log.info("✅ Estado de mensaje actualizado: id={}, providerId={}, {} -> {}",
+                message.getId(), providerId, oldStatus, newStatus);
+    }
+
+    /**
      * Maneja mensajes entrantes desde webhooks (Brevo/Email)
      */
     public void handleBrevoInbound(BrevoWebhookDTO.@Valid IncomingEmail webhook) {
+        log.info("📧 Procesando mensaje entrante de Email: from={}, subject={}",
+                webhook.from(), webhook.subject());
+
         User admin = getDefaultAdmin();
 
         // Buscar contacto por email
@@ -162,21 +218,36 @@ public class MessageService {
                     Channel.EMAIL,
                     admin
             );
+            log.info("🆕 Nuevo contacto creado desde webhook Email: email={}", webhook.from());
+
             // Si el email trae nombre, actualizarlo
             if (webhook.fromName() != null && !webhook.fromName().isEmpty()) {
-                contact.setName(webhook.fromName());
-                contact = contactService.updateContact(contact.getId(),
-                        new ContactDTOs.CreateContactRequest(
-                                new ContactDTOs.ContactBase(
-                                        webhook.fromName(),
-                                        webhook.from(),
-                                        null,
-                                        null
-                                ),
-                                "email_inbound",
-                                Channel.EMAIL,
-                                admin.getId()
-                        ), admin);
+                // Separar nombre y apellido si es posible
+                String[] nameParts = webhook.fromName().split(" ", 2);
+                String firstName = nameParts[0];
+                String lastName = nameParts.length > 1 ? nameParts[1] : null;
+
+                contact.setName(firstName);
+                contact.setLastName(lastName);
+
+                // Crear el DTO con los 5 campos requeridos
+                ContactDTOs.ContactBase contactBase = new ContactDTOs.ContactBase(
+                        firstName,
+                        lastName,
+                        webhook.from(),
+                        null,  // phone
+                        null   // company
+                );
+
+                ContactDTOs.CreateContactRequest updateRequest = new ContactDTOs.CreateContactRequest(
+                        contactBase,
+                        "email_inbound",
+                        Channel.EMAIL,
+                        admin.getId()
+                );
+
+                contact = contactService.updateContact(contact.getId(), updateRequest, admin);
+                log.info("✏️ Contacto actualizado con nombre: {} {}", firstName, lastName);
             }
         }
 
@@ -191,8 +262,15 @@ public class MessageService {
                             .assignedTo(finalContact.getOwner())
                             .lastInteraction(LocalDateTime.now())
                             .build();
+                    log.info("💬 Nueva conversación Email creada para contacto: id={}", finalContact.getId());
                     return conversationRepository.save(newConv);
                 });
+
+        // Verificar si el mensaje ya fue procesado (evitar duplicados)
+        if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
+            log.warn("⚠️ Mensaje duplicado ignorado: messageId={}", webhook.messageId());
+            return;
+        }
 
         // Crear mensaje entrante
         String body = webhook.text() != null ? webhook.text() : webhook.subject();
@@ -206,12 +284,16 @@ public class MessageService {
                 .build();
 
         messageRepository.save(message);
+        log.info("💾 Mensaje entrante Email guardado: id={}, conversationId={}", message.getId(), conversation.getId());
 
         // Actualizar última interacción
         conversation.setLastInteraction(LocalDateTime.now());
         conversationRepository.save(conversation);
     }
 
+    /**
+     * Obtiene el administrador por defecto (primer admin activo)
+     */
     private User getDefaultAdmin() {
         List<User> admins = userRepository.findByRoleAndActiveTrue(Role.ADMIN);
         if (admins.isEmpty()) {
