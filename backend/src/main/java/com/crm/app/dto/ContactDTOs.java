@@ -9,21 +9,30 @@ public class ContactDTOs {
     @Schema(description = "Datos básicos de contacto")
     public record ContactBase(
 
-            @NotBlank
-            @Schema(example = "Juan Pérez")
+            @Schema(example = "Juan", description = "Nombre del contacto (opcional en creación automática)")
             String name,
 
-            @Email @NotBlank
+            @Schema(example = "Pérez", description = "Apellido del contacto (opcional)")
+            String lastName,
+
+            @Email
             @Schema(example = "juan@gmail.com")
             String email,
 
-            @NotBlank
             @Schema(example = "+5491123456789")
             String phone,
 
             @Schema(example = "Tech Solutions")
             String company
-    ) {}
+    ) {
+        // Validación personalizada: al menos name o lastName o email o phone debe estar presente
+        public boolean hasAtLeastOneIdentifier() {
+            return (name != null && !name.isBlank()) ||
+                    (lastName != null && !lastName.isBlank()) ||
+                    (email != null && !email.isBlank()) ||
+                    (phone != null && !phone.isBlank());
+        }
+    }
 
     @Schema(description = "Creación de contacto")
     public record CreateContactRequest(
@@ -34,7 +43,6 @@ public class ContactDTOs {
             @Schema(example = "Instagram Ads")
             String source,
 
-            @NotNull
             Channel preferredChannel,
 
             @Schema(description = "Solo Admin puede setearlo")

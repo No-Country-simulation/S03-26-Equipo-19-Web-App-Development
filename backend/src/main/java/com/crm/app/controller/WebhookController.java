@@ -27,12 +27,21 @@ public class WebhookController {
             @RequestParam("hub.verify_token") String token,
             @RequestParam("hub.challenge") String challenge) {
 
-        String verifyToken = "crmwebhook2024"; // Mismo que pusiste en Meta
+        // Log de entrada
+        log.info("🔵 GET /webhooks/whatsapp llamado");
+        log.info("   - mode: {}", mode);
+        log.info("   - token: {}", token);
+        log.info("   - challenge: {}", challenge);
+
+        String verifyToken = "crmwebhook2024";
 
         if ("subscribe".equals(mode) && verifyToken.equals(token)) {
-            log.info("Webhook verificado exitosamente");
+            log.info("✅ Webhook verificado exitosamente");
             return ResponseEntity.ok(challenge);
         }
+
+        log.warn("❌ Verificación fallida - mode: {}, token recibido: {}, esperado: {}",
+                mode, token, verifyToken);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 

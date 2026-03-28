@@ -35,9 +35,11 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-
+                        // ✅ Endpoints públicos (no requieren JWT)
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/webhooks/**").permitAll()  // ← NUEVO: webhooks públicos
 
+                        // Swagger público
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -46,6 +48,7 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
+                        // Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
                 )
 

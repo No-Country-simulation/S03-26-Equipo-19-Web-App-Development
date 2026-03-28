@@ -28,6 +28,14 @@ public class ContactService {
     public Contact createContact(ContactDTOs.CreateContactRequest request, User currentUser) {
         ContactDTOs.ContactBase contactBase = request.contact();
 
+        // Validar que tenga al menos un identificador
+        if (!contactBase.hasAtLeastOneIdentifier()) {
+            throw new BusinessRuleViolationException(
+                    "Creación de contacto",
+                    "El contacto debe tener al menos nombre, apellido, email o teléfono"
+            );
+        }
+
         // Si es Vendedor, no puede especificar ownerId
         if (currentUser.getRole() == Role.SALESPERSON && request.ownerId() != null) {
             throw new UnauthorizedAccessException("Los vendedores no pueden asignar contactos a otros usuarios");
@@ -59,6 +67,7 @@ public class ContactService {
 
         Contact contact = Contact.builder()
                 .name(contactBase.name())
+                .lastName(contactBase.lastName())
                 .email(contactBase.email())
                 .phone(contactBase.phone())
                 .company(contactBase.company())
@@ -68,7 +77,8 @@ public class ContactService {
                 .owner(owner)
                 .build();
 
-        log.info("Contacto creado: {} - Asignado a: {}", contact.getName(), owner.getEmail());
+        String displayName = buildDisplayName(contact);
+        log.info("Contacto creado: {} - Asignado a: {}", displayName, owner.getEmail());
         return contactRepository.save(contact);
     }
 
@@ -111,11 +121,13 @@ public class ContactService {
         }
 
         if (contactBase.name() != null) contact.setName(contactBase.name());
+        if (contactBase.lastName() != null) contact.setLastName(contactBase.lastName());
         if (contactBase.company() != null) contact.setCompany(contactBase.company());
         if (request.source() != null) contact.setSource(request.source());
         if (request.preferredChannel() != null) contact.setPreferredChannel(request.preferredChannel());
 
-        log.info("Contacto actualizado: id={}, name={}", id, contact.getName());
+        String displayName = buildDisplayName(contact);
+        log.info("Contacto actualizado: id={}, name={}", id, displayName);
         return contactRepository.save(contact);
     }
 
@@ -130,6 +142,7 @@ public class ContactService {
 
     /**
      * Crea un contacto automáticamente desde un webhook (WhatsApp o Email)
+     * name, lastName y source pueden ser null inicialmente
      */
     public Contact createContactFromWebhook(String identifier, Channel channel, User defaultOwner) {
         if (defaultOwner == null) {
@@ -139,12 +152,22 @@ public class ContactService {
             );
         }
 
+        String source;
+        String tempIdentifier = identifier;
+
+        if (channel == Channel.WHATSAPP) {
+            source = "whatsapp_inbound";
+        } else {
+            source = "email_inbound";
+        }
+
         Contact contact = Contact.builder()
-                .name(null)
+                .name(null)           // ✅ Puede ser null inicialmente
+                .lastName(null)       // ✅ Puede ser null inicialmente
                 .email(channel == Channel.EMAIL ? identifier : null)
                 .phone(channel == Channel.WHATSAPP ? identifier : null)
                 .company(null)
-                .source(channel == Channel.WHATSAPP ? "whatsapp_inbound" : "email_inbound")
+                .source(source)       // ✅ source puede ser null? Según tu requerimiento sí, pero aquí lo seteamos
                 .preferredChannel(channel)
                 .funnelStatus(FunnelStatus.NEW_LEAD)
                 .owner(defaultOwner)
@@ -179,5 +202,23 @@ public class ContactService {
             );
         }
         return admins.getFirst();
+    }
+
+    /**
+     * Construye un nombre para mostrar (nombre + apellido o email o teléfono)
+     */
+    private String buildDisplayName(Contact contact) {
+        if (contact.getName() != null && contact.getLastName() != null) {
+            return contact.getName() + " " + contact.getLastName();
+        } else if (contact.getName() != null) {
+            return contact.getName();
+        } else if (contact.getLastName() != null) {
+            return contact.getLastName();
+        } else if (contact.getEmail() != null) {
+            return contact.getEmail();
+        } else if (contact.getPhone() != null) {
+            return contact.getPhone();
+        }
+        return "Sin identificar";
     }
 }

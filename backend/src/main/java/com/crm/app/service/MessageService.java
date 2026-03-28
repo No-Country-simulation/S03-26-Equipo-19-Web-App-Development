@@ -164,19 +164,31 @@ public class MessageService {
             );
             // Si el email trae nombre, actualizarlo
             if (webhook.fromName() != null && !webhook.fromName().isEmpty()) {
-                contact.setName(webhook.fromName());
-                contact = contactService.updateContact(contact.getId(),
-                        new ContactDTOs.CreateContactRequest(
-                                new ContactDTOs.ContactBase(
-                                        webhook.fromName(),
-                                        webhook.from(),
-                                        null,
-                                        null
-                                ),
-                                "email_inbound",
-                                Channel.EMAIL,
-                                admin.getId()
-                        ), admin);
+                // Separar nombre y apellido si es posible
+                String[] nameParts = webhook.fromName().split(" ", 2);
+                String firstName = nameParts[0];
+                String lastName = nameParts.length > 1 ? nameParts[1] : null;
+
+                contact.setName(firstName);
+                contact.setLastName(lastName);
+
+                // Crear el DTO con los 5 campos requeridos
+                ContactDTOs.ContactBase contactBase = new ContactDTOs.ContactBase(
+                        firstName,
+                        lastName,
+                        webhook.from(),
+                        null,  // phone
+                        null   // company
+                );
+
+                ContactDTOs.CreateContactRequest updateRequest = new ContactDTOs.CreateContactRequest(
+                        contactBase,
+                        "email_inbound",
+                        Channel.EMAIL,
+                        admin.getId()
+                );
+
+                contact = contactService.updateContact(contact.getId(), updateRequest, admin);
             }
         }
 
