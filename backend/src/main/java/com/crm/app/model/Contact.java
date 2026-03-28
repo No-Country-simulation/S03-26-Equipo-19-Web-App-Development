@@ -33,8 +33,17 @@ public class Contact {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    /**
+     * Nombre del contacto. Puede ser null inicialmente (ej: desde webhook)
+     */
+    @Column(nullable = true)
     private String name;
+
+    /**
+     * Apellido del contacto. Puede ser null inicialmente (ej: desde webhook)
+     */
+    @Column(name = "last_name", nullable = true)
+    private String lastName;
 
     @Column
     private String email;
@@ -56,8 +65,9 @@ public class Contact {
 
     /**
      * Cómo llegó el contacto al sistema. Ej: "LinkedIn", "Referido", "Formulario web".
+     * Puede ser null para contactos creados automáticamente.
      */
-    @Column
+    @Column(nullable = true)
     private String source;
 
     /**
