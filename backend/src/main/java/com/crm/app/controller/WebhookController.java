@@ -132,13 +132,19 @@ public class WebhookController {
                     text = (String) textObj.get("body");
                 }
 
+                // Manejar timestamp (puede ser String o Number)
                 Long timestamp = null;
                 if (message.containsKey("timestamp")) {
-                    timestamp = ((Number) message.get("timestamp")).longValue();
+                    Object timestampObj = message.get("timestamp");
+                    if (timestampObj instanceof Number) {
+                        timestamp = ((Number) timestampObj).longValue();
+                    } else if (timestampObj instanceof String) {
+                        timestamp = Long.parseLong((String) timestampObj);
+                    }
                 }
 
-                log.info("📩 Mensaje entrante de WhatsApp: from={}, messageId={}, text={}",
-                        from, messageId, text);
+                log.info("📩 Mensaje entrante de WhatsApp: from={}, messageId={}, text={}, timestamp={}",
+                        from, messageId, text, timestamp);
 
                 // Crear DTO y enviar al servicio
                 WhatsAppWebhookDTO.IncomingMessage incomingMessage =
@@ -164,26 +170,28 @@ public class WebhookController {
             try {
                 String messageId = (String) status.get("id");
                 String statusType = (String) status.get("status");
-                Long timestamp = ((Number) status.get("timestamp")).longValue();
+
+                // ✅ Manejar timestamp correctamente
+                Long timestamp = null;
+                if (status.containsKey("timestamp")) {
+                    Object timestampObj = status.get("timestamp");
+                    if (timestampObj instanceof Number) {
+                        timestamp = ((Number) timestampObj).longValue();
+                    } else if (timestampObj instanceof String) {
+                        timestamp = Long.parseLong((String) timestampObj);
+                    }
+                }
 
                 log.info("📬 Eco de estado WhatsApp: messageId={}, status={}, timestamp={}",
                         messageId, statusType, timestamp);
 
                 // Actualizar estado del mensaje en la base de datos
-                com.crm.app.model.enums.DeliveryStatus deliveryStatus;
-                switch (statusType) {
-                    case "sent":
-                        deliveryStatus = com.crm.app.model.enums.DeliveryStatus.SENT;
-                        break;
-                    case "delivered":
-                        deliveryStatus = com.crm.app.model.enums.DeliveryStatus.DELIVERED;
-                        break;
-                    case "read":
-                        deliveryStatus = com.crm.app.model.enums.DeliveryStatus.READ;
-                        break;
-                    default:
-                        deliveryStatus = com.crm.app.model.enums.DeliveryStatus.FAILED;
-                }
+                com.crm.app.model.enums.DeliveryStatus deliveryStatus = switch (statusType) {
+                    case "sent" -> com.crm.app.model.enums.DeliveryStatus.SENT;
+                    case "delivered" -> com.crm.app.model.enums.DeliveryStatus.DELIVERED;
+                    case "read" -> com.crm.app.model.enums.DeliveryStatus.READ;
+                    default -> com.crm.app.model.enums.DeliveryStatus.FAILED;
+                };
 
                 messageService.updateDeliveryStatus(messageId, deliveryStatus);
 
