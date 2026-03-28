@@ -21,13 +21,14 @@ public class WhatsAppService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${whatsapp.api.url}")
+    // ✅ Agregar valores por defecto
+    @Value("${whatsapp.api.url:https://graph.facebook.com/v22.0}")
     private String apiUrl;
 
-    @Value("${whatsapp.api.phone-number-id}")
+    @Value("${whatsapp.api.phone-number-id:}")
     private String phoneNumberId;
 
-    @Value("${whatsapp.api.token}")
+    @Value("${whatsapp.api.token:}")
     private String apiToken;
 
     public WhatsAppService(RestTemplate restTemplate) {
@@ -39,6 +40,11 @@ public class WhatsAppService {
      * Envía un mensaje de texto por WhatsApp
      */
     public String sendMessage(String toPhoneNumber, String message) {
+        if (!isConfigured()) {
+            log.warn("WhatsApp no está configurado. Mensaje no enviado: {}", message);
+            return "simulated-" + System.currentTimeMillis();
+        }
+
         log.info("Enviando mensaje WhatsApp a: {}", toPhoneNumber);
 
         String url = apiUrl + "/" + phoneNumberId + "/messages";
@@ -102,6 +108,11 @@ public class WhatsAppService {
      * Envía un mensaje de texto con plantilla (mensaje predefinido)
      */
     public String sendTemplateMessage(String toPhoneNumber, String templateName, Map<String, String> variables) {
+        if (!isConfigured()) {
+            log.warn("WhatsApp no está configurado. Plantilla no enviada: {}", templateName);
+            return "simulated-" + System.currentTimeMillis();
+        }
+
         log.info("Enviando plantilla WhatsApp a: {}, template: {}", toPhoneNumber, templateName);
 
         String url = apiUrl + "/" + phoneNumberId + "/messages";
@@ -157,7 +168,6 @@ public class WhatsAppService {
         template.put("name", templateName);
         template.put("language", Map.of("code", "es"));
 
-        // Construir componentes con variables
         if (variables != null && !variables.isEmpty()) {
             List<Map<String, Object>> components = List.of(
                     Map.of(
@@ -179,6 +189,11 @@ public class WhatsAppService {
      * Marca un mensaje como leído (para enviar notificación de lectura)
      */
     public void markAsRead(String messageId) {
+        if (!isConfigured()) {
+            log.debug("WhatsApp no configurado, no se marca como leído");
+            return;
+        }
+
         log.info("Marcando mensaje WhatsApp como leído: {}", messageId);
 
         String url = apiUrl + "/" + phoneNumberId + "/messages";
