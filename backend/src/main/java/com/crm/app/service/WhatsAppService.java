@@ -41,9 +41,23 @@ public class WhatsAppService {
      */
     private String normalizePhoneNumber(String phone) {
         if (phone == null) return null;
+
         // Eliminar todo excepto dígitos
         String digitsOnly = phone.replaceAll("[^0-9]", "");
-        log.debug("Número normalizado (solo dígitos): {} -> {}", phone, digitsOnly);
+
+        // Argentina: eliminar el '9' después del código de país '54'
+        if (digitsOnly.startsWith("549") && digitsOnly.length() == 13) {
+            String normalized = "54" + digitsOnly.substring(3);
+            log.info("📱 Número normalizado para API: {} -> {}", digitsOnly, normalized);
+            return normalized;
+        }
+
+        if (digitsOnly.startsWith("5499") && digitsOnly.length() == 14) {
+            String normalized = "54" + digitsOnly.substring(4);
+            log.info("📱 Número normalizado para API (con 9 extra): {} -> {}", digitsOnly, normalized);
+            return normalized;
+        }
+
         return digitsOnly;
     }
 

@@ -25,6 +25,53 @@ public class ContactService {
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Normaliza un número de teléfono al formato que espera WhatsApp.
+     *
+     * Reglas:
+     * - Elimina todo excepto dígitos
+     * - Para Argentina: convierte 549XXXXXXXXX -> 54XXXXXXXXXX (elimina el 9)
+     *
+     * Ejemplos:
+     * - +5491122540454 -> 541122540454
+     * - 5491122540454 -> 541122540454
+     * - 54991122540454 -> 541122540454
+     * - 541122540454 -> 541122540454 (se mantiene)
+     */
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null || phone.isBlank()) return null;
+
+        // Eliminar todo excepto dígitos
+        String digitsOnly = phone.replaceAll("[^0-9]", "");
+
+        log.info("📞 Normalizando teléfono: original={}, soloDigitos={}", phone, digitsOnly);
+
+        // Si el número es argentino (código 54)
+        if (digitsOnly.startsWith("54")) {
+            // Caso: 549XXXXXXXXX (13 dígitos) -> eliminar el 9 después del 54
+            if (digitsOnly.length() == 13 && digitsOnly.startsWith("549")) {
+                String normalized = "54" + digitsOnly.substring(3);
+                log.info("✅ Argentina (13 dígitos con 9): {} -> {}", digitsOnly, normalized);
+                return normalized;
+            }
+            // Caso: 5499XXXXXXXXX (14 dígitos con 9 extra)
+            if (digitsOnly.length() == 14 && digitsOnly.startsWith("5499")) {
+                String normalized = "54" + digitsOnly.substring(4);
+                log.info("✅ Argentina (14 dígitos con 9 extra): {} -> {}", digitsOnly, normalized);
+                return normalized;
+            }
+            // Caso: 54XXXXXXXXXX (12 dígitos, ya correcto)
+            if (digitsOnly.length() == 12) {
+                log.info("✅ Argentina (formato correcto): {}", digitsOnly);
+                return digitsOnly;
+            }
+        }
+
+        // Para otros países o formatos, devolver solo dígitos
+        log.info("✅ Número normalizado (sin cambios específicos): {}", digitsOnly);
+        return digitsOnly;
+    }
+
     public Contact createContact(ContactDTOs.CreateContactRequest request, User currentUser) {
         ContactDTOs.ContactBase contactBase = request.contact();
 
@@ -55,23 +102,27 @@ public class ContactService {
             owner = currentUser;
         }
 
-        // Validar que no exista contacto con mismo email para el mismo owner
+        // ✅ FORZAR normalización del teléfono
+        String originalPhone = contactBase.phone();
+        String normalizedPhone = normalizePhoneNumber(originalPhone);
+
+        log.info("📞 Creando contacto: teléfono original={}, normalizado={}", originalPhone, normalizedPhone);
+
+        // Validar duplicados con el número normalizado
+        if (normalizedPhone != null && contactRepository.existsByPhoneAndOwner(normalizedPhone, owner)) {
+            throw new DuplicateResourceException("contacto", "teléfono", normalizedPhone);
+        }
+
+        // Validar duplicados por email
         if (contactBase.email() != null && contactRepository.existsByEmailAndOwner(contactBase.email(), owner)) {
             throw new DuplicateResourceException("contacto", "email", contactBase.email());
         }
-
-        // Validar que no exista contacto con mismo teléfono para el mismo owner
-        if (contactBase.phone() != null && contactRepository.existsByPhoneAndOwner(contactBase.phone(), owner)) {
-            throw new DuplicateResourceException("contacto", "teléfono", contactBase.phone());
-        }
-
-        String normalizedPhone = contactBase.getNormalizedPhone();
 
         Contact contact = Contact.builder()
                 .name(contactBase.name())
                 .lastName(contactBase.lastName())
                 .email(contactBase.email())
-                .phone(normalizedPhone)
+                .phone(normalizedPhone)  // ✅ Guardar número normalizado
                 .company(contactBase.company())
                 .source(request.source() != null ? request.source() : "manual")
                 .preferredChannel(request.preferredChannel())
@@ -80,7 +131,7 @@ public class ContactService {
                 .build();
 
         String displayName = buildDisplayName(contact);
-        log.info("Contacto creado: {} - Asignado a: {}", displayName, owner.getEmail());
+        log.info("✅ Contacto guardado: {} - Teléfono en BD: {}", displayName, normalizedPhone);
         return contactRepository.save(contact);
     }
 
@@ -114,12 +165,16 @@ public class ContactService {
             contact.setEmail(contactBase.email());
         }
 
-        // Validar duplicados si se actualiza teléfono
-        if (contactBase.phone() != null && !contactBase.phone().equals(contact.getPhone())) {
-            if (contactRepository.existsByPhoneAndOwner(contactBase.phone(), contact.getOwner())) {
-                throw new DuplicateResourceException("contacto", "teléfono", contactBase.phone());
+        // ✅ Normalizar y validar duplicados si se actualiza teléfono
+        String originalPhone = contactBase.phone();
+        String normalizedPhone = normalizePhoneNumber(originalPhone);
+
+        if (normalizedPhone != null && !normalizedPhone.equals(contact.getPhone())) {
+            if (contactRepository.existsByPhoneAndOwner(normalizedPhone, contact.getOwner())) {
+                throw new DuplicateResourceException("contacto", "teléfono", normalizedPhone);
             }
-            contact.setPhone(contactBase.phone());
+            contact.setPhone(normalizedPhone);
+            log.info("📞 Teléfono actualizado: original={}, normalizado={}", originalPhone, normalizedPhone);
         }
 
         if (contactBase.name() != null) contact.setName(contactBase.name());
@@ -144,7 +199,6 @@ public class ContactService {
 
     /**
      * Crea un contacto automáticamente desde un webhook (WhatsApp o Email)
-     * name, lastName y source pueden ser null inicialmente
      */
     public Contact createContactFromWebhook(String identifier, Channel channel, User defaultOwner) {
         if (defaultOwner == null) {
@@ -158,14 +212,10 @@ public class ContactService {
         String cleanIdentifier = identifier;
 
         if (channel == Channel.WHATSAPP) {
-            String digitsOnly = identifier.replaceAll("[^0-9]", "");
-            if (digitsOnly.length() == 14 && digitsOnly.startsWith("5499")) {
-                cleanIdentifier = "549" + digitsOnly.substring(4);
-            } else {
-                cleanIdentifier = digitsOnly;
-            }
             source = "whatsapp_inbound";
-            log.info("📱 Número de webhook normalizado: {} -> {}", identifier, cleanIdentifier);
+            // ✅ FORZAR normalización del número del webhook
+            cleanIdentifier = normalizePhoneNumber(identifier);
+            log.info("📱 Webhook WhatsApp: original={}, normalizado={}", identifier, cleanIdentifier);
         } else {
             source = "email_inbound";
         }
@@ -182,8 +232,7 @@ public class ContactService {
                 .owner(defaultOwner)
                 .build();
 
-        log.info("Contacto creado automáticamente desde webhook: {} - Canal: {}",
-                identifier, channel);
+        log.info("✅ Contacto creado desde webhook: {} - Teléfono en BD: {}", identifier, cleanIdentifier);
 
         return contactRepository.save(contact);
     }
@@ -193,7 +242,10 @@ public class ContactService {
      */
     public Contact findByExternalId(String externalId, Channel channel) {
         if (channel == Channel.WHATSAPP) {
-            return contactRepository.findByPhone(externalId).orElse(null);
+            // ✅ Normalizar el número antes de buscar
+            String normalizedPhone = normalizePhoneNumber(externalId);
+            log.info("🔍 Buscando contacto por teléfono: original={}, normalizado={}", externalId, normalizedPhone);
+            return contactRepository.findByPhone(normalizedPhone).orElse(null);
         } else {
             return contactRepository.findByEmail(externalId).orElse(null);
         }
