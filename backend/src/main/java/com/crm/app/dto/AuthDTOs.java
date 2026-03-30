@@ -22,6 +22,9 @@ public class AuthDTOs {
             @Schema(description = "Token JWT para autenticación", example = "eyJhbGciOiJIUzI1NiIs...")
             String token,
 
+            @Schema(description = "ID del usuario", example = "1")
+            Long id,
+
             @Schema(description = "Correo electrónico del usuario", example = "admin@crm.com")
             String email,
 

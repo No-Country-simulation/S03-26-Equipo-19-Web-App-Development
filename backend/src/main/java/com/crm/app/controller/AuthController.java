@@ -72,11 +72,9 @@ public class AuthController {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.email());
 
-        // ✅ Obtener el usuario para sacar el nombre
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // ✅ Generar token incluyendo el nombre
         String token = jwtUtil.generateToken(userDetails, user.getName());
 
         String role = userDetails.getAuthorities().stream()
@@ -84,8 +82,13 @@ public class AuthController {
                 .map(a -> a.getAuthority().replace("ROLE_", ""))
                 .orElse("");
 
-        // ✅ Devolver nombre en la respuesta
-        return ResponseEntity.ok(new AuthDTOs.LoginResponse(token, request.email(), role, user.getName()));
+        return ResponseEntity.ok(new AuthDTOs.LoginResponse(
+                token,
+                user.getId(),      // ✅ ID
+                request.email(),
+                role,
+                user.getName()
+        ));
     }
 
     @GetMapping("/available-users")
