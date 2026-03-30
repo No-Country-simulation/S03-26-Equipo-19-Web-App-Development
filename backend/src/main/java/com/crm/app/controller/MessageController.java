@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,17 +27,18 @@ public class MessageController {
     @Operation(summary = "Enviar mensaje", description = "Envía un mensaje por WhatsApp o Email desde el CRM")
     public ResponseEntity<Message> sendMessage(
             @RequestBody @Valid MessageDTOs.SendMessageRequest request,
-            @AuthenticationPrincipal User currentUser
+            @AuthenticationPrincipal UserDetails userDetails  // Solo el email
     ) {
-        return ResponseEntity.ok(messageService.sendMessage(request, currentUser));
+        // El servicio se encarga de buscar el User completo
+        return ResponseEntity.ok(messageService.sendMessage(request, userDetails.getUsername()));
     }
 
     @GetMapping("/conversations/{conversationId}/history")
     @Operation(summary = "Historial de conversación", description = "Obtiene todos los mensajes de una conversación")
     public ResponseEntity<List<Message>> getConversationHistory(
             @PathVariable Long conversationId,
-            @AuthenticationPrincipal User currentUser
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(messageService.getConversationHistory(conversationId, currentUser));
+        return ResponseEntity.ok(messageService.getConversationHistory(conversationId, userDetails.getUsername()));
     }
 }

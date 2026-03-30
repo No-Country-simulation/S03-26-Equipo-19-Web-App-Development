@@ -35,7 +35,10 @@ public class MessageService {
     private final EmailService emailService;
     private final UserRepository userRepository;
 
-    public Message sendMessage(MessageDTOs.SendMessageRequest request, User currentUser) {
+    // ✅ Método público que recibe email en lugar de User
+    public Message sendMessage(MessageDTOs.SendMessageRequest request, String userEmail) {
+        User currentUser = getUserByEmail(userEmail);
+
         MessageDTOs.MessageContent content = request.content();
 
         // Validar contenido
@@ -116,7 +119,9 @@ public class MessageService {
         return message;
     }
 
-    public List<Message> getConversationHistory(Long conversationId, User currentUser) {
+    // ✅ Método público que recibe email en lugar de User
+    public List<Message> getConversationHistory(Long conversationId, String userEmail) {
+        User currentUser = getUserByEmail(userEmail);
         Conversation conversation = conversationService.findByIdAndCheckAccess(conversationId, currentUser);
         return messageRepository.findByConversationOrderBySentAtAsc(conversation);
     }
@@ -289,6 +294,11 @@ public class MessageService {
         // Actualizar última interacción
         conversation.setLastInteraction(LocalDateTime.now());
         conversationRepository.save(conversation);
+    }
+
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
     }
 
     /**
