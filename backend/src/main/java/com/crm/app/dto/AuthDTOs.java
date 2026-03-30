@@ -26,7 +26,10 @@ public class AuthDTOs {
             String email,
 
             @Schema(description = "Rol del usuario", example = "ADMIN")
-            String role
+            String role,
+
+            @Schema(description = "Nombre del usuario", example = "Manuel Manrique")
+            String name
     ) {}
 
     @Schema(description = "Credenciales de usuario precargado para el selectbox")

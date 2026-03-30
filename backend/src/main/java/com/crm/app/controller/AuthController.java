@@ -1,6 +1,8 @@
 package com.crm.app.controller;
 
 import com.crm.app.dto.AuthDTOs;
+import com.crm.app.model.User;
+import com.crm.app.repository.UserRepository;
 import com.crm.app.security.JwtUtil;
 import com.crm.app.service.impl.UserDetailsServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +32,7 @@ public class AuthController {
     private final AuthenticationManager authManager;
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;  // ✅ Inyectar UserRepository
 
     @PostMapping("/login")
     @Operation(
@@ -44,7 +47,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "Success Response",
-                                    value = "{\"token\": \"eyJhbGciOiJIUzI1NiIs...\", \"email\": \"admin@crm.com\", \"role\": \"ADMIN\"}"
+                                    value = "{\"token\": \"eyJhbGciOiJIUzI1NiIs...\", \"email\": \"admin@crm.com\", \"role\": \"ADMIN\", \"name\": \"Administrador\"}"
                             )
                     )
             ),
@@ -60,7 +63,6 @@ public class AuthController {
     public ResponseEntity<AuthDTOs.LoginResponse> login(
             @Valid @RequestBody AuthDTOs.LoginRequest request) {
 
-        // Log para debug
         log.info("📥 Login request: email={}, password={}",
                 request.email(), request.password() != null ? "****" : "null");
 
@@ -69,14 +71,21 @@ public class AuthController {
         );
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.email());
-        String token = jwtUtil.generateToken(userDetails);
+
+        // ✅ Obtener el usuario para sacar el nombre
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // ✅ Generar token incluyendo el nombre
+        String token = jwtUtil.generateToken(userDetails, user.getName());
 
         String role = userDetails.getAuthorities().stream()
                 .findFirst()
                 .map(a -> a.getAuthority().replace("ROLE_", ""))
                 .orElse("");
 
-        return ResponseEntity.ok(new AuthDTOs.LoginResponse(token, request.email(), role));
+        // ✅ Devolver nombre en la respuesta
+        return ResponseEntity.ok(new AuthDTOs.LoginResponse(token, request.email(), role, user.getName()));
     }
 
     @GetMapping("/available-users")

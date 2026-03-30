@@ -41,6 +41,21 @@ public class JwtUtil {
                 .compact();
     }
 
+    public String generateToken(UserDetails userDetails, String name) {
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .toList();
+
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .claim("roles", roles)
+                .claim("name", name)  // ✅ Agregar nombre
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(signingKey)
+                .compact();
+    }
+
     public String extractEmail(String token) {
         return parseClaims(token).getSubject();
     }
