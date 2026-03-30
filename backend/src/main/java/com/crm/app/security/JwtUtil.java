@@ -5,6 +5,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -27,9 +28,10 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
+    // ✅ Método original (sin nombre)
     public String generateToken(UserDetails userDetails) {
         List<String> roles = userDetails.getAuthorities().stream()
-                .map(a -> a.getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .toList();
 
         return Jwts.builder()
@@ -41,15 +43,16 @@ public class JwtUtil {
                 .compact();
     }
 
+    // ✅ Método con nombre (el que necesitas)
     public String generateToken(UserDetails userDetails, String name) {
         List<String> roles = userDetails.getAuthorities().stream()
-                .map(a -> a.getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .toList();
 
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .claim("roles", roles)
-                .claim("name", name)  // ✅ Agregar nombre
+                .claim("name", name)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(signingKey)
