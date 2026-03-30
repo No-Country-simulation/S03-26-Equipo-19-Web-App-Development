@@ -21,7 +21,6 @@ public class WhatsAppService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    // ✅ Agregar valores por defecto
     @Value("${whatsapp.api.url:https://graph.facebook.com/v22.0}")
     private String apiUrl;
 
@@ -37,15 +36,53 @@ public class WhatsAppService {
     }
 
     /**
+     * Normaliza números de teléfono para el formato que espera WhatsApp
+     * - Elimina cualquier caracter no numérico
+     * - Para números argentinos (código 54), elimina el 9 extra si está presente
+     *
+     * Ejemplos:
+     * - +5491125405337 -> 5491125405337
+     * - 54991125405337 -> 5491125405337 (elimina 9 extra)
+     * - 5491125405337 -> 5491125405337 (se mantiene)
+     */
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null) return null;
+
+        // Eliminar todo excepto dígitos
+        String digitsOnly = phone.replaceAll("[^0-9]", "");
+
+        // Si es un número argentino (código 54) y tiene 14 dígitos (con 9 extra)
+        // Formato argentino correcto: 549 + 11 + 225405337 = 13 dígitos
+        // Formato con 9 extra: 5499 + 11 + 225405337 = 14 dígitos
+        if (digitsOnly.startsWith("5499") && digitsOnly.length() == 14) {
+            String normalized = "549" + digitsOnly.substring(4);
+            log.info("📱 Número argentino normalizado: {} -> {}", digitsOnly, normalized);
+            return normalized;
+        }
+
+        // Para números argentinos que empiezan con 549 pero tienen 13 dígitos (ya están bien)
+        if (digitsOnly.startsWith("549") && digitsOnly.length() == 13) {
+            log.info("📱 Número argentino correcto: {}", digitsOnly);
+            return digitsOnly;
+        }
+
+        log.info("📱 Número normalizado: {} -> {}", phone, digitsOnly);
+        return digitsOnly;
+    }
+
+    /**
      * Envía un mensaje de texto por WhatsApp
      */
     public String sendMessage(String toPhoneNumber, String message) {
+        // Normalizar el número antes de cualquier procesamiento
+        String normalizedNumber = normalizePhoneNumber(toPhoneNumber);
+
+        log.info("📱 Enviando mensaje WhatsApp - Original: {}, Normalizado: {}", toPhoneNumber, normalizedNumber);
+
         if (!isConfigured()) {
-            log.warn("WhatsApp no está configurado. Mensaje no enviado: {}", message);
+            log.warn("⚠️ WhatsApp no está configurado. Mensaje no enviado: {}", message);
             return "simulated-" + System.currentTimeMillis();
         }
-
-        log.info("Enviando mensaje WhatsApp a: {}", toPhoneNumber);
 
         String url = apiUrl + "/" + phoneNumberId + "/messages";
 
@@ -53,11 +90,14 @@ public class WhatsAppService {
         headers.setBearerAuth(apiToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> requestBody = buildTextMessageBody(toPhoneNumber, message);
+        Map<String, Object> requestBody = buildTextMessageBody(normalizedNumber, message);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
+            log.debug("📤 Request URL: {}", url);
+            log.debug("📤 Request Body: {}", requestBody);
+
             ResponseEntity<String> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
@@ -67,9 +107,10 @@ public class WhatsAppService {
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 String messageId = extractMessageId(response.getBody());
-                log.info("Mensaje WhatsApp enviado exitosamente. providerId: {}", messageId);
+                log.info("✅ Mensaje WhatsApp enviado exitosamente a: {}, providerId: {}", normalizedNumber, messageId);
                 return messageId;
             } else {
+                log.error("❌ Error HTTP {} al enviar mensaje a: {}", response.getStatusCode(), normalizedNumber);
                 throw new ExternalServiceException(
                         "WhatsApp Cloud API",
                         "Error al enviar mensaje. Status: " + response.getStatusCode()
@@ -77,7 +118,14 @@ public class WhatsAppService {
             }
 
         } catch (RestClientException e) {
-            log.error("Error al enviar mensaje WhatsApp: {}", e.getMessage(), e);
+            log.error("❌ Error de comunicación al enviar mensaje WhatsApp a {}: {}", normalizedNumber, e.getMessage(), e);
+
+            // Extraer información adicional del error si es posible
+            String errorDetails = e.getMessage();
+            if (e.getMessage() != null && e.getMessage().contains("131030")) {
+                log.error("🔍 Error 131030: El número {} no está en la lista de destinatarios permitidos. Verifica en Meta Developers -> API Setup -> Agregar número de destinatario", normalizedNumber);
+            }
+
             throw new ExternalServiceException(
                     "WhatsApp Cloud API",
                     "Error de comunicación con WhatsApp: " + e.getMessage(),
@@ -108,12 +156,14 @@ public class WhatsAppService {
      * Envía un mensaje de texto con plantilla (mensaje predefinido)
      */
     public String sendTemplateMessage(String toPhoneNumber, String templateName, Map<String, String> variables) {
+        String normalizedNumber = normalizePhoneNumber(toPhoneNumber);
+
         if (!isConfigured()) {
-            log.warn("WhatsApp no está configurado. Plantilla no enviada: {}", templateName);
+            log.warn("⚠️ WhatsApp no está configurado. Plantilla no enviada: {}", templateName);
             return "simulated-" + System.currentTimeMillis();
         }
 
-        log.info("Enviando plantilla WhatsApp a: {}, template: {}", toPhoneNumber, templateName);
+        log.info("📱 Enviando plantilla WhatsApp a: {}, template: {}", normalizedNumber, templateName);
 
         String url = apiUrl + "/" + phoneNumberId + "/messages";
 
@@ -121,7 +171,7 @@ public class WhatsAppService {
         headers.setBearerAuth(apiToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> requestBody = buildTemplateMessageBody(toPhoneNumber, templateName, variables);
+        Map<String, Object> requestBody = buildTemplateMessageBody(normalizedNumber, templateName, variables);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
@@ -135,7 +185,7 @@ public class WhatsAppService {
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 String messageId = extractMessageId(response.getBody());
-                log.info("Plantilla WhatsApp enviada exitosamente. providerId: {}", messageId);
+                log.info("✅ Plantilla WhatsApp enviada exitosamente a: {}, providerId: {}", normalizedNumber, messageId);
                 return messageId;
             } else {
                 throw new ExternalServiceException(
@@ -145,7 +195,7 @@ public class WhatsAppService {
             }
 
         } catch (RestClientException e) {
-            log.error("Error al enviar plantilla WhatsApp: {}", e.getMessage(), e);
+            log.error("❌ Error al enviar plantilla WhatsApp: {}", e.getMessage(), e);
             throw new ExternalServiceException(
                     "WhatsApp Cloud API",
                     "Error de comunicación con WhatsApp: " + e.getMessage(),
@@ -194,7 +244,7 @@ public class WhatsAppService {
             return;
         }
 
-        log.info("Marcando mensaje WhatsApp como leído: {}", messageId);
+        log.info("📖 Marcando mensaje WhatsApp como leído: {}", messageId);
 
         String url = apiUrl + "/" + phoneNumberId + "/messages";
 
@@ -218,10 +268,10 @@ public class WhatsAppService {
             );
 
             if (!response.getStatusCode().is2xxSuccessful()) {
-                log.warn("No se pudo marcar como leído el mensaje: {}", messageId);
+                log.warn("⚠️ No se pudo marcar como leído el mensaje: {}", messageId);
             }
         } catch (RestClientException e) {
-            log.warn("Error al marcar mensaje como leído: {}", e.getMessage());
+            log.warn("⚠️ Error al marcar mensaje como leído: {}", e.getMessage());
         }
     }
 
