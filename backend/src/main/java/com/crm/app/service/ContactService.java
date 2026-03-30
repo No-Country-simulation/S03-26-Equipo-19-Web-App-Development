@@ -65,11 +65,13 @@ public class ContactService {
             throw new DuplicateResourceException("contacto", "teléfono", contactBase.phone());
         }
 
+        String normalizedPhone = contactBase.getNormalizedPhone();
+
         Contact contact = Contact.builder()
                 .name(contactBase.name())
                 .lastName(contactBase.lastName())
                 .email(contactBase.email())
-                .phone(contactBase.phone())
+                .phone(normalizedPhone)
                 .company(contactBase.company())
                 .source(request.source() != null ? request.source() : "manual")
                 .preferredChannel(request.preferredChannel())
@@ -153,21 +155,28 @@ public class ContactService {
         }
 
         String source;
-        String tempIdentifier = identifier;
+        String cleanIdentifier = identifier;
 
         if (channel == Channel.WHATSAPP) {
+            String digitsOnly = identifier.replaceAll("[^0-9]", "");
+            if (digitsOnly.length() == 14 && digitsOnly.startsWith("5499")) {
+                cleanIdentifier = "549" + digitsOnly.substring(4);
+            } else {
+                cleanIdentifier = digitsOnly;
+            }
             source = "whatsapp_inbound";
+            log.info("📱 Número de webhook normalizado: {} -> {}", identifier, cleanIdentifier);
         } else {
             source = "email_inbound";
         }
 
         Contact contact = Contact.builder()
-                .name(null)           // ✅ Puede ser null inicialmente
-                .lastName(null)       // ✅ Puede ser null inicialmente
+                .name(null)
+                .lastName(null)
                 .email(channel == Channel.EMAIL ? identifier : null)
-                .phone(channel == Channel.WHATSAPP ? identifier : null)
+                .phone(channel == Channel.WHATSAPP ? cleanIdentifier : null)
                 .company(null)
-                .source(source)       // ✅ source puede ser null? Según tu requerimiento sí, pero aquí lo seteamos
+                .source(source)
                 .preferredChannel(channel)
                 .funnelStatus(FunnelStatus.NEW_LEAD)
                 .owner(defaultOwner)

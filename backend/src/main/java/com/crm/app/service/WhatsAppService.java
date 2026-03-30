@@ -36,37 +36,14 @@ public class WhatsAppService {
     }
 
     /**
-     * Normaliza números de teléfono para el formato que espera WhatsApp
-     * - Elimina cualquier caracter no numérico
-     * - Para números argentinos (código 54), elimina el 9 extra si está presente
-     *
-     * Ejemplos:
-     * - +5491125405337 -> 5491125405337
-     * - 54991125405337 -> 5491125405337 (elimina 9 extra)
-     * - 5491125405337 -> 5491125405337 (se mantiene)
+     * Normaliza números de teléfono para el formato que espera WhatsApp.
+     * Dado que la BD ya almacena el formato correcto, esta función es solo por seguridad.
      */
     private String normalizePhoneNumber(String phone) {
         if (phone == null) return null;
-
         // Eliminar todo excepto dígitos
         String digitsOnly = phone.replaceAll("[^0-9]", "");
-
-        // Si es un número argentino (código 54) y tiene 14 dígitos (con 9 extra)
-        // Formato argentino correcto: 549 + 11 + 225405337 = 13 dígitos
-        // Formato con 9 extra: 5499 + 11 + 225405337 = 14 dígitos
-        if (digitsOnly.startsWith("5499") && digitsOnly.length() == 14) {
-            String normalized = "549" + digitsOnly.substring(4);
-            log.info("📱 Número argentino normalizado: {} -> {}", digitsOnly, normalized);
-            return normalized;
-        }
-
-        // Para números argentinos que empiezan con 549 pero tienen 13 dígitos (ya están bien)
-        if (digitsOnly.startsWith("549") && digitsOnly.length() == 13) {
-            log.info("📱 Número argentino correcto: {}", digitsOnly);
-            return digitsOnly;
-        }
-
-        log.info("📱 Número normalizado: {} -> {}", phone, digitsOnly);
+        log.debug("Número normalizado (solo dígitos): {} -> {}", phone, digitsOnly);
         return digitsOnly;
     }
 
