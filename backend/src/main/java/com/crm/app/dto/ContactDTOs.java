@@ -2,7 +2,8 @@ package com.crm.app.dto;
 
 import com.crm.app.model.enums.Channel;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 
 public class ContactDTOs {
 
@@ -19,7 +20,7 @@ public class ContactDTOs {
             @Schema(example = "juan@gmail.com")
             String email,
 
-            @Schema(example = "+5491123456789")
+            @Schema(example = "5491123456789")
             String phone,
 
             @Schema(example = "Tech Solutions")
@@ -31,6 +32,16 @@ public class ContactDTOs {
                     (lastName != null && !lastName.isBlank()) ||
                     (email != null && !email.isBlank()) ||
                     (phone != null && !phone.isBlank());
+        }
+
+        public String getNormalizedPhone() {
+            if (phone == null) return null;
+            String digitsOnly = phone.replaceAll("[^0-9]", "");
+
+            if (digitsOnly.length() == 14 && digitsOnly.startsWith("5499")) {
+                return "549" + digitsOnly.substring(4);
+            }
+            return digitsOnly;
         }
     }
 
