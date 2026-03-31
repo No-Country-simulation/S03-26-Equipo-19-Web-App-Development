@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { ContactFilters } from '../components/contacts/ContactFilters';
 import { ContactForm } from '../components/contacts/ContactForm';
 import { Badge } from '../components/ui/Badge';
@@ -33,7 +32,7 @@ export const ContactsPage = () => {
   }, [contacts, search, stage, channel]);
 
   return (
-    <DashboardLayout>
+    <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-white text-2xl font-bold">Contactos</h1>
         <Button onClick={() => setModalOpen(true)}>+ Nuevo contacto</Button>
@@ -111,6 +110,6 @@ export const ContactsPage = () => {
           onCancel={() => setModalOpen(false)}
         />
       </Modal>
-    </DashboardLayout>
+    </>
   );
 };
