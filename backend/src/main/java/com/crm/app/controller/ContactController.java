@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +26,7 @@ public class ContactController {
 
     @PostMapping
     @Operation(summary = "Crear contacto", description = "Admin o Vendedor crean contacto. El vendedor solo puede asignarse a sí mismo")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Contact> createContact(
             @RequestBody @Valid ContactDTOs.CreateContactRequest request,
             @AuthenticationPrincipal User currentUser
@@ -34,12 +36,14 @@ public class ContactController {
 
     @GetMapping
     @Operation(summary = "Listar mis contactos", description = "Vendedor ve sus contactos. Admin ve todos")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Contact>> getMyContacts(@AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(contactService.getMyContacts(currentUser));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener contacto por ID", description = "Acceso controlado por rol")
+    @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
     public ResponseEntity<Contact> getContact(
             @PathVariable Long id,
             @AuthenticationPrincipal User currentUser
@@ -48,7 +52,8 @@ public class ContactController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar contacto", description = "Actualiza datos del contacto")
+    @Operation(summary = "Actualizar contacto", description = "Acceso: Admin o dueño del contacto")
+    @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
     public ResponseEntity<Contact> updateContact(
             @PathVariable Long id,
             @RequestBody @Valid ContactDTOs.CreateContactRequest request,
@@ -59,6 +64,7 @@ public class ContactController {
 
     @PatchMapping("/{id}/funnel-status")
     @Operation(summary = "Actualizar estado del funnel", description = "Cambia el estado del contacto en el proceso de ventas")
+    @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
     public ResponseEntity<Contact> updateFunnelStatus(
             @PathVariable Long id,
             @RequestParam FunnelStatus status,
@@ -66,4 +72,19 @@ public class ContactController {
     ) {
         return ResponseEntity.ok(contactService.updateFunnelStatus(id, status, currentUser));
     }
+
+    @PatchMapping("/{id}/assign")
+    @Operation(
+            summary = "Reasignar contacto a vendedor",
+            description = "Solo Admin puede reasignar contactos. Cambia el owner del contacto a otro vendedor."
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Contact> reassignContact(
+            @PathVariable Long id,
+            @RequestParam Long newOwnerId,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return ResponseEntity.ok(contactService.reassignContact(id, newOwnerId, currentUser));
+    }
+
 }
