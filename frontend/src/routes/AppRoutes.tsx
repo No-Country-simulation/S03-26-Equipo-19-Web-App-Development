@@ -8,7 +8,6 @@ import ProtectedRoute from "./ProtectedRoute";
 import Register from "../pages/Register";
 import { DashboardPage } from "../pages/DashboardPage";
 import { ContactsPage } from "../pages/ContactsPage";
-import { Home } from "lucide-react";
 import { MessagesPage } from "../pages/MessagesPage";
 import { MetricsPage } from "../pages/MetricsPage";
 import { useAuthStore } from "../store/useAuthStore";
@@ -53,7 +52,7 @@ export const AppRoutes: React.FC = () => {
                     </ProtectedRoute>
                 }
             >
-                <Route index element={<Home />} />
+                <Route index element={<DashboardPage />} />
                 <Route path={ROUTES.CONTACTS} element={<ContactsPage />} />
                 <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
                 <Route path={ROUTES.METRICS} element={<MetricsPage />} />
