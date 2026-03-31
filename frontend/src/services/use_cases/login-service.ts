@@ -3,8 +3,11 @@ import { apiAuthService } from "../general_api";
 
 
 export const postLogin = async (data: LoginType) => {
+  console.log("Enviando datos de login:", data);
   try {
     const res = await apiAuthService.post("/login", data);
+    console.log(res.data);
+    
     return res.data;
   } catch (error: any) {
   

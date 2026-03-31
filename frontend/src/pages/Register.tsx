@@ -51,13 +51,6 @@ const Register: React.FC = () => {
                 error={errors.name?.message}
               />
               <Input
-                label="Apellido"
-                placeholder="Pérez"
-                type="text"
-                {...register("lastName")}
-                error={errors.lastName?.message}
-              />
-              <Input
                 label="Email"
                 placeholder="ejemplo@gmail.com"
                 type="email"

@@ -14,6 +14,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, loading } = useAuthStore()
 
+  console.log({isAuthenticated});
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">

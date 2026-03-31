@@ -1,0 +1,46 @@
+.env
+
+# Archivos de ayuda
+HELP.md
+
+# Carpetas de compilación
+target/
+build/
+
+# Maven Wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# Excepciones para incluir carpetas de build/target dentro src
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Configuración de IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Configuración de Spring Tool Suite (STS)
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# Configuración de NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Configuración de Visual Studio Code
+.vscode/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
