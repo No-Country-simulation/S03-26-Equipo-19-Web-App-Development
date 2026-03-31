@@ -1,12 +1,15 @@
 package com.crm.app.service;
 
 import com.crm.app.exception.ExternalServiceException;
+import com.crm.app.exception.TokenExpiredException;
+import com.crm.app.util.PhoneNumberNormalizer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,6 +23,7 @@ public class WhatsAppService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final PhoneNumberNormalizer phoneNormalizer;
 
     @Value("${whatsapp.api.url:https://graph.facebook.com/v22.0}")
     private String apiUrl;
@@ -30,35 +34,10 @@ public class WhatsAppService {
     @Value("${whatsapp.api.token:}")
     private String apiToken;
 
-    public WhatsAppService(RestTemplate restTemplate) {
+    public WhatsAppService(RestTemplate restTemplate, PhoneNumberNormalizer phoneNormalizer) {
         this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper();
-    }
-
-    /**
-     * Normaliza números de teléfono para el formato que espera WhatsApp.
-     * Dado que la BD ya almacena el formato correcto, esta función es solo por seguridad.
-     */
-    private String normalizePhoneNumber(String phone) {
-        if (phone == null) return null;
-
-        // Eliminar todo excepto dígitos
-        String digitsOnly = phone.replaceAll("[^0-9]", "");
-
-        // Argentina: eliminar el '9' después del código de país '54'
-        if (digitsOnly.startsWith("549") && digitsOnly.length() == 13) {
-            String normalized = "54" + digitsOnly.substring(3);
-            log.info("📱 Número normalizado para API: {} -> {}", digitsOnly, normalized);
-            return normalized;
-        }
-
-        if (digitsOnly.startsWith("5499") && digitsOnly.length() == 14) {
-            String normalized = "54" + digitsOnly.substring(4);
-            log.info("📱 Número normalizado para API (con 9 extra): {} -> {}", digitsOnly, normalized);
-            return normalized;
-        }
-
-        return digitsOnly;
+        this.phoneNormalizer = phoneNormalizer;
     }
 
     /**
@@ -66,13 +45,13 @@ public class WhatsAppService {
      */
     public String sendMessage(String toPhoneNumber, String message) {
         // Normalizar el número antes de cualquier procesamiento
-        String normalizedNumber = normalizePhoneNumber(toPhoneNumber);
-
+        String normalizedNumber = phoneNormalizer.normalize(toPhoneNumber);
         log.info("📱 Enviando mensaje WhatsApp - Original: {}, Normalizado: {}", toPhoneNumber, normalizedNumber);
 
         if (!isConfigured()) {
-            log.warn("⚠️ WhatsApp no está configurado. Mensaje no enviado: {}", message);
-            return "simulated-" + System.currentTimeMillis();
+            log.error("❌ WhatsApp no está configurado. Verifica WHATSAPP_API_TOKEN y WHATSAPP_PHONE_NUMBER_ID");
+            throw new ExternalServiceException("WhatsApp Cloud API",
+                    "Servicio no configurado. Verifica las variables de entorno en Render");
         }
 
         String url = apiUrl + "/" + phoneNumberId + "/messages";
@@ -82,7 +61,6 @@ public class WhatsAppService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> requestBody = buildTextMessageBody(normalizedNumber, message);
-
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
@@ -108,20 +86,27 @@ public class WhatsAppService {
                 );
             }
 
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.error("🔑 Token expirado o inválido. Código: {}, Mensaje: {}", e.getStatusCode(), e.getMessage());
+            throw new TokenExpiredException("WhatsApp Cloud API");
+
+        } catch (HttpClientErrorException.BadRequest e) {
+            String responseBody = e.getResponseBodyAsString();
+            log.error("❌ Error 400 - Bad Request: {}", responseBody);
+
+            if (responseBody.contains("131030")) {
+                throw new ExternalServiceException("WhatsApp Cloud API", null,
+                        "El número " + normalizedNumber + " no está en la lista de destinatarios permitidos. Agrega el número en Meta Developers -> API Setup -> Números de destinatarios de prueba");
+            }
+            throw new ExternalServiceException("WhatsApp Cloud API", e.getMessage(), e);
+
+        } catch (HttpClientErrorException e) {
+            log.error("❌ Error HTTP {}: {}", e.getStatusCode(), e.getMessage());
+            throw new ExternalServiceException("WhatsApp Cloud API", e.getMessage(), e);
+
         } catch (RestClientException e) {
             log.error("❌ Error de comunicación al enviar mensaje WhatsApp a {}: {}", normalizedNumber, e.getMessage(), e);
-
-            // Extraer información adicional del error si es posible
-            String errorDetails = e.getMessage();
-            if (e.getMessage() != null && e.getMessage().contains("131030")) {
-                log.error("🔍 Error 131030: El número {} no está en la lista de destinatarios permitidos. Verifica en Meta Developers -> API Setup -> Agregar número de destinatario", normalizedNumber);
-            }
-
-            throw new ExternalServiceException(
-                    "WhatsApp Cloud API",
-                    "Error de comunicación con WhatsApp: " + e.getMessage(),
-                    e
-            );
+            throw new ExternalServiceException("WhatsApp Cloud API", "Error de comunicación con WhatsApp: " + e.getMessage(), e);
         }
     }
 
@@ -147,7 +132,7 @@ public class WhatsAppService {
      * Envía un mensaje de texto con plantilla (mensaje predefinido)
      */
     public String sendTemplateMessage(String toPhoneNumber, String templateName, Map<String, String> variables) {
-        String normalizedNumber = normalizePhoneNumber(toPhoneNumber);
+        String normalizedNumber = phoneNormalizer.normalize(toPhoneNumber);
 
         if (!isConfigured()) {
             log.warn("⚠️ WhatsApp no está configurado. Plantilla no enviada: {}", templateName);
@@ -163,7 +148,6 @@ public class WhatsAppService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> requestBody = buildTemplateMessageBody(normalizedNumber, templateName, variables);
-
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
@@ -185,13 +169,13 @@ public class WhatsAppService {
                 );
             }
 
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.error("🔑 Token expirado o inválido");
+            throw new TokenExpiredException("WhatsApp Cloud API");
+
         } catch (RestClientException e) {
             log.error("❌ Error al enviar plantilla WhatsApp: {}", e.getMessage(), e);
-            throw new ExternalServiceException(
-                    "WhatsApp Cloud API",
-                    "Error de comunicación con WhatsApp: " + e.getMessage(),
-                    e
-            );
+            throw new ExternalServiceException("WhatsApp Cloud API", e.getMessage(), e);
         }
     }
 
@@ -213,8 +197,8 @@ public class WhatsAppService {
             List<Map<String, Object>> components = List.of(
                     Map.of(
                             "type", "body",
-                            "parameters", variables.entrySet().stream()
-                                    .map(entry -> Map.of("type", "text", "text", entry.getValue()))
+                            "parameters", variables.values().stream()
+                                    .map(s -> Map.of("type", "text", "text", s))
                                     .toList()
                     )
             );

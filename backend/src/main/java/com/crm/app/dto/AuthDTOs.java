@@ -31,8 +31,56 @@ public class AuthDTOs {
             @Schema(description = "Rol del usuario", example = "ADMIN")
             String role,
 
-            @Schema(description = "Nombre del usuario", example = "Manuel Manrique")
+            @Schema(description = "Nombre del usuario", example = "Administrador")
             String name
+    ) {}
+
+    @Schema(description = "Respuesta de logout")
+    public record LogoutResponse(
+            @Schema(description = "Mensaje de confirmación", example = "Logout exitoso")
+            String message,
+
+            @Schema(description = "Timestamp del logout", example = "2024-01-01T00:00:00")
+            String timestamp
+    ) {}
+
+    @Schema(description = "Respuesta de validación de token")
+    public record TokenValidationResponse(
+            @Schema(description = "Token válido", example = "true")
+            boolean valid,
+
+            @Schema(description = "Email del usuario", example = "admin@crm.com")
+            String email,
+
+            @Schema(description = "Rol del usuario", example = "ADMIN")
+            String role,
+
+            @Schema(description = "Nombre del usuario", example = "Administrador")
+            String name
+    ) {}
+
+    @Schema(description = "Información de perfil de usuario")
+    public record UserProfileResponse(
+            @Schema(description = "ID del usuario", example = "1")
+            Long id,
+
+            @Schema(description = "Nombre del usuario", example = "Administrador")
+            String name,
+
+            @Schema(description = "Email del usuario", example = "admin@crm.com")
+            String email,
+
+            @Schema(description = "Rol del usuario", example = "ADMIN")
+            String role,
+
+            @Schema(description = "Estado activo", example = "true")
+            boolean isActive,
+
+            @Schema(description = "Fecha de creación", example = "2024-01-01T00:00:00")
+            String createdAt,
+
+            @Schema(description = "Fecha de última actualización", example = "2024-01-01T00:00:00")
+            String updatedAt
     ) {}
 
     @Schema(description = "Credenciales de usuario precargado para el selectbox")
