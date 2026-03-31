@@ -17,9 +17,8 @@ export const RegisterMutationsService = () => {
       setUserData({
         id: _res.user.id,
         name: _res.user.name,
-        lastName: _res.user.lastName,
         email: _res.user.email,
-        rol: _res.user.rol,
+        role: _res.user.rol,
         token: _res.access_token,
       });
        navigate(ROUTES.DASHBOARD);

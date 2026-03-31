@@ -20,9 +20,8 @@ export const useUserStore = create<UserState>()(
     (set) => ({
       id: "",
       name: "",
-      lastname: "",
       email: "",
-      rol: undefined,
+      role: undefined,
       hasHydrated: false,
 
  
@@ -59,9 +58,8 @@ export const useUserStore = create<UserState>()(
         set({
           id: "",
           name: "",
-          lastName: "",
           email: "",
-          rol: undefined,
+          role: undefined,
         }),
         
 

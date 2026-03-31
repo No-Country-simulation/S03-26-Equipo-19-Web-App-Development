@@ -1,20 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type User = {
+/* type User = {
   id: string;
   name: string;
-};
+}; */
 
 type AuthState = {
-  user: User | null;
+/*   user: User | null; */
   token: string | null;
   isAuthenticated: boolean;
 
   loading: boolean;
   error: string | null;
 
-  login: (user: User, token: string) => Promise<void>;
+  login: (/* user: User,  */token: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -28,14 +28,14 @@ export const useAuthStore = create<AuthState>()(
       loading: false,
       error: null,
 
-      login: async (user, token) => {
+      login: async (/* user, */ token) => {
         try {
           set({ loading: true, error: null });
 
           await new Promise((res) => setTimeout(res, 500));
 
           set({
-            user,
+           /*  user, */
             token,
             isAuthenticated: true,
             loading: false,
@@ -50,7 +50,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () =>
         set({
-          user: null,
+         /*  user: null, */
           token: null,
           isAuthenticated: false,
         }),
@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({
-        user: state.user,
+      /*   user: state.user, */
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),

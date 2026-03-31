@@ -15,13 +15,14 @@ export const LoginMutationsService = () => {
     },
     onSuccess: function Exito(_res) {
       setUserData({
-        id: _res.user.id,
-        name: _res.user.name,
-        lastName: _res.user.lastName,
-        email: _res.user.email,
-        rol: _res.user.rol,
-        token: _res.access_token,
+      /*   id: _res.user.id,
+        name: _res.user.name, */
+        email: _res.email,
+        role: _res.role,
+        token: _res.token,
       });
+      console.log("Login executionAsyncResource, deberia redirigir");
+      
       navigate(ROUTES.DASHBOARD);
     },
     onError: (error: any) => {

@@ -5,7 +5,6 @@ export interface LoginType{
 
 export interface RegisterType{
     name: string,
-    lastName: string,
     email: string,
     password: string,
     confirmPass?: string
