@@ -12,9 +12,10 @@ export const registerformSchema = z
       .string()
       .min(6, { message: "La contraseña debe tener al menos 6 caracteres" })
       .max(10, { message: "La contraseña no puede superar los 10 caracteres" })
-      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,10}$/, {
-        message: "La contraseña debe incluir mayúsculas, minúsculas y números",
-      }),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,10}$/, {
+      message:
+        "La contraseña debe incluir mayúsculas, minúsculas, números y un carácter especial",
+    }),
     confirmPass: z.string({
       message: "Debe confirmar la contraseña",
     }),

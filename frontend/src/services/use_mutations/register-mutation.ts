@@ -1,25 +1,26 @@
 import { useMutation } from "@tanstack/react-query";
-import { useUserStore } from "../../store/useUserStore";
+
 import { useNavigate } from "react-router-dom";
 import type { RegisterType } from "../../types/auth.types";
 import { postRegister } from "../use_cases/register-service";
 import { ROUTES } from "../../constants/routes";
+import { useAuthStore } from "../../store/useAuthStore";
 
 export const RegisterMutationsService = () => {
  const navigate = useNavigate()
-  const setUserData = useUserStore((state) => state.setUserData);
+  const userData = useAuthStore((state) => state.login);
 
   const mutationPostRegister = useMutation({
     mutationFn: (data: RegisterType) => {
       return postRegister(data);
     },
     onSuccess: function Exito(_res) {
-      setUserData({
-        id: _res.user.id,
-        name: _res.user.name,
-        email: _res.user.email,
-        role: _res.user.rol,
-        token: _res.access_token,
+      userData({
+        id: _res.id,
+        name: _res.name,
+        email: _res.email,
+        role: _res.role,
+        token: _res.token,
       });
        navigate(ROUTES.DASHBOARD);
     },
