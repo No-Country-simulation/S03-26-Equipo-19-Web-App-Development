@@ -2,6 +2,7 @@ package com.crm.app.model;
 
 import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.ConversationStatus;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,6 +31,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Conversation {
 
     @Id

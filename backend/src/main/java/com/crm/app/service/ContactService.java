@@ -9,6 +9,7 @@ import com.crm.app.model.enums.FunnelStatus;
 import com.crm.app.model.enums.Role;
 import com.crm.app.repository.ContactRepository;
 import com.crm.app.repository.UserRepository;
+import com.crm.app.util.PhoneNumberNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,54 +25,11 @@ public class ContactService {
 
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
+    private final PhoneNumberNormalizer phoneNormalizer;
 
     /**
-     * Normaliza un número de teléfono al formato que espera WhatsApp.
-     *
-     * Reglas:
-     * - Elimina todo excepto dígitos
-     * - Para Argentina: convierte 549XXXXXXXXX -> 54XXXXXXXXXX (elimina el 9)
-     *
-     * Ejemplos:
-     * - +5491122540454 -> 541122540454
-     * - 5491122540454 -> 541122540454
-     * - 54991122540454 -> 541122540454
-     * - 541122540454 -> 541122540454 (se mantiene)
+     * Crea un nuevo contacto
      */
-    private String normalizePhoneNumber(String phone) {
-        if (phone == null || phone.isBlank()) return null;
-
-        // Eliminar todo excepto dígitos
-        String digitsOnly = phone.replaceAll("[^0-9]", "");
-
-        log.info("📞 Normalizando teléfono: original={}, soloDigitos={}", phone, digitsOnly);
-
-        // Si el número es argentino (código 54)
-        if (digitsOnly.startsWith("54")) {
-            // Caso: 549XXXXXXXXX (13 dígitos) -> eliminar el 9 después del 54
-            if (digitsOnly.length() == 13 && digitsOnly.startsWith("549")) {
-                String normalized = "54" + digitsOnly.substring(3);
-                log.info("✅ Argentina (13 dígitos con 9): {} -> {}", digitsOnly, normalized);
-                return normalized;
-            }
-            // Caso: 5499XXXXXXXXX (14 dígitos con 9 extra)
-            if (digitsOnly.length() == 14 && digitsOnly.startsWith("5499")) {
-                String normalized = "54" + digitsOnly.substring(4);
-                log.info("✅ Argentina (14 dígitos con 9 extra): {} -> {}", digitsOnly, normalized);
-                return normalized;
-            }
-            // Caso: 54XXXXXXXXXX (12 dígitos, ya correcto)
-            if (digitsOnly.length() == 12) {
-                log.info("✅ Argentina (formato correcto): {}", digitsOnly);
-                return digitsOnly;
-            }
-        }
-
-        // Para otros países o formatos, devolver solo dígitos
-        log.info("✅ Número normalizado (sin cambios específicos): {}", digitsOnly);
-        return digitsOnly;
-    }
-
     public Contact createContact(ContactDTOs.CreateContactRequest request, User currentUser) {
         ContactDTOs.ContactBase contactBase = request.contact();
 
@@ -88,25 +46,20 @@ public class ContactService {
             throw new UnauthorizedAccessException("Los vendedores no pueden asignar contactos a otros usuarios");
         }
 
-        User owner;
-        if (currentUser.getRole() == Role.ADMIN && request.ownerId() != null) {
-            owner = userRepository.findById(request.ownerId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Usuario", request.ownerId()));
-            if (owner.getRole() != Role.SALESPERSON) {
-                throw new BusinessRuleViolationException(
-                        "Asignación de contacto",
-                        "Solo se pueden asignar contactos a vendedores. El usuario " + owner.getEmail() + " es " + owner.getRole()
-                );
+        // Resolver el owner del contacto
+        User owner = resolveOwner(request, currentUser);
+
+        // Normalizar el teléfono
+        String normalizedPhone = null;
+        if (contactBase.phone() != null) {
+            try {
+                normalizedPhone = phoneNormalizer.normalize(contactBase.phone());
+                log.info("📞 Creando contacto: teléfono original={}, normalizado={}", contactBase.phone(), normalizedPhone);
+            } catch (InvalidPhoneNumberException e) {
+                log.warn("📞 Número inválido al crear contacto: {}", e.getMessage());
+                throw e;
             }
-        } else {
-            owner = currentUser;
         }
-
-        // ✅ FORZAR normalización del teléfono
-        String originalPhone = contactBase.phone();
-        String normalizedPhone = normalizePhoneNumber(originalPhone);
-
-        log.info("📞 Creando contacto: teléfono original={}, normalizado={}", originalPhone, normalizedPhone);
 
         // Validar duplicados con el número normalizado
         if (normalizedPhone != null && contactRepository.existsByPhoneAndOwner(normalizedPhone, owner)) {
@@ -118,11 +71,12 @@ public class ContactService {
             throw new DuplicateResourceException("contacto", "email", contactBase.email());
         }
 
+        // Construir el contacto
         Contact contact = Contact.builder()
                 .name(contactBase.name())
                 .lastName(contactBase.lastName())
                 .email(contactBase.email())
-                .phone(normalizedPhone)  // ✅ Guardar número normalizado
+                .phone(normalizedPhone)
                 .company(contactBase.company())
                 .source(request.source() != null ? request.source() : "manual")
                 .preferredChannel(request.preferredChannel())
@@ -130,29 +84,63 @@ public class ContactService {
                 .owner(owner)
                 .build();
 
-        String displayName = buildDisplayName(contact);
-        log.info("✅ Contacto guardado: {} - Teléfono en BD: {}", displayName, normalizedPhone);
-        return contactRepository.save(contact);
+        try {
+            Contact saved = contactRepository.save(contact);
+            String displayName = buildDisplayName(saved);
+            log.info("✅ Contacto creado: ID={}, Nombre={}, Teléfono={}", saved.getId(), displayName, saved.getPhone());
+            return saved;
+        } catch (Exception e) {
+            log.error("❌ Error al guardar contacto: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar el contacto en la base de datos", e);
+        }
     }
 
+    /**
+     * Resuelve el owner del contacto (Admin puede asignar, Vendedor se asigna a sí mismo)
+     */
+    private User resolveOwner(ContactDTOs.CreateContactRequest request, User currentUser) {
+        if (currentUser.getRole() == Role.ADMIN && request.ownerId() != null) {
+            User owner = userRepository.findById(request.ownerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario", request.ownerId()));
+            if (owner.getRole() != Role.SALESPERSON) {
+                throw new BusinessRuleViolationException(
+                        "Asignación de contacto",
+                        "Solo se pueden asignar contactos a vendedores. El usuario " + owner.getEmail() + " es " + owner.getRole()
+                );
+            }
+            log.info("📌 Admin asignando contacto al vendedor: {}", owner.getEmail());
+            return owner;
+        }
+        return currentUser;
+    }
+
+    /**
+     * Busca un contacto por ID con validación de acceso según el rol
+     */
     public Contact findByIdAndCheckAccess(Long id, User currentUser) {
         if (currentUser.getRole() == Role.ADMIN) {
             return contactRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Contacto", id));
-        } else {
-            return contactRepository.findByIdAndOwner(id, currentUser)
-                    .orElseThrow(() -> new UnauthorizedAccessException("contacto", id));
         }
+        return contactRepository.findByIdAndOwner(id, currentUser)
+                .orElseThrow(() -> new UnauthorizedAccessException("contacto", id));
     }
 
+    /**
+     * Obtiene todos los contactos del usuario actual (Admin ve todos, Vendedor solo los suyos)
+     */
     public List<Contact> getMyContacts(User currentUser) {
         if (currentUser.getRole() == Role.ADMIN) {
+            log.info("📋 Admin obteniendo todos los contactos");
             return contactRepository.findAll();
-        } else {
-            return contactRepository.findByOwner(currentUser);
         }
+        log.info("📋 Vendedor {} obteniendo sus contactos", currentUser.getEmail());
+        return contactRepository.findByOwner(currentUser);
     }
 
+    /**
+     * Actualiza un contacto existente
+     */
     public Contact updateContact(Long id, ContactDTOs.CreateContactRequest request, User currentUser) {
         Contact contact = findByIdAndCheckAccess(id, currentUser);
         ContactDTOs.ContactBase contactBase = request.contact();
@@ -163,37 +151,60 @@ public class ContactService {
                 throw new DuplicateResourceException("contacto", "email", contactBase.email());
             }
             contact.setEmail(contactBase.email());
+            log.info("📧 Email actualizado: {}", contactBase.email());
         }
 
-        // ✅ Normalizar y validar duplicados si se actualiza teléfono
-        String originalPhone = contactBase.phone();
-        String normalizedPhone = normalizePhoneNumber(originalPhone);
-
-        if (normalizedPhone != null && !normalizedPhone.equals(contact.getPhone())) {
-            if (contactRepository.existsByPhoneAndOwner(normalizedPhone, contact.getOwner())) {
-                throw new DuplicateResourceException("contacto", "teléfono", normalizedPhone);
+        // Normalizar y validar duplicados si se actualiza teléfono
+        if (contactBase.phone() != null) {
+            String normalizedPhone = phoneNormalizer.normalize(contactBase.phone());
+            if (!normalizedPhone.equals(contact.getPhone())) {
+                if (contactRepository.existsByPhoneAndOwner(normalizedPhone, contact.getOwner())) {
+                    throw new DuplicateResourceException("contacto", "teléfono", normalizedPhone);
+                }
+                contact.setPhone(normalizedPhone);
+                log.info("📞 Teléfono actualizado: {}", normalizedPhone);
             }
-            contact.setPhone(normalizedPhone);
-            log.info("📞 Teléfono actualizado: original={}, normalizado={}", originalPhone, normalizedPhone);
         }
 
+        // Actualizar otros campos
         if (contactBase.name() != null) contact.setName(contactBase.name());
         if (contactBase.lastName() != null) contact.setLastName(contactBase.lastName());
         if (contactBase.company() != null) contact.setCompany(contactBase.company());
         if (request.source() != null) contact.setSource(request.source());
         if (request.preferredChannel() != null) contact.setPreferredChannel(request.preferredChannel());
 
-        String displayName = buildDisplayName(contact);
-        log.info("Contacto actualizado: id={}, name={}", id, displayName);
-        return contactRepository.save(contact);
+        try {
+            Contact updated = contactRepository.save(contact);
+            String displayName = buildDisplayName(updated);
+            log.info("✅ Contacto actualizado: ID={}, Nombre={}", updated.getId(), displayName);
+            return updated;
+        } catch (Exception e) {
+            log.error("❌ Error al actualizar contacto: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al actualizar el contacto", e);
+        }
     }
 
+    /**
+     * Verifica si el usuario es dueño del contacto o es ADMIN
+     */
+    public boolean isOwner(Long contactId, User currentUser) {
+        if (currentUser == null) return false;
+        if (currentUser.getRole() == Role.ADMIN) return true;
+
+        return contactRepository.findById(contactId)
+                .map(contact -> contact.getOwner().getId().equals(currentUser.getId()))
+                .orElse(false);
+    }
+
+    /**
+     * Actualiza el estado del funnel de un contacto
+     */
     public Contact updateFunnelStatus(Long id, FunnelStatus newStatus, User currentUser) {
         Contact contact = findByIdAndCheckAccess(id, currentUser);
         FunnelStatus oldStatus = contact.getFunnelStatus();
         contact.setFunnelStatus(newStatus);
 
-        log.info("Contacto {} cambió estado: {} -> {}", id, oldStatus, newStatus);
+        log.info("🔄 Contacto {} cambió estado: {} -> {}", id, oldStatus, newStatus);
         return contactRepository.save(contact);
     }
 
@@ -208,16 +219,17 @@ public class ContactService {
             );
         }
 
-        String source;
+        String source = channel == Channel.WHATSAPP ? "whatsapp_inbound" : "email_inbound";
         String cleanIdentifier = identifier;
 
         if (channel == Channel.WHATSAPP) {
-            source = "whatsapp_inbound";
-            // ✅ FORZAR normalización del número del webhook
-            cleanIdentifier = normalizePhoneNumber(identifier);
-            log.info("📱 Webhook WhatsApp: original={}, normalizado={}", identifier, cleanIdentifier);
-        } else {
-            source = "email_inbound";
+            try {
+                cleanIdentifier = phoneNormalizer.normalize(identifier);
+                log.info("📱 Webhook WhatsApp: original={}, normalizado={}", identifier, cleanIdentifier);
+            } catch (InvalidPhoneNumberException e) {
+                log.warn("⚠️ Número inválido en webhook: {}", e.getMessage());
+                // Continuamos con el identificador original, pero se guardará como está
+            }
         }
 
         Contact contact = Contact.builder()
@@ -232,9 +244,15 @@ public class ContactService {
                 .owner(defaultOwner)
                 .build();
 
-        log.info("✅ Contacto creado desde webhook: {} - Teléfono en BD: {}", identifier, cleanIdentifier);
-
-        return contactRepository.save(contact);
+        try {
+            Contact saved = contactRepository.save(contact);
+            log.info("✅ Contacto creado desde webhook: ID={}, Canal={}, Identificador={}",
+                    saved.getId(), channel, identifier);
+            return saved;
+        } catch (Exception e) {
+            log.error("❌ Error al guardar contacto desde webhook: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar el contacto desde webhook", e);
+        }
     }
 
     /**
@@ -242,13 +260,17 @@ public class ContactService {
      */
     public Contact findByExternalId(String externalId, Channel channel) {
         if (channel == Channel.WHATSAPP) {
-            // ✅ Normalizar el número antes de buscar
-            String normalizedPhone = normalizePhoneNumber(externalId);
-            log.info("🔍 Buscando contacto por teléfono: original={}, normalizado={}", externalId, normalizedPhone);
-            return contactRepository.findByPhone(normalizedPhone).orElse(null);
-        } else {
-            return contactRepository.findByEmail(externalId).orElse(null);
+            try {
+                String normalizedPhone = phoneNormalizer.normalize(externalId);
+                log.debug("🔍 Buscando contacto por teléfono: original={}, normalizado={}", externalId, normalizedPhone);
+                return contactRepository.findByPhone(normalizedPhone).orElse(null);
+            } catch (InvalidPhoneNumberException e) {
+                log.warn("⚠️ Número inválido al buscar: {}", e.getMessage());
+                return contactRepository.findByPhone(externalId).orElse(null);
+            }
         }
+        log.debug("🔍 Buscando contacto por email: {}", externalId);
+        return contactRepository.findByEmail(externalId).orElse(null);
     }
 
     /**
@@ -271,15 +293,46 @@ public class ContactService {
     private String buildDisplayName(Contact contact) {
         if (contact.getName() != null && contact.getLastName() != null) {
             return contact.getName() + " " + contact.getLastName();
-        } else if (contact.getName() != null) {
+        }
+        if (contact.getName() != null) {
             return contact.getName();
-        } else if (contact.getLastName() != null) {
+        }
+        if (contact.getLastName() != null) {
             return contact.getLastName();
-        } else if (contact.getEmail() != null) {
+        }
+        if (contact.getEmail() != null) {
             return contact.getEmail();
-        } else if (contact.getPhone() != null) {
+        }
+        if (contact.getPhone() != null) {
             return contact.getPhone();
         }
         return "Sin identificar";
+    }
+
+    public Contact reassignContact(Long id, Long newOwnerId, User currentUser) {
+
+        if (currentUser.getRole() != Role.ADMIN) {
+            throw new UnauthorizedAccessException("Solo el Administrador puede reasignar contactos");
+        }
+
+        Contact contact = contactRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contacto", id));
+
+        User newOwner = userRepository.findById(newOwnerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", newOwnerId));
+
+        if (newOwner.getRole() != Role.SALESPERSON) {
+            throw new BusinessRuleViolationException(
+                    "Reasignación de contacto",
+                    "Solo se pueden asignar contactos a vendedores. El usuario " + newOwner.getEmail() + " es " + newOwner.getRole()
+            );
+        }
+
+        log.info("📌 Admin {} reasignando contacto ID={} de {} a {}",
+                currentUser.getEmail(), id, contact.getOwner().getEmail(), newOwner.getEmail());
+
+        contact.setOwner(newOwner);
+
+        return contactRepository.save(contact);
     }
 }
