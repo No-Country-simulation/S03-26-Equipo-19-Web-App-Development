@@ -19,7 +19,7 @@ import java.util.Map;
 public class EmailService {
 
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${brevo.api.url:https://api.brevo.com/v3}")
     private String apiUrl;
@@ -35,30 +35,53 @@ public class EmailService {
 
     public EmailService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
-        this.objectMapper = new ObjectMapper();
     }
 
-    /**
-     * Envía un email simple
-     */
+    // ==================== PUBLIC METHODS ====================
+
     public String sendMessage(String toEmail, String message, String recipientName) {
-        if (!isConfigured()) {
-            log.warn("Brevo no está configurado. Email no enviado: para={}, mensaje={}", toEmail, message);
-            // Para desarrollo, simular envío
-            return "simulated-" + System.currentTimeMillis();
+        return send(toEmail, message, recipientName, null);
+    }
+
+    public String sendMessageWithSubject(String toEmail, String message, String recipientName, String subject) {
+        return send(toEmail, message, recipientName, subject);
+    }
+
+    public String sendTemplateMessage(String toEmail, Long templateId, Map<String, String> params, String recipientName) {
+        if (!isConfigured()) return simulate(toEmail, "template");
+
+        log.info("📧 Enviando template a: {}", toEmail);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("to", List.of(Map.of("email", toEmail, "name", safe(recipientName))));
+        body.put("templateId", templateId);
+
+        if (params != null && !params.isEmpty()) {
+            body.put("params", params);
         }
+
+        return executeRequest(body, "template");
+    }
+
+    // ==================== CORE ====================
+
+    private String send(String toEmail, String message, String recipientName, String subject) {
+        if (!isConfigured()) return simulate(toEmail, "email");
 
         log.info("📧 Enviando email a: {}", toEmail);
 
+        Map<String, Object> body = buildEmailBody(toEmail, message, recipientName, subject);
+        return executeRequest(body, "email");
+    }
+
+    private String executeRequest(Map<String, Object> body, String type) {
         String url = apiUrl + "/smtp/email";
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("api-key", apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Map<String, Object> requestBody = buildEmailBody(toEmail, message, recipientName, null);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -69,188 +92,61 @@ public class EmailService {
             );
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                String messageId = extractMessageId(response.getBody());
-                log.info("✅ Email enviado exitosamente. providerId: {}", messageId);
-                return messageId;
-            } else {
-                throw new ExternalServiceException(
-                        "Brevo",
-                        "Error al enviar email. Status: " + response.getStatusCode()
-                );
+                String id = extractMessageId(response.getBody());
+                log.info("✅ {} enviado. id={}", type, id);
+                return id;
             }
 
+            throw new ExternalServiceException("Brevo", "Error HTTP: " + response.getStatusCode());
+
         } catch (RestClientException e) {
-            log.error("❌ Error al enviar email: {}", e.getMessage(), e);
-            throw new ExternalServiceException(
-                    "Brevo",
-                    "Error de comunicación con Brevo: " + e.getMessage(),
-                    e
-            );
+            log.error("❌ Error Brevo", e);
+            throw new ExternalServiceException("Brevo", e.getMessage(), e);
         }
     }
 
-    /**
-     * Envía un email con asunto personalizado
-     */
-    public String sendMessageWithSubject(String toEmail, String message, String recipientName, String subject) {
-        if (!isConfigured()) {
-            log.warn("Brevo no está configurado. Email no enviado: para={}", toEmail);
-            return "simulated-" + System.currentTimeMillis();
-        }
-
-        log.info("📧 Enviando email con asunto a: {}", toEmail);
-
-        String url = apiUrl + "/smtp/email";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("api-key", apiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        Map<String, Object> requestBody = buildEmailBody(toEmail, message, recipientName, subject);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                String messageId = extractMessageId(response.getBody());
-                log.info("✅ Email con asunto enviado exitosamente. providerId: {}", messageId);
-                return messageId;
-            } else {
-                throw new ExternalServiceException(
-                        "Brevo",
-                        "Error al enviar email. Status: " + response.getStatusCode()
-                );
-            }
-
-        } catch (RestClientException e) {
-            log.error("❌ Error al enviar email: {}", e.getMessage(), e);
-            throw new ExternalServiceException(
-                    "Brevo",
-                    "Error de comunicación con Brevo: " + e.getMessage(),
-                    e
-            );
-        }
+    private String simulate(String toEmail, String type) {
+        log.warn("Brevo no configurado. {} simulado para: {}", type, toEmail);
+        return "simulated-" + System.currentTimeMillis();
     }
 
-    /**
-     * Envía un email usando una plantilla de Brevo
-     */
-    public String sendTemplateMessage(String toEmail, Long templateId, Map<String, String> params, String recipientName) {
-        if (!isConfigured()) {
-            log.warn("Brevo no está configurado. Email con plantilla no enviado");
-            return "simulated-" + System.currentTimeMillis();
-        }
+    // ==================== BUILDERS ====================
 
-        log.info("📧 Enviando email con plantilla a: {}, templateId: {}", toEmail, templateId);
-
-        String url = apiUrl + "/smtp/email";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("api-key", apiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("to", List.of(Map.of("email", toEmail, "name", recipientName != null ? recipientName : "")));
-        requestBody.put("templateId", templateId);
-
-        if (params != null && !params.isEmpty()) {
-            requestBody.put("params", params);
-        }
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                String messageId = extractMessageId(response.getBody());
-                log.info("✅ Email con plantilla enviado exitosamente. providerId: {}", messageId);
-                return messageId;
-            } else {
-                throw new ExternalServiceException(
-                        "Brevo",
-                        "Error al enviar email con plantilla. Status: " + response.getStatusCode()
-                );
-            }
-
-        } catch (RestClientException e) {
-            log.error("❌ Error al enviar email con plantilla: {}", e.getMessage(), e);
-            throw new ExternalServiceException(
-                    "Brevo",
-                    "Error de comunicación con Brevo: " + e.getMessage(),
-                    e
-            );
-        }
-    }
-
-    /**
-     * Construye el cuerpo del email
-     */
     private Map<String, Object> buildEmailBody(String toEmail, String message, String recipientName, String subject) {
         Map<String, Object> body = new HashMap<>();
 
-        // Remitente
         body.put("sender", Map.of("email", senderEmail, "name", senderName));
-
-        // Destinatario
-        body.put("to", List.of(Map.of("email", toEmail, "name", recipientName != null ? recipientName : "")));
-
-        // Asunto
-        String finalSubject = subject != null ? subject : "Nuevo mensaje de tu equipo de ventas";
-        body.put("subject", finalSubject);
-
-        // Contenido HTML
-        String htmlContent = buildHtmlMessage(message, recipientName);
-        body.put("htmlContent", htmlContent);
-
-        // Contenido texto plano (fallback)
+        body.put("to", List.of(Map.of("email", toEmail, "name", safe(recipientName))));
+        body.put("subject", subject != null ? subject : "Nuevo mensaje de tu equipo de ventas");
+        body.put("htmlContent", buildHtml(message, recipientName));
         body.put("textContent", message);
 
         return body;
     }
 
-    /**
-     * Construye el mensaje HTML con formato
-     */
-    private String buildHtmlMessage(String message, String recipientName) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>");
-        html.append("<html>");
-        html.append("<head><meta charset='UTF-8'></head>");
-        html.append("<body style='font-family: Arial, sans-serif; padding: 20px;'>");
-
-        if (recipientName != null && !recipientName.isEmpty()) {
-            html.append("<p>Hola <strong>").append(escapeHtml(recipientName)).append("</strong>,</p>");
-        } else {
-            html.append("<p>Hola,</p>");
-        }
-
-        html.append("<p>").append(escapeHtml(message).replace("\n", "<br>")).append("</p>");
-        html.append("<br>");
-        html.append("<p>Saludos cordiales,<br>");
-        html.append("<strong>").append(escapeHtml(senderName)).append("</strong></p>");
-        html.append("</body>");
-        html.append("</html>");
-
-        return html.toString();
+    private String buildHtml(String message, String recipientName) {
+        return "<!DOCTYPE html>" +
+                "<html><head><meta charset='UTF-8'></head>" +
+                "<body style='font-family: Arial; padding:20px;'>" +
+                "<p>Hola " + (hasText(recipientName) ? "<strong>" + escape(recipientName) + "</strong>" : "") + ",</p>" +
+                "<p>" + escape(message).replace("\n", "<br>") + "</p>" +
+                "<br><p>Saludos,<br><strong>" + escape(senderName) + "</strong></p>" +
+                "</body></html>";
     }
 
-    /**
-     * Escapa caracteres HTML para seguridad
-     */
-    private String escapeHtml(String text) {
+    // ==================== HELPERS ====================
+
+    private String extractMessageId(String body) {
+        try {
+            JsonNode node = objectMapper.readTree(body);
+            return node.has("messageId") ? node.get("messageId").asText() : null;
+        } catch (Exception e) {
+            log.warn("No se pudo parsear messageId");
+            return null;
+        }
+    }
+
+    private String escape(String text) {
         if (text == null) return "";
         return text
                 .replace("&", "&amp;")
@@ -260,27 +156,15 @@ public class EmailService {
                 .replace("'", "&#39;");
     }
 
-    /**
-     * Extrae el messageId de la respuesta de Brevo
-     */
-    private String extractMessageId(String responseBody) {
-        try {
-            JsonNode root = objectMapper.readTree(responseBody);
-            JsonNode messageId = root.get("messageId");
-            if (messageId != null) {
-                return messageId.asText();
-            }
-        } catch (Exception e) {
-            log.warn("No se pudo extraer messageId de la respuesta: {}", e.getMessage());
-        }
-        return null;
+    private boolean hasText(String text) {
+        return text != null && !text.isBlank();
     }
 
-    /**
-     * Verifica si la configuración de Brevo está completa
-     */
+    private String safe(String text) {
+        return text != null ? text : "";
+    }
+
     public boolean isConfigured() {
-        return apiKey != null && !apiKey.isEmpty()
-                && senderEmail != null && !senderEmail.isEmpty();
+        return hasText(apiKey) && hasText(senderEmail);
     }
 }
