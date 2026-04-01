@@ -7,6 +7,8 @@ export const ROUTES = {
   CONTACTS: 'contacts',
   MESSAGES: 'messages',
   METRICS: 'metrics',
+  SETTINGS: 'settings',
+  TASKS: 'tasks',
 
   HOME: '/',
 } as const;
@@ -29,14 +31,10 @@ export const API_ENDPOINTS = {
     LOGIN: '/api/auth/login',
     REGISTER: '/api/auth/register',
   },
-  USERS: {
+  USERS: {    // Agregar endpoints reales
     BASE: '/api/users',
     byId: (id: string | number) => `/api/users/${id}`,
   },
  
 } as const;
 
-export const STORAGE_KEYS = {
-  USER: 'example_user',
-  TOKEN: 'example_token',
-} as const;

@@ -1,8 +1,7 @@
 import axios from "axios";
 
 export const apiAuthService = axios.create({
-   /*  baseURL: `${import.meta.env.VITE_URL_BASE}/auth` */
-    baseURL: `https://crm-cross-industry.onrender.com/api/v1/auth`
+    baseURL: `${import.meta.env.VITE_URL_BASE}/auth`
 })
 
 export const apiContactsService = axios.create({

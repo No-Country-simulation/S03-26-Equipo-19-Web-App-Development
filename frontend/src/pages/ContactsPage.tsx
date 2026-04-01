@@ -32,7 +32,7 @@ export const ContactsPage = () => {
   }, [contacts, search, stage, channel]);
 
   return (
-    <div>
+    <DashboardLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-white text-2xl font-bold">Contactos</h1>
         <Button onClick={() => setModalOpen(true)}>+ Nuevo contacto</Button>
@@ -110,6 +110,6 @@ export const ContactsPage = () => {
           onCancel={() => setModalOpen(false)}
         />
       </Modal>
-    </div>
+    </DashboardLayout>
   );
 };
