@@ -8,10 +8,10 @@ import ProtectedRoute from "./ProtectedRoute";
 import Register from "../pages/Register";
 import { DashboardPage } from "../pages/DashboardPage";
 import { ContactsPage } from "../pages/ContactsPage";
-import { Home } from "lucide-react";
 import { MessagesPage } from "../pages/MessagesPage";
 import { MetricsPage } from "../pages/MetricsPage";
 import { useAuthStore } from "../store/useAuthStore";
+import Home from "../components/dashboard/Home";
 
 
 
