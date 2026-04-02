@@ -1,76 +1,104 @@
-import { User, Trash2 } from 'lucide-react';
+import { SlidersHorizontal, Eye, UserRoundPen } from 'lucide-react';
+import { getInitials } from '../../utils/getInitials';
+import { useGetContacts } from '../../services/use_queries/contacts-query';
+import { timeAgo } from '../../utils/timeAgo';
+import type { ContactResType } from '../../types/contact.types';
 
-// Datos de prueba (mock data) basados en la imagen
-const contactsData = [
-  {
-    id: 1,
-    name: 'Jorge R. Konner',
-    company: 'Companies, Inc.',
-    status: '#1E3A8A',
-    lastActive: '2 days ago',
-    badgeColor: 'bg-[#13316b] text-white',
-  },
-  {
-    id: 2,
-    name: 'Sara M. Righn',
-    company: 'Company',
-    status: '#38BDF8',
-    lastActive: '2 min ago',
-    badgeColor: 'bg-[#38bdf8] text-white',
-  },
-  {
-    id: 3,
-    name: 'Alex P. Borman',
-    company: 'CoreCRM',
-    status: 'Awaiting',
-    lastActive: '2 May 2023',
-    badgeColor: 'bg-slate-100 text-slate-500', // Estado neutral
-  },
-];
+
+  
+const getFunnelStatusColor = (status: string) => {
+  switch (status) {
+    case 'NEW_LEAD': return 'bg-accent';
+    case 'CONTACTED': return 'bg-secondary ';
+    case 'IN_NEGOTIATION': return 'bg-primary';
+    case 'PROPOSAL_SENT': return 'bg-primary/70';
+    case 'CLOSED_WON': return 'bg-success';
+    case 'CLOSED_LOST': return 'bg-error';
+    default: return 'bg-neutro-3';
+  }
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'NEW_LEAD': return 'Nuevo';
+    case 'CONTACTED': return 'Contactado';
+    case 'IN_NEGOTIATION': return 'En negociación';
+    case 'PROPOSAL_SENT': return 'Propuesta enviada';
+    case 'CLOSED_WON': return 'Ganado';
+    case 'CLOSED_LOST': return 'Perdido';
+    default: return status;
+  }
+};
 
 export const ContactsTable = () => {
+  
+  const { data: contactsData, isLoading } = useGetContacts();
+
+  if (isLoading) return <div className="flex items-center justify-center">
+    <p className="text-lg font-medium text-primary">Cargando datos...</p>
+  </div>;
+
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col">
-      <h3 className="text-sm font-bold text-slate-700 mb-4">Contactos Recientes</h3>
-      
+      <div className='flex justify-between'>
+        <h3 className="text-sm font-bold text-primary mb-4">Contactos recientes</h3>
+        <SlidersHorizontal size={20} className="text-primary" />
+      </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-slate-100 text-sm font-semibold text-slate-800">
-              <th className="py-3 px-2">Name</th>
-              <th className="py-3 px-2">Company</th>
-              <th className="py-3 px-2">Status</th>
-              <th className="py-3 px-2">Last Active</th>
-              <th className="py-3 px-2 text-right">Actions</th>
+            <tr className="border-b border-neutro-2 font-semibold text-neutro-2">
+              <th className="py-3 px-2">Nombre</th>
+              <th className="py-3 px-2">Estado</th>
+              <th className="py-3 px-2">Última interacción</th>
+              <th className="py-3 px-2">Etiquetas</th>
+              <th className="py-3 px-2 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {contactsData.map((contact) => (
-              <tr key={contact.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors text-sm text-slate-600">
-                <td className="py-4 px-2 font-medium text-slate-800">{contact.name}</td>
-                <td className="py-4 px-2">{contact.company}</td>
+            {contactsData?.map((contact : ContactResType) => (
+              <tr key={contact.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors text-slate-600">
+                <td className="py-4 px-2 font-medium text-neutro-1 flex items-center gap-3 min-w-0">
+                  <span className="w-8 h-8 flex-shrink-0 border-2 border-primary rounded-full flex items-center justify-center text-primary font-bold">
+                    {getInitials(contact?.name ?? undefined, contact?.lastName ?? undefined)}
+                  </span>
+                  <span className="truncate text-xs">{contact.name} {contact.lastName}</span>
+                </td>
                 <td className="py-4 px-2">
-                  <span className={`px-3 py-1 rounded-md text-xs font-medium ${contact.badgeColor}`}>
-                    {contact.status}
+                  <span className={`px-3 py-1 rounded-md font-medium text-white text-[10px] whitespace-nowrap ${getFunnelStatusColor(contact.funnelStatus)}`}>
+                    {getStatusLabel(contact.funnelStatus)}
                   </span>
                 </td>
-                <td className="py-4 px-2">{contact.lastActive}</td>
-                <td className="py-4 px-2 flex justify-end gap-3">
-                  {/* Botón de Perfil con accesibilidad */}
-                  <button 
+                <td className="py-4 px-2">{timeAgo(contact.updatedAt)}</td>
+                <td className="py-4 px-2 w-[220px] min-w-[220px]">
+                  <div className="flex gap-1 justify-start">
+                    {contact.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-neutro-3 text-primary whitespace-nowrap w-fit"
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+
+                <td className="py-2 px-2 flex justify-end gap-3">
+
+                  <button
                     aria-label={`Ver perfil de ${contact.name}`}
                     title="Ver perfil"
-                    className={`p-1.5 rounded-md ${contact.status.startsWith('#') ? contact.badgeColor : 'bg-slate-100 text-slate-400 hover:text-slate-600'}`}
+                    className={`p-1 rounded-md text-primary hover:bg-secondary hover:text-white transition-colors flex items-center justify-center`}
                   >
-                    <User size={16} />
+                    <Eye size={24} />
                   </button>
-                  {/* Botón de Eliminar con accesibilidad */}
-                  <button 
+
+                  <button
                     aria-label={`Eliminar a ${contact.name}`}
-                    title="Eliminar contacto"
-                    className="p-1.5 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                    title="Editar contacto"
+                    className={`p-1 rounded-md text-primary hover:bg-secondary hover:text-white transition-colors flex items-center justify-center`}
                   >
-                    <Trash2 size={16} />
+                    <UserRoundPen size={24} />
                   </button>
                 </td>
               </tr>
