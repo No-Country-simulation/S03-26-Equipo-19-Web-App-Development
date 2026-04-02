@@ -12,5 +12,12 @@ export const apiMessagesService = axios.create({
     baseURL: `${import.meta.env.VITE_URL_BASE}/messages`
 })
 
+export const apiSalespersonService = axios.create({
+    baseURL: `${import.meta.env.VITE_URL_BASE}/salespersons`
+})
+
+export const apiWebhooksService = axios.create({
+    baseURL: `${import.meta.env.VITE_URL_BASE}/webhooks`
+})
 
 

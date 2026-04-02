@@ -10,7 +10,7 @@ export const ContactsPage = () => {
     <>
       <div className="flex justify-center md:justify-between mb-6">
         <TitleSection text="Mis contactos" className='hidden md:flex' />
-        <Button variant='secondary' onClick={() => {}}> //conectar modal para crear nuevo contacto
+        <Button variant='secondary' onClick={() => {}}> {/* conectar modal para crear nuevo contacto */}
           Nuevo contacto
         </Button>
       </div>

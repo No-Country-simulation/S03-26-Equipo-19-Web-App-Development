@@ -12,15 +12,3 @@ export const useGetContacts = () => {
   });
 };
 
-//  Contactos del vendedor logueado
-/* export const useGetContactsBySalesperson = (id?: number) => {
-  const token = useAuthStore((state) => state.token);
- 
-  return useQuery<{ contact: ContactResType }[]>({
-    queryKey: ["contacts", id],
-    queryFn: () => getContacts(token!), 
-    enabled: !!token && !!id,
-    select: (data) =>
-      data.filter((item) => item.contact.owner.id === id),
-  });
-}; */

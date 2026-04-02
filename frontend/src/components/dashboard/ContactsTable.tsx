@@ -41,7 +41,7 @@ export const ContactsTable = () => {
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col">
       <div className='flex justify-between'>
-        <h3 className="text-sm font-bold text-primary mb-4">Contactos recientes</h3>
+        <h3 className="text-lg font-bold text-primary mb-4">Contactos recientes</h3>
         <SlidersHorizontal size={20} className="text-primary" />
       </div>
       <div className="overflow-x-auto">

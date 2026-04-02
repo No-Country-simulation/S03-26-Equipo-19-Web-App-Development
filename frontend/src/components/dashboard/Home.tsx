@@ -5,6 +5,7 @@ import { Calendar, CalendarCheck, CalendarX, UserStar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '../../constants/routes'
 import TitleSection from '../ui/TitleSection'
+import { InboxTable } from './InboxTable'
 
 
 const Home = () => {
@@ -33,6 +34,7 @@ const Home = () => {
         </Button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="lg:col-span-1"><InboxTable /></div>
         <div className="lg:col-span-1"><ContactsTable /></div>
       </div>
     </>

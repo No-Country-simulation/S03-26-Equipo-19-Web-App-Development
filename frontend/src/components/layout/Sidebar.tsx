@@ -5,7 +5,6 @@ import {
   ListTodo,
   Bookmark,
   FileText,
-  Settings,
   UserRoundCog,
  
   ChartNoAxesCombined,
