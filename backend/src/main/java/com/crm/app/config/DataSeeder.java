@@ -201,11 +201,13 @@ public class DataSeeder implements ApplicationRunner {
 
         List<Template> savedTemplates = new ArrayList<>();
         for (Template template : templates) {
-            if (!templateRepository.existsByName(template.getName())) {
+            // Verificar si ya existe una plantilla con el mismo nombre creada por ADMIN
+            if (!templateRepository.existsByNameAndCreatedByRole(template.getName(), Role.ADMIN)) {
                 savedTemplates.add(templateRepository.save(template));
-                log.info("Template seeded: {}", template.getName());
+                log.info("Template seeded: {} (global, creada por ADMIN)", template.getName());
             } else {
                 savedTemplates.add(templateRepository.findByName(template.getName()).orElseThrow());
+                log.info("Template already exists: {}", template.getName());
             }
         }
         return savedTemplates;
