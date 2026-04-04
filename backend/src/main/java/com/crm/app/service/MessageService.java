@@ -87,7 +87,8 @@ public class MessageService {
 
         if (request.templateId() != null) {
             // ✅ Usar plantilla
-            usedTemplate = templateService.getTemplate(request.templateId());
+            // ✅ Correcto
+            usedTemplate = templateService.getTemplate(request.templateId(), currentUser);
             Map<String, String> variables = request.variables();
 
             if (variables == null || variables.isEmpty()) {

@@ -6,8 +6,6 @@ import com.crm.app.model.User;
 import com.crm.app.model.enums.Channel;
 import com.crm.app.service.TemplateService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,66 +16,53 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/templates")
 @RequiredArgsConstructor
-@Tag(name = "Plantillas", description = "Gestión de plantillas de mensajes (Admin puede CRUD, Vendedor solo lectura)")
+@Tag(name = "Plantillas", description = "Gestión de plantillas (Admin: globales, Vendedor: personales)")
 public class TemplateController {
 
     private final TemplateService templateService;
 
-    // ==================== ADMIN ====================
-
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Crear plantilla", description = "Solo ADMIN puede crear plantillas")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Plantilla creada"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos o variables inconsistentes"),
-            @ApiResponse(responseCode = "403", description = "Acceso denegado (requiere ADMIN)")
-    })
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Crear plantilla",
+            description = "Admin crea plantillas globales. Vendedor crea plantillas personales (solo él las ve)")
     public ResponseEntity<Template> create(@Valid @RequestBody TemplateDTOs.TemplateRequest request,
-                                           @AuthenticationPrincipal User admin) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(templateService.createTemplate(request, admin));
+                                           @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(templateService.createTemplate(request, currentUser));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Actualizar plantilla", description = "Solo ADMIN puede actualizar")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Actualizar plantilla", description = "Solo el creador puede actualizar")
     public ResponseEntity<Template> update(@PathVariable Long id,
                                            @Valid @RequestBody TemplateDTOs.TemplateRequest request,
-                                           @AuthenticationPrincipal User admin) {
-        return ResponseEntity.ok(templateService.updateTemplate(id, request, admin));
+                                           @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(templateService.updateTemplate(id, request, currentUser));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Eliminar plantilla", description = "Solo ADMIN puede eliminar")
-    @ApiResponse(responseCode = "204", description = "Plantilla eliminada")
-    public ResponseEntity<Void> delete(@PathVariable Long id, @AuthenticationPrincipal User admin) {
-        templateService.deleteTemplate(id, admin);
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Eliminar plantilla", description = "Solo el creador puede eliminar")
+    public ResponseEntity<Void> delete(@PathVariable Long id, @AuthenticationPrincipal User currentUser) {
+        templateService.deleteTemplate(id, currentUser);
         return ResponseEntity.noContent().build();
     }
 
-    // ==================== VENDEDOR (lectura) ====================
-
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Listar plantillas", description = "Cualquier usuario autenticado puede ver plantillas")
-    @ApiResponse(responseCode = "200", description = "Lista de plantillas")
-    public ResponseEntity<List<Template>> list(@RequestParam(required = false) Channel channel) {
-        return ResponseEntity.ok(templateService.listTemplates(channel));
+    @Operation(summary = "Listar plantillas",
+            description = "Admin ve todas. Vendedor ve globales (de Admin) + sus personales")
+    public ResponseEntity<List<Template>> list(@RequestParam(required = false) Channel channel,
+                                               @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(templateService.listTemplates(currentUser, channel));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Obtener plantilla por ID")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Plantilla encontrada"),
-            @ApiResponse(responseCode = "404", description = "Plantilla no encontrada")
-    })
-    public ResponseEntity<Template> get(@PathVariable Long id) {
-        return ResponseEntity.ok(templateService.getTemplate(id));
+    @Operation(summary = "Obtener plantilla por ID", description = "Solo si tiene acceso")
+    public ResponseEntity<Template> get(@PathVariable Long id, @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(templateService.getTemplate(id, currentUser));
     }
 }

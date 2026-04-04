@@ -26,11 +26,19 @@ public class TemplateService {
     private final TemplateRepository templateRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ==================== ADMIN ====================
+    // ==================== CREAR ====================
 
-    public Template createTemplate(TemplateDTOs.TemplateRequest request, User admin) {
-        if (admin.getRole() != Role.ADMIN) throw new UnauthorizedAccessException("Solo ADMIN puede crear plantillas");
-        if (templateRepository.existsByName(request.name())) throw new DuplicateResourceException("plantilla", "nombre", request.name());
+    public Template createTemplate(TemplateDTOs.TemplateRequest request, User currentUser) {
+        // Validar nombre único para este contexto
+        if (currentUser.getRole() == Role.ADMIN) {
+            if (templateRepository.existsByNameAndCreatedByRole(request.name(), Role.ADMIN)) {
+                throw new DuplicateResourceException("plantilla global", "nombre", request.name());
+            }
+        } else {
+            if (templateRepository.existsByNameAndCreatedBy(request.name(), currentUser)) {
+                throw new DuplicateResourceException("plantilla personal", "nombre", request.name());
+            }
+        }
 
         validateVariables(request.body(), request.variables());
 
@@ -40,18 +48,23 @@ public class TemplateService {
                 .subject(request.subject())
                 .body(request.body())
                 .variables(toJson(request.variables()))
-                .createdBy(admin)
+                .createdBy(currentUser)
                 .build();
 
-        log.info("Admin {} creó plantilla: {}", admin.getEmail(), request.name());
+        log.info("{} creó plantilla: {}", currentUser.getEmail(), request.name());
         return templateRepository.save(template);
     }
 
-    public Template updateTemplate(Long id, TemplateDTOs.TemplateRequest request, User admin) {
-        if (admin.getRole() != Role.ADMIN) throw new UnauthorizedAccessException("Solo ADMIN puede modificar plantillas");
+    // ==================== ACTUALIZAR ====================
 
+    public Template updateTemplate(Long id, TemplateDTOs.TemplateRequest request, User currentUser) {
         Template template = templateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plantilla", id));
+
+        // Solo el creador puede modificar
+        if (!template.getCreatedBy().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
+            throw new UnauthorizedAccessException("No puedes modificar esta plantilla");
+        }
 
         validateVariables(request.body(), request.variables());
 
@@ -61,28 +74,53 @@ public class TemplateService {
         template.setBody(request.body());
         template.setVariables(toJson(request.variables()));
 
-        log.info("Admin {} actualizó plantilla: {}", admin.getEmail(), request.name());
+        log.info("{} actualizó plantilla: {}", currentUser.getEmail(), request.name());
         return templateRepository.save(template);
     }
 
-    public void deleteTemplate(Long id, User admin) {
-        if (admin.getRole() != Role.ADMIN) throw new UnauthorizedAccessException("Solo ADMIN puede eliminar plantillas");
+    // ==================== ELIMINAR ====================
 
+    public void deleteTemplate(Long id, User currentUser) {
         Template template = templateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plantilla", id));
 
+        if (!template.getCreatedBy().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
+            throw new UnauthorizedAccessException("No puedes eliminar esta plantilla");
+        }
+
         templateRepository.delete(template);
-        log.info("Admin {} eliminó plantilla: {}", admin.getEmail(), template.getName());
+        log.info("{} eliminó plantilla: {}", currentUser.getEmail(), template.getName());
     }
 
-    // ==================== VENDEDOR (solo lectura) ====================
+    // ==================== LISTAR ====================
 
-    public List<Template> listTemplates(Channel channel) {
-        return channel != null ? templateRepository.findByChannel(channel) : templateRepository.findAll();
+    public List<Template> listTemplates(User currentUser, Channel channel) {
+        if (currentUser.getRole() == Role.ADMIN) {
+            // Admin ve todas
+            return channel != null ? templateRepository.findByChannel(channel) : templateRepository.findAll();
+        } else {
+            // Vendedor ve: globales (de ADMIN) + sus personales
+            return channel != null
+                    ? templateRepository.findByChannelAndGlobalOrUser(channel, currentUser)
+                    : templateRepository.findGlobalAndUserTemplates(currentUser);
+        }
     }
 
-    public Template getTemplate(Long id) {
-        return templateRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Plantilla", id));
+    // ==================== OBTENER UNA ====================
+
+    public Template getTemplate(Long id, User currentUser) {
+        Template template = templateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plantilla", id));
+
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isGlobal = template.getCreatedBy().getRole() == Role.ADMIN;
+        boolean isOwner = template.getCreatedBy().getId().equals(currentUser.getId());
+
+        if (isAdmin || isGlobal || isOwner) {
+            return template;
+        }
+
+        throw new UnauthorizedAccessException("No tienes acceso a esta plantilla");
     }
 
     // ==================== RENDERIZADO ====================
@@ -93,7 +131,9 @@ public class TemplateService {
 
         for (String var : vars.keySet()) {
             String value = values != null ? values.get(var) : null;
-            if (value == null) throw new BusinessRuleViolationException("Falta variable: {{" + var + "}}");
+            if (value == null) {
+                throw new BusinessRuleViolationException("Falta variable: {{" + var + "}}");
+            }
             rendered = rendered.replace("{{" + var + "}}", value);
         }
         return rendered;
