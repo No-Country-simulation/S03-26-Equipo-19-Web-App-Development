@@ -8,6 +8,7 @@ import com.crm.app.exception.*;
 import com.crm.app.model.Contact;
 import com.crm.app.model.Conversation;
 import com.crm.app.model.Message;
+import com.crm.app.model.Template;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.*;
 import com.crm.app.repository.ConversationRepository;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -35,19 +37,13 @@ public class MessageService {
     private final WhatsAppService whatsAppService;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final TemplateService templateService;  // ✅ Agregado
 
     // ==================== MÉTODOS PÚBLICOS ====================
 
     /**
      * Envía un mensaje desde el CRM a un contacto (WhatsApp o Email)
-     *
-     * @param request Datos del mensaje a enviar (contactId, canal, contenido)
-     * @param userEmail Email del usuario autenticado
-     * @return Mensaje guardado con su providerId
-     * @throws ResourceNotFoundException Si el contacto no existe
-     * @throws UnauthorizedAccessException Si el usuario no tiene permisos
-     * @throws BusinessRuleViolationException Si hay violación de reglas de negocio
-     * @throws ExternalServiceException Si falla el servicio externo (Brevo/WhatsApp)
+     * Soporta mensaje libre o uso de plantillas
      */
     public Message sendMessage(MessageDTOs.SendMessageRequest request, String userEmail) {
         // 1. Validar usuario autenticado
@@ -59,17 +55,7 @@ public class MessageService {
         log.info("📨 Usuario {} enviando mensaje a contacto ID={} por canal {}",
                 currentUser.getEmail(), request.contactId(), request.channel());
 
-        MessageDTOs.MessageContent content = request.content();
-
-        // 2. Validar contenido del mensaje
-        if (content.body() == null || content.body().trim().isEmpty()) {
-            throw new BusinessRuleViolationException(
-                    "Envío de mensaje",
-                    "El contenido del mensaje no puede estar vacío"
-            );
-        }
-
-        // 3. Obtener o crear conversación
+        // 2. Obtener o crear conversación
         Conversation conversation;
         try {
             conversation = conversationService.getOrCreateConversation(
@@ -85,22 +71,53 @@ public class MessageService {
             throw e;
         }
 
-        // 4. Validar que la conversación esté abierta
+        // 3. Validar que la conversación esté abierta
         if (conversation.getStatus() != ConversationStatus.OPEN) {
             log.warn("⚠️ Intento de enviar mensaje a conversación cerrada: ID={}", conversation.getId());
             throw new ConversationClosedException(conversation.getId());
         }
 
-        // 5. Validar que el contacto tenga la información necesaria para el canal
+        // 4. Validar que el contacto tenga la información necesaria para el canal
         Contact contact = conversation.getContact();
         validateContactHasChannelInfo(contact, request.channel());
 
+        // 5. Construir el cuerpo del mensaje (libre o desde plantilla)
+        String finalBody;
+        Template usedTemplate = null;
+
+        if (request.templateId() != null) {
+            // ✅ Usar plantilla
+            // ✅ Correcto
+            usedTemplate = templateService.getTemplate(request.templateId(), currentUser);
+            Map<String, String> variables = request.variables();
+
+            if (variables == null || variables.isEmpty()) {
+                throw new BusinessRuleViolationException(
+                        "Envío con plantilla",
+                        "Debes proporcionar los valores para las variables de la plantilla"
+                );
+            }
+
+            finalBody = templateService.renderTemplate(usedTemplate, variables);
+            log.info("📝 Mensaje renderizado desde plantilla: {}", usedTemplate.getName());
+        } else {
+            // ✅ Mensaje libre
+            MessageDTOs.MessageContent content = request.content();
+            if (content == null || content.body() == null || content.body().trim().isEmpty()) {
+                throw new BusinessRuleViolationException(
+                        "Envío de mensaje",
+                        "El contenido del mensaje no puede estar vacío"
+                );
+            }
+            finalBody = content.body();
+        }
+
         // 6. Crear mensaje en BD (estado SENT)
-        Message message = createOutboundMessage(conversation, content.body(), currentUser);
+        Message message = createOutboundMessage(conversation, finalBody, currentUser, usedTemplate);
 
         // 7. Enviar por canal externo y actualizar
         try {
-            String providerId = sendViaExternalService(conversation, content.body(), request.channel());
+            String providerId = sendViaExternalService(conversation, finalBody, request.channel());
             message.setProviderId(providerId);
             message = messageRepository.save(message);
 
@@ -139,12 +156,6 @@ public class MessageService {
 
     /**
      * Obtiene el historial de mensajes de una conversación
-     *
-     * @param conversationId ID de la conversación
-     * @param userEmail Email del usuario autenticado
-     * @return Lista de mensajes ordenados cronológicamente
-     * @throws ResourceNotFoundException Si la conversación no existe
-     * @throws UnauthorizedAccessException Si el usuario no tiene acceso
      */
     public List<Message> getConversationHistory(Long conversationId, String userEmail) {
         if (userEmail == null || userEmail.isBlank()) {
@@ -164,11 +175,6 @@ public class MessageService {
 
     // ==================== MANEJO DE WEBHOOKS ====================
 
-    /**
-     * Maneja mensajes entrantes desde webhooks de WhatsApp
-     *
-     * @param webhook Datos del mensaje entrante
-     */
     public void handleWhatsAppInbound(WhatsAppWebhookDTO.@Valid IncomingMessage webhook) {
         log.info("📱 Procesando mensaje entrante de WhatsApp: from={}, messageId={}",
                 webhook.from(), webhook.messageId());
@@ -178,13 +184,11 @@ public class MessageService {
             Contact contact = getOrCreateContactFromWhatsApp(webhook.from(), admin);
             Conversation conversation = getOrCreateConversation(contact, Channel.WHATSAPP);
 
-            // Evitar duplicados
             if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
                 log.warn("⚠️ Mensaje WhatsApp duplicado ignorado: messageId={}", webhook.messageId());
                 return;
             }
 
-            // Crear y guardar mensaje entrante
             Message message = Message.builder()
                     .conversation(conversation)
                     .direction(MessageDirection.INBOUND)
@@ -202,15 +206,9 @@ public class MessageService {
 
         } catch (Exception e) {
             log.error("❌ Error procesando mensaje WhatsApp entrante: {}", e.getMessage(), e);
-            // No relanzamos para no interrumpir el webhook
         }
     }
 
-    /**
-     * Maneja mensajes entrantes desde webhooks de Brevo (Email)
-     *
-     * @param webhook Datos del email entrante
-     */
     public void handleBrevoInbound(BrevoWebhookDTO.@Valid IncomingEmail webhook) {
         log.info("📧 Procesando mensaje entrante de Email: from={}, subject={}, messageId={}",
                 webhook.from(), webhook.subject(), webhook.messageId());
@@ -227,13 +225,11 @@ public class MessageService {
                 return;
             }
 
-            // Limpiar contenido HTML si es necesario
             String body = webhook.text() != null ? webhook.text() : webhook.subject();
             if (body.contains("<") && body.contains(">")) {
                 body = body.replaceAll("<[^>]*>", "").trim();
             }
 
-            // Crear y guardar mensaje entrante
             Message message = Message.builder()
                     .conversation(conversation)
                     .direction(MessageDirection.INBOUND)
@@ -251,16 +247,9 @@ public class MessageService {
 
         } catch (Exception e) {
             log.error("❌ Error procesando mensaje Email entrante: {}", e.getMessage(), e);
-            // No relanzamos para no interrumpir el webhook
         }
     }
 
-    /**
-     * Actualiza el estado de entrega de un mensaje (desde message_echoes)
-     *
-     * @param providerId ID del mensaje en el proveedor externo
-     * @param newStatus Nuevo estado de entrega
-     */
     public void updateDeliveryStatus(String providerId, DeliveryStatus newStatus) {
         log.info("📬 Actualizando estado de mensaje: providerId={}, newStatus={}", providerId, newStatus);
 
@@ -284,9 +273,6 @@ public class MessageService {
 
     // ==================== MÉTODOS AUXILIARES PRIVADOS ====================
 
-    /**
-     * Valida que el contacto tenga la información necesaria para el canal
-     */
     private void validateContactHasChannelInfo(Contact contact, Channel channel) {
         if (channel == Channel.WHATSAPP && (contact.getPhone() == null || contact.getPhone().isEmpty())) {
             throw new BusinessRuleViolationException(
@@ -302,24 +288,19 @@ public class MessageService {
         }
     }
 
-    /**
-     * Crea un mensaje saliente en la base de datos
-     */
-    private Message createOutboundMessage(Conversation conversation, String body, User sender) {
+    private Message createOutboundMessage(Conversation conversation, String body, User sender, Template template) {
         Message message = Message.builder()
                 .conversation(conversation)
                 .direction(MessageDirection.OUTBOUND)
                 .body(body)
                 .deliveryStatus(DeliveryStatus.SENT)
                 .sender(sender)
+                .template(template)  // ✅ Guardar referencia a la plantilla usada
                 .sentAt(LocalDateTime.now())
                 .build();
         return messageRepository.save(message);
     }
 
-    /**
-     * Envía el mensaje a través del servicio externo correspondiente
-     */
     private String sendViaExternalService(Conversation conversation, String body, Channel channel) {
         Contact contact = conversation.getContact();
 
@@ -332,12 +313,8 @@ public class MessageService {
         }
     }
 
-    /**
-     * Obtiene o crea un contacto desde webhook de WhatsApp
-     */
     private Contact getOrCreateContactFromWhatsApp(String phoneNumber, User admin) {
         Contact contact = contactService.findByExternalId(phoneNumber, Channel.WHATSAPP);
-
         if (contact == null) {
             contact = contactService.createContactFromWebhook(phoneNumber, Channel.WHATSAPP, admin);
             log.info("🆕 Nuevo contacto creado desde WhatsApp: phone={}", phoneNumber);
@@ -345,17 +322,12 @@ public class MessageService {
         return contact;
     }
 
-    /**
-     * Obtiene o crea un contacto desde webhook de Email
-     */
     private Contact getOrCreateContactFromEmail(BrevoWebhookDTO.IncomingEmail webhook, User admin) {
         Contact contact = contactService.findByExternalId(webhook.from(), Channel.EMAIL);
-
         if (contact == null) {
             contact = contactService.createContactFromWebhook(webhook.from(), Channel.EMAIL, admin);
             log.info("🆕 Nuevo contacto creado desde Email: email={}", webhook.from());
 
-            // Actualizar nombre si está disponible
             if (webhook.fromName() != null && !webhook.fromName().isEmpty()) {
                 updateContactName(contact, webhook.fromName(), admin);
             }
@@ -363,9 +335,6 @@ public class MessageService {
         return contact;
     }
 
-    /**
-     * Actualiza el nombre del contacto
-     */
     private void updateContactName(Contact contact, String fullName, User admin) {
         String[] nameParts = fullName.split(" ", 2);
         String firstName = nameParts[0];
@@ -381,9 +350,6 @@ public class MessageService {
         log.info("✏️ Contacto actualizado con nombre: {} {}", firstName, lastName);
     }
 
-    /**
-     * Obtiene o crea una conversación
-     */
     private Conversation getOrCreateConversation(Contact contact, Channel channel) {
         return conversationRepository.findByContactAndChannel(contact, channel)
                 .orElseGet(() -> {
@@ -399,25 +365,16 @@ public class MessageService {
                 });
     }
 
-    /**
-     * Actualiza la última interacción de una conversación
-     */
     private void updateConversationLastInteraction(Conversation conversation) {
         conversation.setLastInteraction(LocalDateTime.now());
         conversationRepository.save(conversation);
     }
 
-    /**
-     * Obtiene un usuario por su email
-     */
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario con email: " + email));
     }
 
-    /**
-     * Obtiene el administrador por defecto (primer admin activo)
-     */
     private User getDefaultAdmin() {
         List<User> admins = userRepository.findByRoleAndActiveTrue(Role.ADMIN);
         if (admins.isEmpty()) {
@@ -431,31 +388,15 @@ public class MessageService {
 
     // ==================== MÉTODOS PARA @PreAuthorize ====================
 
-    /**
-     * Verifica si el usuario puede enviar mensajes a un contacto
-     *
-     * @param contactId ID del contacto
-     * @param currentUser Usuario autenticado
-     * @return true si puede enviar, false en caso contrario
-     */
     public boolean canSendToContact(Long contactId, User currentUser) {
         if (currentUser == null) return false;
         if (currentUser.getRole() == Role.ADMIN) return true;
-
         return contactService.isOwner(contactId, currentUser);
     }
 
-    /**
-     * Verifica si el usuario es dueño de la conversación
-     *
-     * @param conversationId ID de la conversación
-     * @param currentUser Usuario autenticado
-     * @return true si es dueño o admin, false en caso contrario
-     */
     public boolean isConversationOwner(Long conversationId, User currentUser) {
         if (currentUser == null) return false;
         if (currentUser.getRole() == Role.ADMIN) return true;
-
         return conversationRepository.findById(conversationId)
                 .map(conversation -> conversation.getAssignedTo().getId().equals(currentUser.getId()))
                 .orElse(false);

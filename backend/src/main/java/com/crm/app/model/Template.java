@@ -64,7 +64,9 @@ public class Template {
     private String variables;
 
     /**
-     * Usuario Admin que creó la plantilla. Sirve para auditoría.
+     * Usuario que creó la plantilla.
+     * - Si es ADMIN → plantilla GLOBAL (visible para todos)
+     * - Si es VENDEDOR → plantilla PERSONAL (visible solo para él)
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
