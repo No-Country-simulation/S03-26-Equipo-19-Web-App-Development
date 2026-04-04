@@ -114,29 +114,66 @@ public class WebhookController {
 
     @PostMapping("/brevo")
     @Operation(
-            summary = "Webhook Brevo",
-            description = "Recibe emails entrantes de Brevo",
+            summary = "Webhook Brevo - Email entrante",
+            description = """
+        Recibe emails entrantes desde Brevo cuando un cliente responde.
+        
+        **¿Qué hace este endpoint?**
+        1. Recibe el payload de Brevo con los datos del email
+        2. Busca o crea el contacto por email
+        3. Busca o crea la conversación (canal EMAIL)
+        4. Guarda el mensaje entrante con el `providerId` = `messageId` de Brevo
+        5. Previene duplicados verificando si ya existe un mensaje con ese `messageId`
+        
+        **Nota:** El campo `messageId` es el identificador ÚNICO que Brevo asigna al mensaje.
+        Se almacena en nuestra BD como `provider_id` para correlacionar eventos futuros.
+        """,
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    content = @Content(examples = {
-                            @ExampleObject(value = """
-                {
-                    "from": "cliente@ejemplo.com",
-                    "fromName": "Juan Pérez",
-                    "subject": "Re: Consulta",
-                    "text": "Me interesa",
-                    "messageId": "msg_123"
-                }""")
-                    })
+                    description = "Datos del email entrante enviados por Brevo",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "Email entrante válido",
+                                            description = "Ejemplo de payload que Brevo envía a este webhook",
+                                            value = """
+                    {
+                        "from": "cliente@ejemplo.com",
+                        "fromName": "Juan Pérez",
+                        "subject": "Re: Consulta sobre el producto",
+                        "text": "Me interesa, ¿pueden darme más información?",
+                        "messageId": "brevo_msg_20240401_123456789"
+                    }
+                    """
+                                    ),
+                                    @ExampleObject(
+                                            name = "Email sin nombre de remitente",
+                                            description = "Cuando el cliente no tiene nombre configurado en su cuenta de email",
+                                            value = """
+                    {
+                        "from": "anonimo@gmail.com",
+                        "fromName": null,
+                        "subject": "Consulta",
+                        "text": "Hola, quisiera saber más sobre sus servicios",
+                        "messageId": "brevo_msg_20240401_987654321"
+                    }
+                    """
+                                    )
+                            }
+                    )
             )
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Mensaje procesado"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos")
+            @ApiResponse(responseCode = "200", description = "Email procesado exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos (email mal formado, messageId faltante)"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     })
     public ResponseEntity<Void> handleBrevoWebhook(
             @RequestBody @Valid BrevoWebhookDTO.IncomingEmail webhook
     ) {
-        log.info("Email entrante: from={}, subject={}", webhook.from(), webhook.subject());
+        log.info("📧 Email entrante: from={}, subject={}, messageId={}",
+                webhook.from(), webhook.subject(), webhook.messageId());
         messageService.handleBrevoInbound(webhook);
         return ResponseEntity.ok().build();
     }

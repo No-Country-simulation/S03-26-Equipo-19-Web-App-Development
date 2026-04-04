@@ -22,9 +22,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/salespersons")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Vendedores", description = "Endpoints para gestión de vendedores (Solo ADMIN)")
 @SecurityRequirement(name = "TOKEN")
+@PreAuthorize("hasRole('ADMIN')")
 public class UserController {
 
     private final UserService service;
