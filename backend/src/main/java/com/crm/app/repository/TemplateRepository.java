@@ -13,6 +13,6 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
     boolean existsByName(String name);
 
     Optional<Template> findByName(String name);
-    
+
     List<Template> findByChannel(Channel channel);
 }
