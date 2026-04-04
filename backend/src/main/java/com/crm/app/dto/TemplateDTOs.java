@@ -56,7 +56,7 @@ public class TemplateDTOs {
             Map<String, String> variables,
 
             String createdBy,
-            
+
             String createdAt
     ) {}
 }

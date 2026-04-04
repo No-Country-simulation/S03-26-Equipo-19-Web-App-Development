@@ -10,19 +10,9 @@ import java.util.Optional;
 
 public interface TemplateRepository extends JpaRepository<Template, Long> {
 
-    // Todas las plantillas de un canal específico — para mostrar en el selector al redactar
-    List<Template> findByChannel(Channel channel);
-
-    // Plantillas creadas por un Admin específico — para auditoría
-    List<Template> findByCreatedBy(User createdBy);
-
     boolean existsByName(String name);
 
-    // Búsqueda por nombre parcial para autocompletado
-    List<Template> findByNameContainingIgnoreCase(String name);
-
-    // Plantillas de un canal ordenadas por nombre — para el selector de la UI
-    List<Template> findByChannelOrderByNameAsc(Channel channel);
-
     Optional<Template> findByName(String name);
+    
+    List<Template> findByChannel(Channel channel);
 }
