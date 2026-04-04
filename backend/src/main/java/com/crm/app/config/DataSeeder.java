@@ -368,35 +368,41 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void seedSavedViews(User admin, User salesperson) {
-        // Admin global view
+        // Admin global view - CONTACTS
         SavedView adminView = SavedView.builder()
                 .name("Todos los contactos activos")
                 .filters("{\"funnelStatus\":[\"NEW_LEAD\",\"CONTACTED\",\"IN_NEGOTIATION\",\"PROPOSAL_SENT\"]}")
-                .entity("contacts")
+                .entity(SavedView.EntityType.CONTACTS)
+                .sortBy("createdAt")
+                .sortOrder(SavedView.SortOrder.DESC)
                 .global(true)
-                .createdBy(admin)
+                .user(admin)
                 .build();
         savedViewRepository.save(adminView);
         log.info("Saved view seeded (global): {}", adminView.getName());
 
-        // Salesperson personal view
+        // Salesperson personal view - CONTACTS
         SavedView sellerView = SavedView.builder()
                 .name("Mis leads calientes")
                 .filters("{\"tagIds\":[1,2],\"funnelStatus\":\"IN_NEGOTIATION\"}")
-                .entity("contacts")
+                .entity(SavedView.EntityType.CONTACTS)
+                .sortBy("updatedAt")
+                .sortOrder(SavedView.SortOrder.DESC)
                 .global(false)
-                .createdBy(salesperson)
+                .user(salesperson)
                 .build();
         savedViewRepository.save(sellerView);
         log.info("Saved view seeded (personal): {}", sellerView.getName());
 
-        // Tasks view
+        // Tasks view - TASKS
         SavedView tasksView = SavedView.builder()
                 .name("Tareas vencidas")
                 .filters("{\"status\":\"PENDING\",\"dueDate\":{\"$lt\":\"today\"}}")
-                .entity("tasks")
+                .entity(SavedView.EntityType.TASKS)
+                .sortBy("dueDate")
+                .sortOrder(SavedView.SortOrder.ASC)
                 .global(true)
-                .createdBy(admin)
+                .user(admin)
                 .build();
         savedViewRepository.save(tasksView);
         log.info("Saved view seeded: {}", tasksView.getName());
