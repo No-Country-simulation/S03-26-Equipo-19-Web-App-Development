@@ -1,28 +1,22 @@
 package com.crm.app.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+
 /**
  * Vista guardada: configuración de filtros que un usuario reutiliza frecuentemente.
  *
- * Qué NO es: no almacena los resultados de la búsqueda.
- * Qué SÍ es: almacena la configuración del filtro en JSON.
- *            Cada vez que se abre la vista, el sistema ejecuta la consulta
- *            en ese momento y devuelve resultados frescos.
- *
- * Reglas de negocio:
- * - Una vista con global = false solo es visible para el usuario que la creó.
- * - Una vista con global = true es visible para todos (solo el Admin puede crearlas).
- * - Las vistas de un Vendedor, aunque sean globales, solo devuelven sus propios datos.
- *   El filtro de visibilidad por rol se aplica siempre en el backend.
- * - El campo filters es JSON. Ejemplo:
- *   {"funnelStatus": "IN_NEGOTIATION", "tagIds": [1, 3], "ownerIds": [5]}
- * - El campo entity indica a qué listado aplica la vista: "contacts", "tasks", "conversations".
+ * Reglas:
+ * - entity solo puede ser CONTACTS o TASKS
+ * - sortOrder solo puede ser ASC o DESC
+ * - filters debe ser un JSON válido (validar antes de persistir)
+ * - global indica si la vista es compartida (true) o privada (false)
  */
 @Entity
 @Table(name = "saved_views")
@@ -31,48 +25,62 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class SavedView {
+        /**
+     * Tipos de entidades sobre las que aplica la vista
+     */
+    public enum EntityType {
+        CONTACTS, TASKS
+    }
+
+    /**
+     * Orden de la vista
+     */
+    public enum SortOrder {
+        ASC, DESC
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Nombre descriptivo de la vista. Ej: "Mis leads calientes esta semana".
-     */
-    @Column(nullable = false)
+    @Column(nullable = false, length = 150)
+    @Size(min = 3, max = 150, message = "Nombre obligatorio y entre 3 y 150 caracteres")
     private String name;
 
     /**
      * Configuración de filtros serializada en JSON.
      * El backend interpreta este JSON para construir la query dinámica.
-     * Ejemplo: {"funnelStatus":"IN_NEGOTIATION","tagIds":[1,3],"daysInactive":7}
      */
     @Column(nullable = false, columnDefinition = "TEXT")  // <- Cambiar a TEXT
     private String filters;
 
     /**
      * Entidad sobre la que opera esta vista.
-     * Valores posibles: "contacts", "tasks", "conversations".
+     * Valores posibles: "contacts", "tasks".
      * Determina qué endpoint se llama al abrir la vista.
      */
-    @Column(nullable = false, length = 30)
-    private String entity;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private EntityType entity;
 
-    /**
-     * Si es true, la vista es visible para todos los usuarios del sistema.
-     * Solo el Admin puede crear vistas globales.
-     * Si es false, solo el creador puede verla y usarla.
-     */
+    @Column(name = "sort_by", nullable = false, length = 50)
+    private String sortBy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sort_order", nullable = false, length = 4)
+    @Builder.Default
+    private SortOrder sortOrder = SortOrder.ASC;
+
+    // Indica si la vista es global (compartida) o privada.
     @Column(nullable = false)
     @Builder.Default
     private boolean global = false;
 
-    /**
-     * Usuario que creó la vista. Para vistas globales, siempre es un Admin.
-     */
+    // Relación con el usuario propietario de la vista.
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by", nullable = false)
-    private User createdBy;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

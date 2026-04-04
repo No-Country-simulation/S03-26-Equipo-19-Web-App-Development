@@ -30,9 +30,42 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(
             summary = "Iniciar sesión",
-            description = "Autentica un usuario con email y contraseña. Devuelve un token JWT con información del usuario."
+            description = """
+            Autentica un usuario mediante email y contraseña.
+
+            Si las credenciales son correctas, devuelve un token JWT junto con la información del usuario.
+            """
     )
-    @ApiResponses(value = {
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Credenciales de usuario",
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    examples = {
+                            @ExampleObject(
+                                    name = "Admin",
+                                    description = "Credenciales de administrador",
+                                    value = """
+                                        {
+                                          "email": "admin@crm.com",
+                                          "password": "Admin1234!"
+                                        }
+                                        """
+                            ),
+                            @ExampleObject(
+                                    name = "Salesperson",
+                                    description = "Credenciales de vendedor",
+                                    value = """
+                                        {
+                                          "email": "alice@crm.com",
+                                          "password": "Sales001!"
+                                        }
+                                        """
+                            )
+                    }
+            )
+    )
+    @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Login exitoso",
@@ -40,18 +73,34 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "Success Response",
-                                    value = "{\"token\": \"eyJhbGciOiJIUzI1NiIs...\", \"id\": 1, \"email\": \"admin@crm.com\", \"role\": \"ADMIN\", \"name\": \"Administrador\"}"
+                                    value = """
+                                        {
+                                          "token": "eyJhbGciOiJIUzI1NiIs...",
+                                          "id": 1,
+                                          "email": "admin@crm.com",
+                                          "role": "ADMIN",
+                                          "name": "Administrador",
+                                          "isActive": true
+                                        }
+                                        """
                             )
                     )
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Datos de entrada inválidos o usuario inactivo",
+                    description = "Datos inválidos o usuario inactivo",
                     content = @Content(
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "Bad Request",
-                                    value = "{\"status\": 400, \"error\": \"Bad Request\", \"message\": \"Tu cuenta está deshabilitada\"}"
+                                    value = """
+                                        {
+                                          "timestamp": "2026-04-01T00:00:00",
+                                          "status": 400,
+                                          "error": "Bad Request",
+                                          "message": "Tu cuenta está deshabilitada"
+                                        }
+                                        """
                             )
                     )
             ),
@@ -62,16 +111,27 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "Unauthorized",
-                                    value = "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Email o contraseña incorrectos\"}"
+                                    value = """
+                                        {
+                                          "timestamp": "2026-04-01T00:00:00",
+                                          "status": 401,
+                                          "error": "Unauthorized",
+                                          "message": "Email o contraseña incorrectos"
+                                        }
+                                        """
                             )
                     )
             )
     })
     public ResponseEntity<AuthDTOs.LoginResponse> login(
-            @Valid @RequestBody AuthDTOs.LoginRequest request) {
-            AuthDTOs.LoginResponse response = authService.login(request.email(), request.password());
-            return ResponseEntity.ok(response);
+            @Valid @org.springframework.web.bind.annotation.RequestBody AuthDTOs.LoginRequest request) {
+
+        AuthDTOs.LoginResponse response =
+                authService.login(request.email(), request.password());
+
+        return ResponseEntity.ok(response);
     }
+
 
     @PostMapping("/logout")
     @Operation(

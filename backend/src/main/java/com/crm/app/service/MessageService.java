@@ -220,9 +220,10 @@ public class MessageService {
             Contact contact = getOrCreateContactFromEmail(webhook, admin);
             Conversation conversation = getOrCreateConversation(contact, Channel.EMAIL);
 
-            // Evitar duplicados
-            if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
-                log.warn("⚠️ Mensaje Email duplicado ignorado: messageId={}", webhook.messageId());
+            String brevoMessageId = webhook.messageId();
+
+            if (messageRepository.findByProviderId(brevoMessageId).isPresent()) {
+                log.warn("⚠️ Mensaje Email duplicado ignorado: messageId={}", brevoMessageId);
                 return;
             }
 
@@ -238,7 +239,7 @@ public class MessageService {
                     .direction(MessageDirection.INBOUND)
                     .body(body)
                     .deliveryStatus(DeliveryStatus.DELIVERED)
-                    .providerId(webhook.messageId())
+                    .providerId(brevoMessageId)
                     .sentAt(LocalDateTime.now())
                     .build();
 
