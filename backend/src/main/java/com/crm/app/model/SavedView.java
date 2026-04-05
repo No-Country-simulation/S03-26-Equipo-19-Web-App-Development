@@ -1,5 +1,7 @@
 package com.crm.app.model;
 
+import com.crm.app.model.enums.EntityType;
+import com.crm.app.model.enums.SortOrder;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -25,19 +27,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class SavedView {
-        /**
-     * Tipos de entidades sobre las que aplica la vista
-     */
-    public enum EntityType {
-        CONTACTS, TASKS
-    }
-
-    /**
-     * Orden de la vista
-     */
-    public enum SortOrder {
-        ASC, DESC
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
