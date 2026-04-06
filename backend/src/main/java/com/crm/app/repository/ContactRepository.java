@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,10 +42,17 @@ public interface ContactRepository extends JpaRepository<Contact, Long>,
     List<Contact> searchByOwner(@Param("owner") User owner, @Param("query") String query);
 
     // Métricas
+    // ✅ MÉTRICAS
     @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c GROUP BY c.funnelStatus")
     List<Object[]> countByFunnelStatus();
 
     @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c WHERE c.owner = :owner GROUP BY c.funnelStatus")
     List<Object[]> countByFunnelStatusAndOwner(@Param("owner") User owner);
+
+    @Query("SELECT COUNT(c) FROM Contact c WHERE c.funnelStatus IN :activeStatuses")
+    long countByFunnelStatusIn(@Param("activeStatuses") List<FunnelStatus> activeStatuses);
+
+    @Query("SELECT COUNT(c) FROM Contact c WHERE c.createdAt BETWEEN :start AND :end")
+    long countNewContactsInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
 }
