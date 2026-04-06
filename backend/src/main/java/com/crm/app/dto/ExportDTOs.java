@@ -30,4 +30,14 @@ public class ExportDTOs {
             @Schema(description = "Tipo de contenido", example = "text/csv")
             String contentType
     ) {}
+
+    @Schema(description = "Exportación de métricas")
+    public record ExportMetrics(
+            @Schema(description = "Datos en formato CSV o PDF (Base64 para PDF)")
+            String data,
+            @Schema(description = "Nombre del archivo", example = "metrics_2026-04-05.csv")
+            String filename,
+            @Schema(description = "Tipo de contenido", example = "text/csv")
+            String contentType
+    ) {}
 }
