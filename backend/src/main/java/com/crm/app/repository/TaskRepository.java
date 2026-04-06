@@ -62,5 +62,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByAssignedToAndType(User assignedTo, TaskType type);
 
     long countByStatus(TaskStatus status);
+
     long countByAssignedToAndStatus(User assignedTo, TaskStatus status);
+
 }
