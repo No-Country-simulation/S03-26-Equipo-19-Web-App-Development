@@ -1,5 +1,6 @@
 package com.crm.app.repository;
 
+import com.crm.app.model.enums.EntityType;
 import com.crm.app.model.SavedView;
 import com.crm.app.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,7 +29,7 @@ public interface SavedViewRepository extends JpaRepository<SavedView, Long> {
             "AND v.entity = :entity ORDER BY v.global DESC, v.name ASC")
     List<SavedView> findAccessibleByUserAndEntity(
             @Param("user") User user,
-            @Param("entity") SavedView.EntityType entity
+            @Param("entity") EntityType entity
     );
 
     // Verificar acceso antes de editar o eliminar:
