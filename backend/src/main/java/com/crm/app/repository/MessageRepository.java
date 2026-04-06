@@ -61,6 +61,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             @Param("to") LocalDateTime to
     );
 
+    List<Message> findBySender(User sender);
+
     // ✅ MÉTRICAS GLOBALES
     @Query("SELECT COUNT(m) FROM Message m WHERE m.direction = 'OUTBOUND'")
     long countOutboundMessages();

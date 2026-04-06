@@ -8,10 +8,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/v1/metrics")
@@ -65,20 +68,46 @@ public class MetricsController {
     @GetMapping("/export")
     @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Exportar métricas a CSV",
-            description = "Exporta todas las métricas visibles según el rol y filtros aplicados"
+            summary = "Exportar métricas",
+            description = """
+                    Exporta las métricas en formato CSV o PDF.
+                    
+                    **Formatos soportados:** csv, pdf
+                    
+                    **Permisos:**
+                    - **Admin**: exporta métricas globales
+                    - **Vendedor**: exporta solo sus métricas
+                    
+                    **Filtros:**
+                    - `salespersonEmail`: filtrar por vendedor (solo Admin)
+                    - `startDate`: fecha inicio (YYYY-MM-DD)
+                    - `endDate`: fecha fin (YYYY-MM-DD)
+                    - `format`: csv o pdf
+                    """
     )
-    public ResponseEntity<String> exportMetrics(
+    public ResponseEntity<byte[]> exportMetrics(
             @AuthenticationPrincipal User currentUser,
             @RequestParam(required = false) String salespersonEmail,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "csv") String format
     ) {
-        var export = metricsService.exportMetrics(currentUser, salespersonEmail, startDate, endDate);
+        var export = metricsService.exportMetrics(currentUser, salespersonEmail, startDate, endDate, format);
+
+        byte[] content;
+        MediaType mediaType;
+
+        if (format.equalsIgnoreCase("csv")) {
+            content = export.data().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            mediaType = MediaType.parseMediaType("text/csv");
+        } else {
+            content = Base64.getDecoder().decode(export.data());
+            mediaType = MediaType.APPLICATION_PDF;
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + export.filename())
-                .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
-                .body(export.csvData());
+                .contentType(mediaType)
+                .body(content);
     }
 }
