@@ -60,4 +60,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to
     );
+
+    List<Message> findBySender(User sender);
 }
