@@ -196,6 +196,19 @@ public class DataSeeder implements ApplicationRunner {
                         .body("Hola {{name}},\n\nEste mes lanzamos:\n• Nueva integración con WhatsApp\n• Reportes avanzados\n• Plantillas dinámicas\n\n¿Querés una demo? Respondé este mail.\n\nSaludos,\nEquipo CRM")
                         .variables("{\"name\":\"string\",\"month\":\"string\"}")
                         .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("Bienvenida automática - WhatsApp")
+                        .channel(Channel.WHATSAPP)
+                        .body("👋 Hola {{name}}! Gracias por contactarte con nosotros.\n\n" +
+                                "Soy el asistente virtual de CRM Cross-Industry. 🚀\n\n" +
+                                "Te informo que tu consulta ha sido recibida y será derivada a uno de nuestros asesores comerciales en breve.\n\n" +
+                                "Mientras tanto, ¿podrías contarnos un poco más sobre lo que necesitas? Así podemos ayudarte mejor.\n\n" +
+                                "📌 *Importante:* Un agente te responderá a la brevedad.\n\n" +
+                                "¡Gracias por tu paciencia!")
+                        .variables("{\"name\":\"string\"}")
+                        .createdBy(admin)
                         .build()
         );
 

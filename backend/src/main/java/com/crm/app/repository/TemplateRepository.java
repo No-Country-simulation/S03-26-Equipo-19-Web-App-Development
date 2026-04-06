@@ -28,4 +28,10 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
 
     @Query("SELECT t FROM Template t WHERE t.channel = :channel AND (t.createdBy.role = 'ADMIN' OR t.createdBy = :user)")
     List<Template> findByChannelAndGlobalOrUser(@Param("channel") Channel channel, @Param("user") User user);
+
+    // ✅ Método con 2 parámetros (nombre + canal)
+    Optional<Template> findByNameAndChannel(String name, Channel channel);
+
+    // ✅ Método con 3 parámetros (nombre + canal + rol) - opcional
+    Optional<Template> findByNameAndChannelAndCreatedByRole(String name, Channel channel, Role role);
 }
