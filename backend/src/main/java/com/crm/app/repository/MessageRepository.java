@@ -62,4 +62,39 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     );
 
     List<Message> findBySender(User sender);
+
+    // ✅ MÉTRICAS GLOBALES
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.direction = 'OUTBOUND'")
+    long countOutboundMessages();
+
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.direction = 'OUTBOUND' AND m.sentAt BETWEEN :start AND :end")
+    long countOutboundMessagesInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.direction = 'INBOUND' AND m.sentAt BETWEEN :start AND :end")
+    long countInboundMessagesInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT c.channel, COUNT(m) FROM Message m JOIN m.conversation c GROUP BY c.channel")
+    List<Object[]> countMessagesByChannel();
+
+    @Query("SELECT u.name, COUNT(m) FROM Message m JOIN m.sender u WHERE u.role = 'SALESPERSON' GROUP BY u.id, u.name ORDER BY COUNT(m) DESC")
+    List<Object[]> findTopSalespersonsByMessages();
+
+    @Query("SELECT COUNT(DISTINCT c.id) FROM Conversation c WHERE EXISTS (SELECT m FROM Message m WHERE m.conversation = c AND m.direction = 'INBOUND')")
+    long countConversationsWithInbound();
+
+    @Query("SELECT COUNT(DISTINCT c.id) FROM Conversation c")
+    long countTotalConversations();
+
+    // ✅ MÉTRICAS POR VENDEDOR
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.direction = 'OUTBOUND' AND m.sender = :sender AND m.sentAt BETWEEN :start AND :end")
+    long countOutboundBySenderAndPeriod(@Param("sender") User sender, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.direction = 'INBOUND' AND m.conversation.contact.owner = :owner AND m.sentAt BETWEEN :start AND :end")
+    long countInboundByContactOwnerAndPeriod(@Param("owner") User owner, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT c.channel, COUNT(m) FROM Message m JOIN m.conversation c WHERE m.sender = :sender AND m.sentAt BETWEEN :start AND :end GROUP BY c.channel")
+    List<Object[]> countOutboundByChannelAndSender(@Param("sender") User sender, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT c.channel, COUNT(m) FROM Message m JOIN m.conversation c WHERE m.sentAt BETWEEN :start AND :end GROUP BY c.channel")
+    List<Object[]> countOutboundByChannelInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
