@@ -41,14 +41,23 @@ public class ExportController {
                     **Filtros:** se pueden aplicar usando savedViewId o filters JSON
                     """
     )
-    public ResponseEntity<String> export(@Valid @RequestBody ExportDTOs.ExportRequest request,
-                                         @AuthenticationPrincipal User currentUser) {
+    public ResponseEntity<?> export(@Valid @RequestBody ExportDTOs.ExportRequest request,
+                                    @AuthenticationPrincipal User currentUser) {
 
         var response = exportService.exportData(request, currentUser);
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + response.filename())
-                .header(HttpHeaders.CONTENT_TYPE, response.contentType())
-                .body(response.data());
+        if (request.format().equalsIgnoreCase("csv")) {
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + response.filename())
+                    .header(HttpHeaders.CONTENT_TYPE, response.contentType())
+                    .body(response.data());
+        } else {
+            // PDF: decodificar Base64 y devolver binario
+            byte[] pdfBytes = Base64.getDecoder().decode(response.data());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + response.filename())
+                    .header(HttpHeaders.CONTENT_TYPE, "application/pdf")
+                    .body(pdfBytes);
+        }
     }
 }
