@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import com.crm.app.dto.SavedViewRequest;
 import com.crm.app.dto.SavedViewResponse;
@@ -35,9 +37,10 @@ public class SavedViewController {
     // CREATE
     // =========================
     @PostMapping
-    public ResponseEntity<SavedViewResponse> create(@RequestBody @Valid SavedViewRequest request) {
-
-        User currentUser = getCurrentUser();
+    public ResponseEntity<SavedViewResponse> create(
+        @RequestBody @Valid SavedViewRequest request,
+        @AuthenticationPrincipal User currentUser
+    ) {
 
         SavedView view = SavedViewMapper.toEntity(request, currentUser);
 
@@ -52,28 +55,30 @@ public class SavedViewController {
     // GET ALL
     // =========================
     @GetMapping
-    public ResponseEntity<List<SavedViewResponse>> getAll() {
+    public ResponseEntity<List<SavedViewResponse>> getAll(
+            @RequestParam(required = false) EntityType entity,
+            @RequestParam(required = false) Boolean global,
+            @AuthenticationPrincipal User currentUser
+    ) {
 
-        User currentUser = getCurrentUser();
+        List<SavedView> views;
 
-        List<SavedViewResponse> result = savedViewService.getAccessible(currentUser)
-                .stream()
-                .map(SavedViewMapper::toResponse)
-                .toList();
+        // 1. Traemos base de datos según entity
+        if (entity != null) {
+            views = savedViewService.getAccessibleByEntity(currentUser, entity);
+        } else {
+            views = savedViewService.getAccessible(currentUser);
+        }
 
-        return ResponseEntity.ok(result);
-    }
+        // 2. Aplicamos filtro global (si viene)
+        if (global != null) {
+            views = views.stream()
+                    .filter(v -> v.isGlobal() == global)
+                    .toList();
+        }
 
-    // =========================
-    // GET BY ENTITY
-    // =========================
-    @GetMapping("/entity/{entity}")
-    public ResponseEntity<List<SavedViewResponse>> getByEntity(@PathVariable EntityType entity) {
-
-        User currentUser = getCurrentUser();
-
-        List<SavedViewResponse> result = savedViewService.getAccessibleByEntity(currentUser, entity)
-                .stream()
+        // 3. Mapear a response
+        List<SavedViewResponse> result = views.stream()
                 .map(SavedViewMapper::toResponse)
                 .toList();
 
@@ -84,9 +89,10 @@ public class SavedViewController {
     // GET ONE
     // =========================
     @GetMapping("/{id}")
-    public ResponseEntity<SavedViewResponse> getById(@PathVariable Long id) {
-
-        User currentUser = getCurrentUser();
+    public ResponseEntity<SavedViewResponse> getById(
+        @PathVariable Long id,
+        @AuthenticationPrincipal User currentUser
+    ) {
 
         SavedView view = savedViewService.getById(id, currentUser);
 
@@ -99,10 +105,9 @@ public class SavedViewController {
     @PutMapping("/{id}")
     public ResponseEntity<SavedViewResponse> update(
             @PathVariable Long id,
-            @RequestBody @Valid SavedViewRequest request
+            @RequestBody @Valid SavedViewRequest request,
+            @AuthenticationPrincipal User currentUser
     ) {
-
-        User currentUser = getCurrentUser();
 
         SavedView updated = SavedViewMapper.toEntity(request, currentUser);
 
@@ -115,22 +120,14 @@ public class SavedViewController {
     // DELETE
     // =========================
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-
-        User currentUser = getCurrentUser();
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser
+    ) {
 
         savedViewService.delete(id, currentUser);
 
         return ResponseEntity.noContent().build();
     }
 
-    // =========================
-    // MOCK USER (temporal)
-    // =========================
-    private User getCurrentUser() {
-        User user = new User();
-        user.setId(1L);
-        user.setName("Anthony");
-        return user;
-    }
 }
