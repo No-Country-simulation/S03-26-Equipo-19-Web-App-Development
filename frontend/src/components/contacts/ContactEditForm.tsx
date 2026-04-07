@@ -2,26 +2,32 @@ import { useState } from 'react';
 import type { Channel, ContactReqType } from '../../types/contact.types';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { useGetContactById, useGetContacts } from '../../services/use_queries/contacts-query';
 
 
 interface ContactFormProps {
+  id: number; 
   onSubmit: (data: ContactReqType) => void;
   onCancel: () => void;
 }
 
-export const ContactForm = ({ onSubmit, onCancel }: ContactFormProps) => {
+export const ContactEditForm = ({ id, onSubmit, onCancel }: ContactFormProps) => {
+
+
+ const { data: contactData, isLoading } = useGetContactById(id);
+  
+
+
   const [form, setForm] = useState<ContactReqType>({
     contact: {
-      name: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      company: '',
-      normalizedPhone: '',
+      name: contactData?.name || '',
+      lastName: contactData?.lastName || '',
+      email: contactData?.email || '',
+      phone: contactData?.phone || '',
+      company: contactData?.company || '',
     },
     funnelStatus: 'NEW_LEAD',
-    source: '',
-    preferredChannel: 'whatsapp',
+    preferredChannel: contactData?.preferredChannel || 'whatsapp',
     ownerId: 0,
     tags: [],
   });
@@ -54,6 +60,10 @@ export const ContactForm = ({ onSubmit, onCancel }: ContactFormProps) => {
     if (!form.contact.name || !form.contact.email) return;
     onSubmit(form);
   };
+
+if (isLoading) return <div className="flex items-center justify-center">
+    <p className="text-lg font-medium text-primary">Cargando datos de contacto...</p>
+  </div>;
 
   return (
     <>

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/useAuthStore";
 import type { ContactResType } from "../../types/contact.types";
-import { getContacts } from "../use_cases/contacts-service";
+import { getContactById, getContacts } from "../use_cases/contacts-service";
 
 export const useGetContacts = () => {
   const token = useAuthStore((state) => state.token);
@@ -12,3 +12,11 @@ export const useGetContacts = () => {
   });
 };
 
+export const useGetContactById = (contactId: number) => {
+  const token = useAuthStore((state) => state.token);
+  return useQuery<ContactResType>({
+    queryKey: ["contact", contactId],
+    queryFn: () => getContactById(token!, contactId),
+    enabled: !!token && !!contactId,
+  });
+};  

@@ -5,7 +5,7 @@ export const getMessages = async (token: string) => {
   if (!token) {
     throw new Error("No hay token de autenticación.");
   }
-console.log("URL:", apiMessagesService.defaults.baseURL);
+
   try {
     const res = await apiMessagesService.get("", {
     headers: {

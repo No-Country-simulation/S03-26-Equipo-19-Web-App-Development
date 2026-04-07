@@ -1,7 +1,12 @@
-export type FunnelStage = "lead" | "active" | "following" | "closed";
+export type FunnelStage =
+  | "NEW_LEAD"
+  | "CONTACTED"
+  | "IN_NEGOTIATION"
+  | "PROPOSAL_SENT"
+  | "CLOSED_WON"
+  | "CLOSED_LOST";
 
 export type Channel = "whatsapp" | "email";
-
 
 export interface ContactResType {
   id: number;
@@ -10,13 +15,27 @@ export interface ContactResType {
   email: string;
   phone: string;
   company: string;
-  funnelStatus: string;
+  funnelStatus: FunnelStage;
   source: string;
-  preferredChannel: "WHATSAPP";
+  preferredChannel: Channel;
   owner: Owner;
   tags: Tag[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ContactReqType {
+  contact: {
+    name: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    company: string;
+  };
+  funnelStatus: FunnelStage;
+  preferredChannel: Channel;
+  ownerId: number;
+  tags: Tag[];
 }
 
 export interface Owner {
@@ -24,7 +43,7 @@ export interface Owner {
   name: string;
   email: string;
   passwordHash: string;
-  role: "ADMIN";
+  role: "ADMIN" | "SALESPERSON";
   active: true;
   createdAt: Date;
   updatedAt: Date;

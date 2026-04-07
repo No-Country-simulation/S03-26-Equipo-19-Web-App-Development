@@ -12,6 +12,7 @@ import { MessagesPage } from "../pages/MessagesPage";
 import { MetricsPage } from "../pages/MetricsPage";
 import { useAuthStore } from "../store/useAuthStore";
 import Home from "../components/dashboard/Home";
+import ContactDetailPage from "../pages/ContactDetailPage";
 
 
 
@@ -55,6 +56,7 @@ export const AppRoutes: React.FC = () => {
             >
                 <Route index element={<Home />} />
                 <Route path={ROUTES.CONTACTS} element={<ContactsPage />} />
+                <Route path={ROUTES.CONTACT_DETALLE} element={<ContactDetailPage/>} />
                 <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
                 <Route path={ROUTES.METRICS} element={<MetricsPage />} />
 

@@ -4,6 +4,7 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
 
   CONTACTS: "contacts",
+  CONTACT_DETALLE: 'contacts/:contactId',
   MESSAGES: "messages",
   TASKS: "tasks",
   SAVED_VIEWS: "saved-views",

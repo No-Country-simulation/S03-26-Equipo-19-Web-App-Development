@@ -3,6 +3,8 @@ import { getInitials } from '../../utils/getInitials';
 import { useGetContacts } from '../../services/use_queries/contacts-query';
 import { timeAgo } from '../../utils/timeAgo';
 import type { ContactResType } from '../../types/contact.types';
+import { useNavigate } from 'react-router-dom';
+import { getStatusLabel } from '../../utils/formateStatusLabel';
 
 
   
@@ -18,21 +20,11 @@ const getFunnelStatusColor = (status: string) => {
   }
 };
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'NEW_LEAD': return 'Nuevo';
-    case 'CONTACTED': return 'Contactado';
-    case 'IN_NEGOTIATION': return 'En negociación';
-    case 'PROPOSAL_SENT': return 'Propuesta enviada';
-    case 'CLOSED_WON': return 'Ganado';
-    case 'CLOSED_LOST': return 'Perdido';
-    default: return status;
-  }
-};
 
 export const ContactsTable = () => {
   
   const { data: contactsData, isLoading } = useGetContacts();
+  const navigate = useNavigate()
 
   if (isLoading) return <div className="flex items-center justify-center">
     <p className="text-lg font-medium text-primary">Cargando datos...</p>
@@ -89,6 +81,7 @@ export const ContactsTable = () => {
                     aria-label={`Ver perfil de ${contact.name}`}
                     title="Ver perfil"
                     className={`p-1 rounded-md text-primary hover:bg-secondary hover:text-white transition-colors flex items-center justify-center`}
+                     onClick={() => navigate(`/dashboard/contacts/${contact.id}`)}
                   >
                     <Eye size={24} />
                   </button>

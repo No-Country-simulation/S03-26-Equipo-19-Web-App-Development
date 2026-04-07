@@ -28,3 +28,4 @@ channel: Channel;
 createdAt: Date;
 updatedAt: Date;
 }
+
