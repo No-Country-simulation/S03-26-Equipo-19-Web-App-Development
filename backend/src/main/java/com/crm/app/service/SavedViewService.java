@@ -5,9 +5,9 @@ import com.crm.app.model.User;
 import com.crm.app.model.enums.EntityType;
 import com.crm.app.model.enums.Role;
 import com.crm.app.repository.SavedViewRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;
 
@@ -16,7 +16,6 @@ import java.util.List;
 public class SavedViewService {
 
     private final SavedViewRepository repository;
-    private final ObjectMapper objectMapper;
 
     // =========================
     // CREATE
@@ -117,16 +116,21 @@ public class SavedViewService {
     // VALIDACIONES
     // =========================
 
-    private void validateFilters(String filters, EntityType entity) {
-        try {
-            // Solo validamos que sea JSON válido por ahora
-            objectMapper.readTree(filters);
+    
+    // Validar que el JSON de filtros sea correcto (no vacío, formato json válido)
+    private void validateFilters(JsonNode filters, EntityType entity) {
+        
+        if (filters == null || filters.isNull() || filters.isEmpty()) {
+            throw new IllegalArgumentException("Filters no puede ser vacío");
+        }
 
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Filters JSON inválido");
+        if (!filters.isObject()) {
+            throw new IllegalArgumentException("Filters debe ser un objeto JSON");
         }
     }
 
+
+    // Solo el owner o ADMIN pueden modificar o eliminar
     private void validateOwnership(SavedView view, User currentUser) {
         if (currentUser.getRole() == Role.ADMIN) return;
 
@@ -135,6 +139,8 @@ public class SavedViewService {
         }
     }
 
+
+    // Para ver una vista (GET ONE), alcanza con que sea global o propia
     private void validateReadAccess(SavedView view, User currentUser) {
 
         // ADMIN puede todo

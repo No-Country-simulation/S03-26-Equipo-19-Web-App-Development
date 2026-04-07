@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
 
@@ -40,8 +41,8 @@ public class SavedView {
      * Configuración de filtros serializada en JSON.
      * El backend interpreta este JSON para construir la query dinámica.
      */
-    @Column(nullable = false, columnDefinition = "TEXT")  // <- Cambiar a TEXT
-    private String filters;
+    @Column(nullable = false, columnDefinition = "jsonb")  // jsonb para PostgreSQL
+    private JsonNode filters;
 
     /**
      * Entidad sobre la que opera esta vista.

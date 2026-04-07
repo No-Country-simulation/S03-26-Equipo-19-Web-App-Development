@@ -1,5 +1,18 @@
 package com.crm.app.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.crm.app.dto.SavedViewRequest;
 import com.crm.app.dto.SavedViewResponse;
 import com.crm.app.mapper.SavedViewMapper;
@@ -7,10 +20,9 @@ import com.crm.app.model.SavedView;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.EntityType;
 import com.crm.app.service.SavedViewService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/saved-views")
@@ -23,7 +35,7 @@ public class SavedViewController {
     // CREATE
     // =========================
     @PostMapping
-    public SavedViewResponse create(@RequestBody SavedViewRequest request) {
+    public ResponseEntity<SavedViewResponse> create(@RequestBody @Valid SavedViewRequest request) {
 
         User currentUser = getCurrentUser();
 
@@ -31,57 +43,63 @@ public class SavedViewController {
 
         SavedView saved = savedViewService.create(view, currentUser);
 
-        return SavedViewMapper.toResponse(saved);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(SavedViewMapper.toResponse(saved));
     }
 
     // =========================
     // GET ALL
     // =========================
     @GetMapping
-    public List<SavedViewResponse> getAll() {
+    public ResponseEntity<List<SavedViewResponse>> getAll() {
 
         User currentUser = getCurrentUser();
 
-        return savedViewService.getAccessible(currentUser)
+        List<SavedViewResponse> result = savedViewService.getAccessible(currentUser)
                 .stream()
                 .map(SavedViewMapper::toResponse)
                 .toList();
+
+        return ResponseEntity.ok(result);
     }
 
     // =========================
     // GET BY ENTITY
     // =========================
     @GetMapping("/entity/{entity}")
-    public List<SavedViewResponse> getByEntity(@PathVariable EntityType entity) {
+    public ResponseEntity<List<SavedViewResponse>> getByEntity(@PathVariable EntityType entity) {
 
         User currentUser = getCurrentUser();
 
-        return savedViewService.getAccessibleByEntity(currentUser, entity)
+        List<SavedViewResponse> result = savedViewService.getAccessibleByEntity(currentUser, entity)
                 .stream()
                 .map(SavedViewMapper::toResponse)
                 .toList();
+
+        return ResponseEntity.ok(result);
     }
 
     // =========================
     // GET ONE
     // =========================
     @GetMapping("/{id}")
-    public SavedViewResponse getById(@PathVariable Long id) {
+    public ResponseEntity<SavedViewResponse> getById(@PathVariable Long id) {
 
         User currentUser = getCurrentUser();
 
         SavedView view = savedViewService.getById(id, currentUser);
 
-        return SavedViewMapper.toResponse(view);
+        return ResponseEntity.ok(SavedViewMapper.toResponse(view));
     }
 
     // =========================
     // UPDATE
     // =========================
     @PutMapping("/{id}")
-    public SavedViewResponse update(
+    public ResponseEntity<SavedViewResponse> update(
             @PathVariable Long id,
-            @RequestBody SavedViewRequest request
+            @RequestBody @Valid SavedViewRequest request
     ) {
 
         User currentUser = getCurrentUser();
@@ -90,18 +108,20 @@ public class SavedViewController {
 
         SavedView saved = savedViewService.update(id, updated, currentUser);
 
-        return SavedViewMapper.toResponse(saved);
+        return ResponseEntity.ok(SavedViewMapper.toResponse(saved));
     }
 
     // =========================
     // DELETE
     // =========================
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
 
         User currentUser = getCurrentUser();
 
         savedViewService.delete(id, currentUser);
+
+        return ResponseEntity.noContent().build();
     }
 
     // =========================
