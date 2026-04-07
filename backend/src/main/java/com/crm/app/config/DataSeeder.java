@@ -141,9 +141,20 @@ public class DataSeeder implements ApplicationRunner {
                 Template.builder()
                         .name("Email de bienvenida")
                         .channel(Channel.EMAIL)
-                        .subject("Bienvenido a {{company}}, {{name}}!")
-                        .body("Hola {{name}},\n\nGracias por contactarnos. Soy {{salesperson}} y estaré ayudándote.\n\n¿Qué te gustaría saber sobre nuestros servicios?\n\nSaludos,\nEquipo CRM")
-                        .variables("{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}")
+                        .subject("✅ Hemos recibido tu consulta - {{company}}")
+                        .body("""
+                                Estimado/a {{name}},
+                                
+                                Gracias por contactarte con {{company}}.
+                                
+                                Hemos recibido tu mensaje correctamente y será derivado a nuestro equipo de ventas.
+                                
+                                En las próximas horas, uno de nuestros asesores se comunicará contigo para brindarte la información que necesitas.
+                                
+                                Mientras tanto, puedes responder este mismo correo si tienes alguna pregunta adicional.
+                                
+                                """)
+                        .variables("{\"name\":\"string\",\"company\":\"string\"}")
                         .createdBy(admin)
                         .build(),
 
@@ -159,8 +170,17 @@ public class DataSeeder implements ApplicationRunner {
                 Template.builder()
                         .name("WhatsApp - Primer contacto")
                         .channel(Channel.WHATSAPP)
-                        .body("Hola {{name}}! Soy {{salesperson}} de CRM Cross-Industry. ¿Cómo estás? Quería contarte cómo podemos ayudar a {{company}} a mejorar sus ventas. ¿Te parece si coordinamos una breve llamada?")
-                        .variables("{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}")
+                        .body("""
+                                👋 Hola {{name}}! Gracias por escribirnos.
+                                
+                                Hemos recibido tu mensaje correctamente. 🚀
+                                
+                                En breve, uno de nuestros asesores se pondrá en contacto contigo para atender tu consulta.
+                                
+                                📌 Mientras tanto, si necesitas algo más, no dudes en escribirnos.
+                                
+                                ¡Gracias por contactarnos!""")
+                        .variables("{\"name\":\"string\"}")
                         .createdBy(admin)
                         .build(),
 
