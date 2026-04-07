@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SavedViewController {
 
-    private final SavedViewService service;
+    private final SavedViewService savedViewService;
 
     // =========================
     // CREATE
@@ -29,7 +29,7 @@ public class SavedViewController {
 
         SavedView view = SavedViewMapper.toEntity(request, currentUser);
 
-        SavedView saved = service.create(view, currentUser);
+        SavedView saved = savedViewService.create(view, currentUser);
 
         return SavedViewMapper.toResponse(saved);
     }
@@ -42,7 +42,7 @@ public class SavedViewController {
 
         User currentUser = getCurrentUser();
 
-        return service.getAccessible(currentUser)
+        return savedViewService.getAccessible(currentUser)
                 .stream()
                 .map(SavedViewMapper::toResponse)
                 .toList();
@@ -56,7 +56,7 @@ public class SavedViewController {
 
         User currentUser = getCurrentUser();
 
-        return service.getAccessibleByEntity(currentUser, entity)
+        return savedViewService.getAccessibleByEntity(currentUser, entity)
                 .stream()
                 .map(SavedViewMapper::toResponse)
                 .toList();
@@ -70,7 +70,7 @@ public class SavedViewController {
 
         User currentUser = getCurrentUser();
 
-        SavedView view = service.getById(id, currentUser);
+        SavedView view = savedViewService.getById(id, currentUser);
 
         return SavedViewMapper.toResponse(view);
     }
@@ -88,7 +88,7 @@ public class SavedViewController {
 
         SavedView updated = SavedViewMapper.toEntity(request, currentUser);
 
-        SavedView saved = service.update(id, updated, currentUser);
+        SavedView saved = savedViewService.update(id, updated, currentUser);
 
         return SavedViewMapper.toResponse(saved);
     }
@@ -101,7 +101,7 @@ public class SavedViewController {
 
         User currentUser = getCurrentUser();
 
-        service.delete(id, currentUser);
+        savedViewService.delete(id, currentUser);
     }
 
     // =========================
