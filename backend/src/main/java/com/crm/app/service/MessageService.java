@@ -185,19 +185,39 @@ public class MessageService {
         try {
             User admin = getDefaultAdmin();
 
-            // Verificar si el contacto ya existía antes de crearlo
-            Contact existingContact = contactService.findByExternalId(webhook.from(), Channel.WHATSAPP);
-            boolean isNewContact = (existingContact == null);
+            // 1. Buscar contacto existente
+            Contact contact = contactService.findByExternalId(webhook.from(), Channel.WHATSAPP);
+            boolean isNewContact = (contact == null);
 
-            Contact contact = getOrCreateContactFromWhatsApp(webhook.from(), admin);
-            Conversation conversation = getOrCreateConversation(contact, Channel.WHATSAPP);
+            if (isNewContact) {
+                contact = contactService.createContactFromWebhook(webhook.from(), Channel.WHATSAPP, admin);
+                log.info("🆕 Nuevo contacto creado desde WhatsApp: phone={}", webhook.from());
+            }
 
+            // 2. Hacer una copia final de contact para usar en la lambda
+            final Contact finalContact = contact;
+
+            // 3. Buscar conversación EXISTENTE antes de crear una nueva
+            Conversation conversation = conversationRepository.findByContactAndChannel(contact, Channel.WHATSAPP)
+                    .orElseGet(() -> {
+                        Conversation newConv = Conversation.builder()
+                                .contact(finalContact)
+                                .channel(Channel.WHATSAPP)
+                                .status(ConversationStatus.OPEN)
+                                .assignedTo(finalContact.getOwner())
+                                .lastInteraction(LocalDateTime.now())
+                                .build();
+                        log.info("💬 Nueva conversación WhatsApp creada para contacto: id={}", finalContact.getId());
+                        return conversationRepository.save(newConv);
+                    });
+
+            // 4. Verificar mensaje duplicado por providerId
             if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
                 log.warn("⚠️ Mensaje WhatsApp duplicado ignorado: messageId={}", webhook.messageId());
                 return;
             }
 
-            // Guardar mensaje entrante
+            // 5. Guardar mensaje entrante
             Message inboundMessage = Message.builder()
                     .conversation(conversation)
                     .direction(MessageDirection.INBOUND)
@@ -207,12 +227,15 @@ public class MessageService {
                     .sentAt(LocalDateTime.now())
                     .build();
             messageRepository.save(inboundMessage);
-            updateConversationLastInteraction(conversation);
+
+            // 6. Actualizar última interacción
+            conversation.setLastInteraction(LocalDateTime.now());
+            conversationRepository.save(conversation);
 
             log.info("💾 Mensaje WhatsApp entrante guardado: id={}, conversationId={}",
                     inboundMessage.getId(), conversation.getId());
 
-            // ✅ ENVIAR RESPUESTA AUTOMÁTICA si es nuevo contacto
+            // 7. Enviar respuesta automática SOLO si es nuevo contacto
             if (isNewContact) {
                 sendWelcomeAutoReply(contact, conversation, admin);
             }
@@ -281,12 +304,35 @@ public class MessageService {
         try {
             User admin = getDefaultAdmin();
 
-            // Verificar si el contacto ya existía
-            Contact existingContact = contactService.findByExternalId(webhook.from(), Channel.EMAIL);
-            boolean isNewContact = (existingContact == null);
+            // 1. Buscar contacto existente
+            Contact contact = contactService.findByExternalId(webhook.from(), Channel.EMAIL);
+            boolean isNewContact = (contact == null);
 
-            Contact contact = getOrCreateContactFromEmail(webhook, admin);
-            Conversation conversation = getOrCreateConversation(contact, Channel.EMAIL);
+            if (contact == null) {
+                contact = contactService.createContactFromWebhook(webhook.from(), Channel.EMAIL, admin);
+                log.info("🆕 Nuevo contacto creado desde Email: email={}", webhook.from());
+
+                if (webhook.fromName() != null && !webhook.fromName().isEmpty()) {
+                    updateContactName(contact, webhook.fromName(), admin);
+                }
+            }
+
+            // 2. Hacer una copia final de contact para usar en la lambda
+            final Contact finalContact = contact;
+
+            // 3. Obtener o crear conversación
+            Conversation conversation = conversationRepository.findByContactAndChannel(contact, Channel.EMAIL)
+                    .orElseGet(() -> {
+                        Conversation newConv = Conversation.builder()
+                                .contact(finalContact)
+                                .channel(Channel.EMAIL)
+                                .status(ConversationStatus.OPEN)
+                                .assignedTo(finalContact.getOwner())
+                                .lastInteraction(LocalDateTime.now())
+                                .build();
+                        log.info("💬 Nueva conversación Email creada para contacto: id={}", finalContact.getId());
+                        return conversationRepository.save(newConv);
+                    });
 
             String brevoMessageId = webhook.messageId();
 
@@ -315,7 +361,6 @@ public class MessageService {
             log.info("💾 Mensaje Email entrante guardado: id={}, conversationId={}",
                     inboundMessage.getId(), conversation.getId());
 
-            // ✅ ENVIAR RESPUESTA AUTOMÁTICA si es nuevo contacto
             if (isNewContact) {
                 sendEmailWelcomeAutoReply(contact, conversation, admin);
             }
