@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import com.crm.app.dto.SavedViewRequest;
@@ -23,12 +24,15 @@ import com.crm.app.model.User;
 import com.crm.app.model.enums.EntityType;
 import com.crm.app.service.SavedViewService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/saved-views")
 @RequiredArgsConstructor
+@Tag(name = "Saved Views", description = "Configuraciones de vistas guardadas por usuario")
 public class SavedViewController {
 
     private final SavedViewService savedViewService;
@@ -37,6 +41,8 @@ public class SavedViewController {
     // CREATE
     // =========================
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Crear vista guardada")
     public ResponseEntity<SavedViewResponse> create(
         @RequestBody @Valid SavedViewRequest request,
         @AuthenticationPrincipal User currentUser
@@ -55,6 +61,8 @@ public class SavedViewController {
     // GET ALL
     // =========================
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Listar vistas accesibles (propias + globales)")
     public ResponseEntity<List<SavedViewResponse>> getAll(
             @RequestParam(required = false) EntityType entity,
             @RequestParam(required = false) Boolean global,
@@ -89,6 +97,8 @@ public class SavedViewController {
     // GET ONE
     // =========================
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Obtener vista por ID")
     public ResponseEntity<SavedViewResponse> getById(
         @PathVariable Long id,
         @AuthenticationPrincipal User currentUser
@@ -103,6 +113,8 @@ public class SavedViewController {
     // UPDATE
     // =========================
     @PutMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Actualizar vista (solo owner o admin)")
     public ResponseEntity<SavedViewResponse> update(
             @PathVariable Long id,
             @RequestBody @Valid SavedViewRequest request,
@@ -120,6 +132,8 @@ public class SavedViewController {
     // DELETE
     // =========================
     @DeleteMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Eliminar vista (solo owner o admin)")
     public ResponseEntity<Void> delete(
             @PathVariable Long id,
             @AuthenticationPrincipal User currentUser
