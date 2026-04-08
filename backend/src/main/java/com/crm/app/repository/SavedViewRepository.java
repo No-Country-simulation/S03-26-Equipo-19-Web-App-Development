@@ -36,4 +36,22 @@ public interface SavedViewRepository extends JpaRepository<SavedView, Long> {
     Optional<SavedView> findByIdAndUser(Long id, User user);
 
     boolean existsByNameAndUser(String name, User user);
+
+    // Filtros adicionales para vistas globales:
+    @Query("SELECT v FROM SavedView v WHERE (v.user = :user OR v.global = true) " +
+        "AND v.global = :global ORDER BY v.global DESC, v.name ASC")
+        List<SavedView> findAccessibleByUserAndGlobal(
+                @Param("user") User user,
+                @Param("global") boolean global
+        );
+
+        // Filtros adicionales para vistas de una entidad específica:
+    @Query("SELECT v FROM SavedView v WHERE (v.user = :user OR v.global = true) " +
+        "AND v.entity = :entity AND v.global = :global " +
+        "ORDER BY v.global DESC, v.name ASC")
+        List<SavedView> findAccessibleByUserAndEntityAndGlobal(
+                @Param("user") User user,
+                @Param("entity") EntityType entity,
+                @Param("global") boolean global
+        );
 }

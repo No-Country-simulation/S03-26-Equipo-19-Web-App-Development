@@ -71,18 +71,17 @@ public class SavedViewController {
 
         List<SavedView> views;
 
-        // 1. Traemos base de datos según entity
-        if (entity != null) {
+        if (entity != null && global != null) {
+            views = savedViewService.getAccessibleByEntityAndGlobal(currentUser, entity, global);
+
+        } else if (entity != null) {
             views = savedViewService.getAccessibleByEntity(currentUser, entity);
+
+        } else if (global != null) {
+            views = savedViewService.getAccessibleByGlobal(currentUser, global);
+
         } else {
             views = savedViewService.getAccessible(currentUser);
-        }
-
-        // 2. Aplicamos filtro global (si viene)
-        if (global != null) {
-            views = views.stream()
-                    .filter(v -> v.isGlobal() == global)
-                    .toList();
         }
 
         // 3. Mapear a response
