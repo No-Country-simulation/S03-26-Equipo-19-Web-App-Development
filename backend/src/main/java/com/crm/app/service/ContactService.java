@@ -78,7 +78,6 @@ public class ContactService {
                 .email(contactBase.email())
                 .phone(normalizedPhone)
                 .company(contactBase.company())
-                .source(request.source() != null ? request.source() : "manual")
                 .preferredChannel(request.preferredChannel())
                 .funnelStatus(FunnelStatus.NEW_LEAD)
                 .owner(owner)
@@ -170,7 +169,6 @@ public class ContactService {
         if (contactBase.name() != null) contact.setName(contactBase.name());
         if (contactBase.lastName() != null) contact.setLastName(contactBase.lastName());
         if (contactBase.company() != null) contact.setCompany(contactBase.company());
-        if (request.source() != null) contact.setSource(request.source());
         if (request.preferredChannel() != null) contact.setPreferredChannel(request.preferredChannel());
 
         try {
@@ -238,7 +236,6 @@ public class ContactService {
                 .email(channel == Channel.EMAIL ? identifier : null)
                 .phone(channel == Channel.WHATSAPP ? cleanIdentifier : null)
                 .company(null)
-                .source(source)
                 .preferredChannel(channel)
                 .funnelStatus(FunnelStatus.NEW_LEAD)
                 .owner(defaultOwner)
