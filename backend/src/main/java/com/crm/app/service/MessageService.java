@@ -568,4 +568,29 @@ public class MessageService {
                 .map(conversation -> conversation.getAssignedTo().getId().equals(currentUser.getId()))
                 .orElse(false);
     }
+
+    /**
+     * Obtiene TODOS los mensajes de un contacto (WhatsApp + Email combinados)
+     * Útil para ver el timeline completo de comunicación con un contacto
+     */
+    public List<Message> getContactConversationHistory(Long contactId, String userEmail) {
+        if (userEmail == null || userEmail.isBlank()) {
+            throw new UnauthorizedAccessException("Debes iniciar sesión para ver el historial");
+        }
+
+        User currentUser = getUserByEmail(userEmail);
+
+        // Verificar acceso al contacto
+        Contact contact = contactService.findByIdAndCheckAccess(contactId, currentUser);
+
+        // Obtener todas las conversaciones del contacto (WhatsApp y Email)
+        List<Conversation> conversations = conversationRepository.findByContact(contact);
+
+        if (conversations.isEmpty()) {
+            return List.of();
+        }
+
+        // Obtener todos los mensajes de todas las conversaciones y combinarlos
+        return messageRepository.findByConversationInOrderBySentAtAsc(conversations);
+    }
 }

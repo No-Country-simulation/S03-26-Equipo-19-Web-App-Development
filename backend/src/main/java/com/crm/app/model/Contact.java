@@ -66,13 +66,6 @@ public class Contact {
     private FunnelStatus funnelStatus = FunnelStatus.NEW_LEAD;
 
     /**
-     * Cómo llegó el contacto al sistema. Ej: "LinkedIn", "Referido", "Formulario web".
-     * Puede ser null para contactos creados automáticamente.
-     */
-    @Column(nullable = true)
-    private String source;
-
-    /**
      * Canal de comunicación preferido del contacto.
      * Determina por dónde se iniciará la primera conversación por defecto.
      */
