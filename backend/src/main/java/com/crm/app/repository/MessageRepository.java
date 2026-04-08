@@ -97,4 +97,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     @Query("SELECT c.channel, COUNT(m) FROM Message m JOIN m.conversation c WHERE m.sentAt BETWEEN :start AND :end GROUP BY c.channel")
     List<Object[]> countOutboundByChannelInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT m FROM Message m WHERE m.conversation IN :conversations ORDER BY m.sentAt ASC")
+    List<Message> findByConversationInOrderBySentAtAsc(@Param("conversations") List<Conversation> conversations);
 }

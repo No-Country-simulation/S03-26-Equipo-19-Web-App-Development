@@ -251,16 +251,16 @@ public class DataSeeder implements ApplicationRunner {
 
         // Contact data: name, email, phone, company, source, funnelStatus, preferredChannel, ownerIndex, tagIndices
         Object[][] contactData = {
-                {"Carlos Rodríguez", "carlos@techcorp.com", "541123456701", "TechCorp", "Formulario web", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 0, new int[]{0, 1}},
-                {"Ana Martínez", "ana@ecomstore.com", "541123456702", "EcomStore", "LinkedIn", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{1, 3}},
-                {"Martín González", "martin@fintech.io", "541123456703", "Fintech IO", "Referido", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 1, new int[]{0, 2}},
-                {"Laura Fernández", "laura@startup.com", "541123456704", "StartupX", "Evento", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{4}},
-                {"Javier López", "javier@saas.com", "541123456705", "SaaS Solutions", "Formulario web", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 2, new int[]{1, 5}},
-                {"Sofía Díaz", "sofia@retail.com", "541123456706", "Retail Plus", "LinkedIn", FunnelStatus.CLOSED_LOST, Channel.EMAIL, 2, new int[]{4}},
-                {"Diego Sánchez", "diego@logistica.com", "541123456707", "Logística Express", "Referido", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 3, new int[]{0, 2}},
-                {"Valentina Pérez", "valentina@health.com", "541123456708", "Health Tech", "Formulario web", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{2, 5}},
-                {"Nicolás Romero", "nico@marketing.com", "541123456709", "Marketing Pro", "LinkedIn", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 4, new int[]{3, 4}},
-                {"Camila Morales", "camila@consulting.com", "541123456710", "Consulting Group", "Referido", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{0, 1, 2}}
+                {"Carlos", "Rodríguez", "carlos@techcorp.com", "541123456701", "TechCorp", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 0, new int[]{0, 1}},
+                {"Ana", "Martínez", "ana@ecomstore.com", "541123456702", "EcomStore", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{1, 3}},
+                {"Martín", "González", "martin@fintech.io", "541123456703", "Fintech IO", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 1, new int[]{0, 2}},
+                {"Laura", "Fernández", "laura@startup.com", "541123456704", "StartupX", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{4}},
+                {"Javier", " López", "javier@saas.com", "541123456705", "SaaS Solutions", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 2, new int[]{1, 5}},
+                {"Sofía", "Díaz", "sofia@retail.com", "541123456706", "Retail Plus", FunnelStatus.CLOSED_LOST, Channel.EMAIL, 2, new int[]{4}},
+                {"Diego", "Sánchez", "diego@logistica.com", "541123456707", "Logística Express", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 3, new int[]{0, 2}},
+                {"Valentina", "Pérez", "valentina@health.com", "541123456708", "Health Tech", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{2, 5}},
+                {"Nicolás", "Romero", "nico@marketing.com", "541123456709", "Marketing Pro", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 4, new int[]{3, 4}},
+                {"Camila", "Morales", "camila@consulting.com", "541123456710", "Consulting Group", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{0, 1, 2}}
         };
 
         for (Object[] data : contactData) {
@@ -268,10 +268,10 @@ public class DataSeeder implements ApplicationRunner {
 
             Contact contact = Contact.builder()
                     .name((String) data[0])
-                    .email((String) data[1])
-                    .phone((String) data[2])
-                    .company((String) data[3])
-                    .source((String) data[4])
+                    .lastName((String) data[1])
+                    .email((String) data[2])
+                    .phone((String) data[3])
+                    .company((String) data[4])
                     .funnelStatus((FunnelStatus) data[5])
                     .preferredChannel((Channel) data[6])
                     .owner(owner)

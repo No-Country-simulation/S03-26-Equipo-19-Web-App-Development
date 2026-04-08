@@ -40,6 +40,14 @@ public class ConversationService {
     }
 
     /**
+     * Obtiene todas las conversaciones del sistema (solo ADMIN)
+     */
+    public List<Conversation> getAllConversations() {
+        log.info("📋 Admin obteniendo todas las conversaciones");
+        return conversationRepository.findAll();
+    }
+
+    /**
      * Crea una nueva conversación
      */
     private Conversation createNewConversation(Contact contact, Channel channel, User currentUser) {
