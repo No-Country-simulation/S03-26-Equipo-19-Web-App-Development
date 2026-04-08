@@ -13,6 +13,7 @@ import com.crm.app.model.User;
 import com.crm.app.model.enums.*;
 import com.crm.app.repository.ConversationRepository;
 import com.crm.app.repository.MessageRepository;
+import com.crm.app.repository.TemplateRepository;
 import com.crm.app.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -37,6 +39,7 @@ public class MessageService {
     private final WhatsAppService whatsAppService;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final TemplateRepository templateRepository;
     private final TemplateService templateService;  // ✅ Agregado
 
     // ==================== MÉTODOS PÚBLICOS ====================
@@ -181,15 +184,41 @@ public class MessageService {
 
         try {
             User admin = getDefaultAdmin();
-            Contact contact = getOrCreateContactFromWhatsApp(webhook.from(), admin);
-            Conversation conversation = getOrCreateConversation(contact, Channel.WHATSAPP);
 
+            // 1. Buscar contacto existente
+            Contact contact = contactService.findByExternalId(webhook.from(), Channel.WHATSAPP);
+            boolean isNewContact = (contact == null);
+
+            if (isNewContact) {
+                contact = contactService.createContactFromWebhook(webhook.from(), Channel.WHATSAPP, admin);
+                log.info("🆕 Nuevo contacto creado desde WhatsApp: phone={}", webhook.from());
+            }
+
+            // 2. Hacer una copia final de contact para usar en la lambda
+            final Contact finalContact = contact;
+
+            // 3. Buscar conversación EXISTENTE antes de crear una nueva
+            Conversation conversation = conversationRepository.findByContactAndChannel(contact, Channel.WHATSAPP)
+                    .orElseGet(() -> {
+                        Conversation newConv = Conversation.builder()
+                                .contact(finalContact)
+                                .channel(Channel.WHATSAPP)
+                                .status(ConversationStatus.OPEN)
+                                .assignedTo(finalContact.getOwner())
+                                .lastInteraction(LocalDateTime.now())
+                                .build();
+                        log.info("💬 Nueva conversación WhatsApp creada para contacto: id={}", finalContact.getId());
+                        return conversationRepository.save(newConv);
+                    });
+
+            // 4. Verificar mensaje duplicado por providerId
             if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
                 log.warn("⚠️ Mensaje WhatsApp duplicado ignorado: messageId={}", webhook.messageId());
                 return;
             }
 
-            Message message = Message.builder()
+            // 5. Guardar mensaje entrante
+            Message inboundMessage = Message.builder()
                     .conversation(conversation)
                     .direction(MessageDirection.INBOUND)
                     .body(webhook.messageBody())
@@ -197,15 +226,74 @@ public class MessageService {
                     .providerId(webhook.messageId())
                     .sentAt(LocalDateTime.now())
                     .build();
+            messageRepository.save(inboundMessage);
 
-            messageRepository.save(message);
-            updateConversationLastInteraction(conversation);
+            // 6. Actualizar última interacción
+            conversation.setLastInteraction(LocalDateTime.now());
+            conversationRepository.save(conversation);
 
             log.info("💾 Mensaje WhatsApp entrante guardado: id={}, conversationId={}",
-                    message.getId(), conversation.getId());
+                    inboundMessage.getId(), conversation.getId());
+
+            // 7. Enviar respuesta automática SOLO si es nuevo contacto
+            if (isNewContact) {
+                sendWelcomeAutoReply(contact, conversation, admin);
+            }
 
         } catch (Exception e) {
             log.error("❌ Error procesando mensaje WhatsApp entrante: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Envía respuesta automática de bienvenida usando plantilla
+     */
+    private void sendWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
+        try {
+            // Buscar plantilla de bienvenida para WhatsApp
+            Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
+                    "Bienvenida automática - WhatsApp", Channel.WHATSAPP);
+
+            if (welcomeTemplateOpt.isEmpty()) {
+                log.warn("⚠️ No se encontró plantilla de bienvenida. No se enviará respuesta automática.");
+                return;
+            }
+
+            Template welcomeTemplate = welcomeTemplateOpt.get();
+
+            // Preparar variables
+            String contactName = contact.getName();
+            if (contactName == null || contactName.isBlank()) {
+                contactName = "cliente";
+            }
+
+            Map<String, String> variables = Map.of("name", contactName);
+
+            // Renderizar mensaje
+            String welcomeMessage = templateService.renderTemplate(welcomeTemplate, variables);
+
+            // Enviar mensaje automático
+            String providerId = whatsAppService.sendMessage(contact.getPhone(), welcomeMessage);
+
+            // Guardar mensaje saliente automático
+            Message autoReply = Message.builder()
+                    .conversation(conversation)
+                    .direction(MessageDirection.OUTBOUND)
+                    .body(welcomeMessage)
+                    .deliveryStatus(DeliveryStatus.SENT)
+                    .sender(admin)
+                    .template(welcomeTemplate)
+                    .providerId(providerId)
+                    .sentAt(LocalDateTime.now())
+                    .build();
+            messageRepository.save(autoReply);
+
+            updateConversationLastInteraction(conversation);
+
+            log.info("🤖 Respuesta automática enviada a: {}", contact.getPhone());
+
+        } catch (Exception e) {
+            log.error("❌ Error enviando respuesta automática: {}", e.getMessage(), e);
         }
     }
 
@@ -215,8 +303,36 @@ public class MessageService {
 
         try {
             User admin = getDefaultAdmin();
-            Contact contact = getOrCreateContactFromEmail(webhook, admin);
-            Conversation conversation = getOrCreateConversation(contact, Channel.EMAIL);
+
+            // 1. Buscar contacto existente
+            Contact contact = contactService.findByExternalId(webhook.from(), Channel.EMAIL);
+            boolean isNewContact = (contact == null);
+
+            if (contact == null) {
+                contact = contactService.createContactFromWebhook(webhook.from(), Channel.EMAIL, admin);
+                log.info("🆕 Nuevo contacto creado desde Email: email={}", webhook.from());
+
+                if (webhook.fromName() != null && !webhook.fromName().isEmpty()) {
+                    updateContactName(contact, webhook.fromName(), admin);
+                }
+            }
+
+            // 2. Hacer una copia final de contact para usar en la lambda
+            final Contact finalContact = contact;
+
+            // 3. Obtener o crear conversación
+            Conversation conversation = conversationRepository.findByContactAndChannel(contact, Channel.EMAIL)
+                    .orElseGet(() -> {
+                        Conversation newConv = Conversation.builder()
+                                .contact(finalContact)
+                                .channel(Channel.EMAIL)
+                                .status(ConversationStatus.OPEN)
+                                .assignedTo(finalContact.getOwner())
+                                .lastInteraction(LocalDateTime.now())
+                                .build();
+                        log.info("💬 Nueva conversación Email creada para contacto: id={}", finalContact.getId());
+                        return conversationRepository.save(newConv);
+                    });
 
             String brevoMessageId = webhook.messageId();
 
@@ -230,7 +346,7 @@ public class MessageService {
                 body = body.replaceAll("<[^>]*>", "").trim();
             }
 
-            Message message = Message.builder()
+            Message inboundMessage = Message.builder()
                     .conversation(conversation)
                     .direction(MessageDirection.INBOUND)
                     .body(body)
@@ -239,14 +355,65 @@ public class MessageService {
                     .sentAt(LocalDateTime.now())
                     .build();
 
-            messageRepository.save(message);
+            messageRepository.save(inboundMessage);
             updateConversationLastInteraction(conversation);
 
             log.info("💾 Mensaje Email entrante guardado: id={}, conversationId={}",
-                    message.getId(), conversation.getId());
+                    inboundMessage.getId(), conversation.getId());
+
+            if (isNewContact) {
+                sendEmailWelcomeAutoReply(contact, conversation, admin);
+            }
 
         } catch (Exception e) {
             log.error("❌ Error procesando mensaje Email entrante: {}", e.getMessage(), e);
+        }
+    }
+
+    private void sendEmailWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
+        try {
+            Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
+                    "Email de bienvenida", Channel.EMAIL);
+
+            if (welcomeTemplateOpt.isEmpty()) {
+                log.warn("⚠️ No se encontró plantilla de bienvenida para Email.");
+                return;
+            }
+
+            Template welcomeTemplate = welcomeTemplateOpt.get();
+
+            // Preparar variables
+            Map<String, String> variables = Map.of(
+                    "name", contact.getName() != null ? contact.getName() : "cliente",
+                    "company", contact.getCompany() != null ? contact.getCompany() : "tu empresa",
+                    "salesperson", "nuestro equipo"
+            );
+
+            // Renderizar mensaje
+            String welcomeMessage = templateService.renderTemplate(welcomeTemplate, variables);
+
+            // Enviar email automático
+            String providerId = emailService.sendMessage(contact.getEmail(), welcomeMessage, contact.getName());
+
+            // Guardar mensaje saliente automático
+            Message autoReply = Message.builder()
+                    .conversation(conversation)
+                    .direction(MessageDirection.OUTBOUND)
+                    .body(welcomeMessage)
+                    .deliveryStatus(DeliveryStatus.SENT)
+                    .sender(admin)
+                    .template(welcomeTemplate)
+                    .providerId(providerId)
+                    .sentAt(LocalDateTime.now())
+                    .build();
+            messageRepository.save(autoReply);
+
+            updateConversationLastInteraction(conversation);
+
+            log.info("🤖 Respuesta automática por Email enviada a: {}", contact.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Error enviando respuesta automática por Email: {}", e.getMessage(), e);
         }
     }
 
@@ -400,5 +567,30 @@ public class MessageService {
         return conversationRepository.findById(conversationId)
                 .map(conversation -> conversation.getAssignedTo().getId().equals(currentUser.getId()))
                 .orElse(false);
+    }
+
+    /**
+     * Obtiene TODOS los mensajes de un contacto (WhatsApp + Email combinados)
+     * Útil para ver el timeline completo de comunicación con un contacto
+     */
+    public List<Message> getContactConversationHistory(Long contactId, String userEmail) {
+        if (userEmail == null || userEmail.isBlank()) {
+            throw new UnauthorizedAccessException("Debes iniciar sesión para ver el historial");
+        }
+
+        User currentUser = getUserByEmail(userEmail);
+
+        // Verificar acceso al contacto
+        Contact contact = contactService.findByIdAndCheckAccess(contactId, currentUser);
+
+        // Obtener todas las conversaciones del contacto (WhatsApp y Email)
+        List<Conversation> conversations = conversationRepository.findByContact(contact);
+
+        if (conversations.isEmpty()) {
+            return List.of();
+        }
+
+        // Obtener todos los mensajes de todas las conversaciones y combinarlos
+        return messageRepository.findByConversationInOrderBySentAtAsc(conversations);
     }
 }

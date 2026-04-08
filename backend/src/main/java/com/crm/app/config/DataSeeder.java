@@ -141,9 +141,20 @@ public class DataSeeder implements ApplicationRunner {
                 Template.builder()
                         .name("Email de bienvenida")
                         .channel(Channel.EMAIL)
-                        .subject("Bienvenido a {{company}}, {{name}}!")
-                        .body("Hola {{name}},\n\nGracias por contactarnos. Soy {{salesperson}} y estaré ayudándote.\n\n¿Qué te gustaría saber sobre nuestros servicios?\n\nSaludos,\nEquipo CRM")
-                        .variables("{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}")
+                        .subject("✅ Hemos recibido tu consulta - {{company}}")
+                        .body("""
+                                Estimado/a {{name}},
+                                
+                                Gracias por contactarte con {{company}}.
+                                
+                                Hemos recibido tu mensaje correctamente y será derivado a nuestro equipo de ventas.
+                                
+                                En las próximas horas, uno de nuestros asesores se comunicará contigo para brindarte la información que necesitas.
+                                
+                                Mientras tanto, puedes responder este mismo correo si tienes alguna pregunta adicional.
+                                
+                                """)
+                        .variables("{\"name\":\"string\",\"company\":\"string\"}")
                         .createdBy(admin)
                         .build(),
 
@@ -159,8 +170,17 @@ public class DataSeeder implements ApplicationRunner {
                 Template.builder()
                         .name("WhatsApp - Primer contacto")
                         .channel(Channel.WHATSAPP)
-                        .body("Hola {{name}}! Soy {{salesperson}} de CRM Cross-Industry. ¿Cómo estás? Quería contarte cómo podemos ayudar a {{company}} a mejorar sus ventas. ¿Te parece si coordinamos una breve llamada?")
-                        .variables("{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}")
+                        .body("""
+                                👋 Hola {{name}}! Gracias por escribirnos.
+                                
+                                Hemos recibido tu mensaje correctamente. 🚀
+                                
+                                En breve, uno de nuestros asesores se pondrá en contacto contigo para atender tu consulta.
+                                
+                                📌 Mientras tanto, si necesitas algo más, no dudes en escribirnos.
+                                
+                                ¡Gracias por contactarnos!""")
+                        .variables("{\"name\":\"string\"}")
                         .createdBy(admin)
                         .build(),
 
@@ -196,6 +216,19 @@ public class DataSeeder implements ApplicationRunner {
                         .body("Hola {{name}},\n\nEste mes lanzamos:\n• Nueva integración con WhatsApp\n• Reportes avanzados\n• Plantillas dinámicas\n\n¿Querés una demo? Respondé este mail.\n\nSaludos,\nEquipo CRM")
                         .variables("{\"name\":\"string\",\"month\":\"string\"}")
                         .createdBy(admin)
+                        .build(),
+
+                Template.builder()
+                        .name("Bienvenida automática - WhatsApp")
+                        .channel(Channel.WHATSAPP)
+                        .body("👋 Hola {{name}}! Gracias por contactarte con nosotros.\n\n" +
+                                "Soy el asistente virtual de CRM Cross-Industry. 🚀\n\n" +
+                                "Te informo que tu consulta ha sido recibida y será derivada a uno de nuestros asesores comerciales en breve.\n\n" +
+                                "Mientras tanto, ¿podrías contarnos un poco más sobre lo que necesitas? Así podemos ayudarte mejor.\n\n" +
+                                "📌 *Importante:* Un agente te responderá a la brevedad.\n\n" +
+                                "¡Gracias por tu paciencia!")
+                        .variables("{\"name\":\"string\"}")
+                        .createdBy(admin)
                         .build()
         );
 
@@ -218,16 +251,16 @@ public class DataSeeder implements ApplicationRunner {
 
         // Contact data: name, email, phone, company, source, funnelStatus, preferredChannel, ownerIndex, tagIndices
         Object[][] contactData = {
-                {"Carlos Rodríguez", "carlos@techcorp.com", "541123456701", "TechCorp", "Formulario web", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 0, new int[]{0, 1}},
-                {"Ana Martínez", "ana@ecomstore.com", "541123456702", "EcomStore", "LinkedIn", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{1, 3}},
-                {"Martín González", "martin@fintech.io", "541123456703", "Fintech IO", "Referido", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 1, new int[]{0, 2}},
-                {"Laura Fernández", "laura@startup.com", "541123456704", "StartupX", "Evento", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{4}},
-                {"Javier López", "javier@saas.com", "541123456705", "SaaS Solutions", "Formulario web", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 2, new int[]{1, 5}},
-                {"Sofía Díaz", "sofia@retail.com", "541123456706", "Retail Plus", "LinkedIn", FunnelStatus.CLOSED_LOST, Channel.EMAIL, 2, new int[]{4}},
-                {"Diego Sánchez", "diego@logistica.com", "541123456707", "Logística Express", "Referido", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 3, new int[]{0, 2}},
-                {"Valentina Pérez", "valentina@health.com", "541123456708", "Health Tech", "Formulario web", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{2, 5}},
-                {"Nicolás Romero", "nico@marketing.com", "541123456709", "Marketing Pro", "LinkedIn", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 4, new int[]{3, 4}},
-                {"Camila Morales", "camila@consulting.com", "541123456710", "Consulting Group", "Referido", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{0, 1, 2}}
+                {"Carlos", "Rodríguez", "carlos@techcorp.com", "541123456701", "TechCorp", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 0, new int[]{0, 1}},
+                {"Ana", "Martínez", "ana@ecomstore.com", "541123456702", "EcomStore", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{1, 3}},
+                {"Martín", "González", "martin@fintech.io", "541123456703", "Fintech IO", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 1, new int[]{0, 2}},
+                {"Laura", "Fernández", "laura@startup.com", "541123456704", "StartupX", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{4}},
+                {"Javier", " López", "javier@saas.com", "541123456705", "SaaS Solutions", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 2, new int[]{1, 5}},
+                {"Sofía", "Díaz", "sofia@retail.com", "541123456706", "Retail Plus", FunnelStatus.CLOSED_LOST, Channel.EMAIL, 2, new int[]{4}},
+                {"Diego", "Sánchez", "diego@logistica.com", "541123456707", "Logística Express", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 3, new int[]{0, 2}},
+                {"Valentina", "Pérez", "valentina@health.com", "541123456708", "Health Tech", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{2, 5}},
+                {"Nicolás", "Romero", "nico@marketing.com", "541123456709", "Marketing Pro", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 4, new int[]{3, 4}},
+                {"Camila", "Morales", "camila@consulting.com", "541123456710", "Consulting Group", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{0, 1, 2}}
         };
 
         for (Object[] data : contactData) {
@@ -235,10 +268,10 @@ public class DataSeeder implements ApplicationRunner {
 
             Contact contact = Contact.builder()
                     .name((String) data[0])
-                    .email((String) data[1])
-                    .phone((String) data[2])
-                    .company((String) data[3])
-                    .source((String) data[4])
+                    .lastName((String) data[1])
+                    .email((String) data[2])
+                    .phone((String) data[3])
+                    .company((String) data[4])
                     .funnelStatus((FunnelStatus) data[5])
                     .preferredChannel((Channel) data[6])
                     .owner(owner)

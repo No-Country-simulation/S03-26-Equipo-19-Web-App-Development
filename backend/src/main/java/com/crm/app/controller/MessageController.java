@@ -115,4 +115,14 @@ public class MessageController {
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(messageService.getConversationHistory(conversationId, currentUser.getEmail()));
     }
+
+    @GetMapping("/contact/{contactId}/history")
+    @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#contactId, principal)")
+    @Operation(summary = "Historial completo del contacto",
+            description = "Obtiene TODOS los mensajes de un contacto (WhatsApp + Email combinados y ordenados cronológicamente)")
+    public ResponseEntity<List<Message>> getContactHistory(
+            @PathVariable Long contactId,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(messageService.getContactConversationHistory(contactId, currentUser.getEmail()));
+    }
 }

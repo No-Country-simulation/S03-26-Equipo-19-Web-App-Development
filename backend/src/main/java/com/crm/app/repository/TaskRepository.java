@@ -60,4 +60,9 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     // Tareas por tipo para un vendedor — para filtros de la UI
     List<Task> findByAssignedToAndType(User assignedTo, TaskType type);
+
+    long countByStatus(TaskStatus status);
+
+    long countByAssignedToAndStatus(User assignedTo, TaskStatus status);
+
 }
