@@ -1,40 +1,33 @@
-
 export const ROUTES = {
-  LOGIN: '/login',
-  REGISTER: '/register',
-  DASHBOARD: '/dashboard',
+  LOGIN: "/login",
+  REGISTER: "/register",
+  DASHBOARD: "/dashboard",
 
-  CONTACTS: 'contacts',
-  MESSAGES: 'messages',
-  METRICS: 'metrics',
-  SETTINGS: 'settings',
-  TASKS: 'tasks',
+  CONTACTS: "contacts",
+  CONTACT_DETALLE: 'contacts/:contactId',
+  MESSAGES: "messages",
+  TASKS: "tasks",
+  SAVED_VIEWS: "saved-views",
+  METRICS: "metrics",
+  FUNNEL: "funnel",
+  SALESPERSONS: "salespersons",
+  REPORTS: "reports",
+  TEMPLATES: "templates",
+  TAGS: "tags",
 
-  HOME: '/',
+  HOME: "/",
 } as const;
 
 export const ROUTE_BUILDERS = {
-  userDetail: (userId: string) => `/dashboard/users/${userId}`,
-
+  salespersonDetail: (userId: string) => `/dashboard/salespersons/${userId}`,
+  contactDetail: (contactId: string) => `/dashboard/contacts/${contactId}`,
+  messageDetail: (messageId: string) => `/dashboard/messages/${messageId}`,
+  taskDetail: (taskId: string) => `/dashboard/tasks/${taskId}`,
+  savedViewDetail: (viewId: string) => `/dashboard/saved-views/${viewId}`,
+  metricDetail: (metricId: string) => `/dashboard/metrics/${metricId}`,
+  reportDetail: (reportId: string) => `/dashboard/reports/${reportId}`,
+  templateDetail: (templateId: string) => `/dashboard/templates/${templateId}`,
 } as const;
 
-const API_BASE_URL =
-  import.meta.env.VITE_URL_BASE ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:3000";
 
-const NORMALIZED_API_BASE = API_BASE_URL.replace(/\/+$/, "").replace(/\/api$/, "");
-
-export const API_ENDPOINTS = {
-  BASE: NORMALIZED_API_BASE,
-  AUTH: {
-    LOGIN: '/api/auth/login',
-    REGISTER: '/api/auth/register',
-  },
-  USERS: {    // Agregar endpoints reales
-    BASE: '/api/users',
-    byId: (id: string | number) => `/api/users/${id}`,
-  },
- 
-} as const;
 

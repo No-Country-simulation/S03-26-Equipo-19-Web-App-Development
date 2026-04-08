@@ -20,17 +20,18 @@ const routeTitles: Record<string, string> = {
 export const Header = ({ onMenuClick }: HeaderProps) => {
 
   const { user } = useAuthStore()
-const location = useLocation();
+  const location = useLocation();
 
-const section = location.pathname.split("/")[2];
+  const section = location.pathname.split("/")[2];
 
-const currentTitle = routeTitles[section] || "Dashboard";
+  const currentTitle = routeTitles[section] || "Dashboard";
 
   return (
-    <header className="flex justify-between items-center px-4 md:px-8 py-4 bg-white border-b border-slate-100">
+    <header className="grid grid-cols-[3fr_1fr] md:grid-cols-[1fr_1fr] items-center justify-content px-4 md:px-8 py-4 bg-white border-b border-slate-100">
 
-      {/* Lado Izquierdo: Menú Hamburguesa (Solo Móvil) + Títulos */}
-      <div className="flex items-center gap-3 md:gap-0">
+      <div className="flex items-center gap-3 w-full md:w-auto">
+
+        {/* Mobile: menú hamburguesa */}
         <button
           onClick={onMenuClick}
           aria-label="Abrir menú"
@@ -39,29 +40,31 @@ const currentTitle = routeTitles[section] || "Dashboard";
           <Menu size={24} />
         </button>
 
-        <h1 className="text-xl md:text-2xl font-bold text-[#13316b]">{currentTitle}</h1>
+        {/* Mobile: título */}
+        <h1 className="block md:hidden text-xl font-bold text-[#13316b]">
+          {currentTitle}
+        </h1>
 
-      </div>
-
-      {/* Lado Derecho: Controles */}
-      <div className="flex items-center gap-4 md:gap-6">
-
-        {/* Selector y Buscador (Ocultos en pantallas pequeñas para ahorrar espacio) */}
-        <div className="hidden lg:flex items-center gap-6">
-
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* Desktop: buscador */}
+        <div className="hidden md:flex ml-2 w-full">
+          <div className="relative w-full">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutro-2"
+            />
             <Input
               type="text"
               placeholder="Buscar"
-              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm w-64 outline-none focus:border-[#3b82f6] transition-colors"
+              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm w-full outline-none focus:border-[#3b82f6] transition-colors"
             />
           </div>
         </div>
 
-        {/* Perfil y Notificaciones (Siempre visibles) */}
-        <div className="flex items-center gap-3 md:gap-4 lg:pl-6 lg:border-l border-slate-200">
+      </div>
 
+      {/* Lado Derecho: Controles */}
+      <div className="flex items-center gap-4 md:gap-6 justify-self-end">
+        <div className="flex items-center gap-3 md:gap-4 lg:pl-6 lg:border-l border-slate-200">
           <div className="flex items-center gap-2 md:gap-3">
             {/* Nombre oculto en móvil muy pequeño */}
             <span className="hidden sm:block text-sm font-medium text-slate-700">{user?.name}</span>

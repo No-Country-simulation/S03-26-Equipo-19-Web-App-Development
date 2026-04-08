@@ -95,9 +95,11 @@ const Login: React.FC = () => {
                   "Credenciales incorrectas"}
               </p>
             )}
-            <Button type="submit" variant="primary" className="w-full mt-4" disabled={mutationPostLogin.isPending}>
-              {mutationPostLogin.isPending ? "Ingresando..." : "Iniciar sesión"}
-            </Button>
+            <div className="flex justify-center">
+              <Button type="submit" variant="primary" className="mt-4 w-1/2" disabled={mutationPostLogin.isPending}>
+                {mutationPostLogin.isPending ? "Ingresando..." : "Iniciar sesión"}
+              </Button>
+            </div>
           </form>
 
           <div className="mt-8 pt-6 border-t border-neutro-2 text-center">

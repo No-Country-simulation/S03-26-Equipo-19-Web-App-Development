@@ -1,46 +1,95 @@
-import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Users, MessageSquare, BarChart2, Settings } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  MessagesSquare,
+  ListTodo,
+  Bookmark,
+  FileText,
+  UserRoundCog,
+ 
+  ChartNoAxesCombined,
+  Funnel,
+  Tag,
+  Download,
+  LogOut,
+} from "lucide-react";
+import { ROUTES } from "../../constants/routes";
+import { useAuthStore } from "../../store/useAuthStore";
+import { useLocation, useNavigate } from "react-router-dom";
 
-const links = [
-  { to: '/dashboard',          icon: <LayoutGrid size={22} />,    label: 'Dashboard' },
-  { to: '/dashboard/contacts', icon: <Users size={22} />,         label: 'Contactos' },
-  { to: '/dashboard/messages', icon: <MessageSquare size={22} />, label: 'Mensajes' },
-  { to: '/dashboard/metrics',  icon: <BarChart2 size={22} />,     label: 'Métricas' },
+
+const sidebarItemsSales = [
+  { icon: LayoutDashboard, path: ROUTES.DASHBOARD },
+  { icon: Users, path: `/dashboard/${ROUTES.CONTACTS}` },
+  { icon: MessagesSquare, path: `/dashboard/${ROUTES.MESSAGES}` },
+  { icon: ListTodo, path: `/dashboard/${ROUTES.TASKS}` },
+  { icon: Bookmark, path: `/dashboard/${ROUTES.SAVED_VIEWS}` }
 ];
 
+const sidebarItemsAdmin = [
+  { icon: LayoutDashboard, path: ROUTES.DASHBOARD },
+  { icon: UserRoundCog, path: `/dashboard/${ROUTES.CONTACTS}` },
+  { icon: MessagesSquare, path: `/dashboard/${ROUTES.MESSAGES}` },
+  { icon: ListTodo, path: `/dashboard/${ROUTES.TASKS}` },
+  { icon: Bookmark, path: `/dashboard/${ROUTES.SAVED_VIEWS}` },
+  { icon: ChartNoAxesCombined, path: `/dashboard/${ROUTES.METRICS}` },
+  { icon: Funnel, path: `/dashboard/${ROUTES.FUNNEL}` },
+  { icon: UserRoundCog, path: `/dashboard/${ROUTES.SALESPERSONS}` },
+  { icon: Tag, path: `/dashboard/${ROUTES.TAGS}` },
+  { icon: FileText, path: `/dashboard/${ROUTES.TEMPLATES}` },
+  { icon: Download, path: `/dashboard/${ROUTES.REPORTS}` },
+];
+
+
 export const Sidebar = () => {
+  const { user, logout } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [, , section] = location.pathname.split("/");
+
+  const isActive = (path: string) => {
+    if (path === ROUTES.DASHBOARD) {
+      return location.pathname === "/dashboard";
+    }
+    return path.includes(section);
+  };
+
+  const sidebarItems = user?.role === "ADMIN" ? sidebarItemsAdmin : sidebarItemsSales;
+  
   return (
-    <aside className="w-20 h-screen bg-[#13316b] flex flex-col items-center py-6 shadow-lg z-10">
-      
-      <div className="w-10 h-10 bg-[#3b82f6] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-8">
-        C
-      </div>
-      
-      <nav className="flex flex-col gap-6 w-full items-center">
-        <div className="p-3 bg-[#2563eb] rounded-xl text-white cursor-pointer shadow-sm">
-          <LayoutGrid size={22} />
-        </div>
+    <aside className="w-20 h-screen bg-[#13316b] flex flex-col items-center py-4 shadow-lg z-10">
+
+      <span className="mb-8">
+        <img src="/logo.svg" alt="Logo" className="w-12 h-12" />
+      </span>
+
+      <nav className="flex flex-col gap-2 w-full items-center">
         
-        {/* Íconos inactivos atenuados para mayor contraste */}
-        <Users size={22} className="text-[#7ea6e0] hover:text-white cursor-pointer transition-colors" />
-        <MessageSquare size={22} className="text-[#7ea6e0] hover:text-white cursor-pointer transition-colors" />
-        <Megaphone size={22} className="text-[#7ea6e0] hover:text-white cursor-pointer transition-colors" />
-        <BarChart2 size={22} className="text-[#7ea6e0] hover:text-white cursor-pointer transition-colors" />
-        <FileText size={22} className="text-[#7ea6e0] hover:text-white cursor-pointer transition-colors" />
+        {sidebarItems.map((item, index) => {
+          const Icon = item.icon;
+          const active = isActive(item.path);
+
+          return (
+            <div
+              key={index}
+              className={`p-3 rounded-xl cursor-pointer transition-all ${active
+                ? "bg-secondary text-white shadow-sm"
+                : "text-secondary hover:text-white"
+                }`}
+              onClick={() => navigate(item.path)}
+            >
+              <Icon size={24} />
+            </div>
+          );
+        })}
       </nav>
 
-      <div className="mt-auto">
-        <NavLink
-          to="/settings"
-          title="Configuración"
-          className={({ isActive }) =>
-            isActive
-              ? 'p-3 bg-[#2563eb] rounded-xl text-white shadow-sm'
-              : 'p-3 text-[#7ea6e0] hover:text-white transition-colors'
-          }
-        >
-          <Settings size={22} />
-        </NavLink>
+      <div className="mt-auto" onClick={() => logout()}>
+        <LogOut
+          size={24}
+          className="text-secondary hover:text-white cursor-pointer transition-colors"
+        />
       </div>
 
     </aside>

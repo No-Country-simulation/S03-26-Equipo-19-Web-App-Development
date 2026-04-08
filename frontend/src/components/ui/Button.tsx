@@ -33,6 +33,7 @@ export const Button = ({
     <button
       disabled={disabled || loading}
       className={`
+     text-center
         rounded-xl font-semibold transition-colors shadow-sm
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variants[variant]} ${sizes[size]} ${className}
