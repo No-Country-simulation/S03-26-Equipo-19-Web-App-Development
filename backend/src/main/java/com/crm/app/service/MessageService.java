@@ -511,7 +511,7 @@ public class MessageService {
                 firstName, lastName, contact.getEmail(), null, null);
 
         ContactDTOs.CreateContactRequest updateRequest = new ContactDTOs.CreateContactRequest(
-                contactBase, "email_inbound", Channel.EMAIL, admin.getId());
+                contactBase, Channel.EMAIL, admin.getId());
 
         contactService.updateContact(contact.getId(), updateRequest, admin);
         log.info("✏️ Contacto actualizado con nombre: {} {}", firstName, lastName);

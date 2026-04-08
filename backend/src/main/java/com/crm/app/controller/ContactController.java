@@ -25,66 +25,57 @@ public class ContactController {
     private final ContactService contactService;
 
     @PostMapping
-    @Operation(summary = "Crear contacto", description = "Admin o Vendedor crean contacto. El vendedor solo puede asignarse a sí mismo")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Contact> createContact(
+    @Operation(summary = "Crear contacto")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ContactDTOs.ContactSummaryResponse> createContact(
             @RequestBody @Valid ContactDTOs.CreateContactRequest request,
-            @AuthenticationPrincipal User currentUser
-    ) {
+            @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(contactService.createContact(request, currentUser));
     }
 
     @GetMapping
-    @Operation(summary = "Listar mis contactos", description = "Vendedor ve sus contactos. Admin ve todos")
+    @Operation(summary = "Listar mis contactos")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Contact>> getMyContacts(@AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(contactService.getMyContacts(currentUser));
+    public ResponseEntity<List<ContactDTOs.ContactDetailResponse>> getMyContacts(@AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(contactService.getMyContactsDetailResponse(currentUser));
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener contacto por ID", description = "Acceso controlado por rol")
+    @Operation(summary = "Obtener contacto por ID")
     @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
-    public ResponseEntity<Contact> getContact(
+    public ResponseEntity<ContactDTOs.ContactDetailResponse> getContact(
             @PathVariable Long id,
-            @AuthenticationPrincipal User currentUser
-    ) {
-        return ResponseEntity.ok(contactService.findByIdAndCheckAccess(id, currentUser));
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(contactService.getContactDetailResponse(id, currentUser));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar contacto", description = "Acceso: Admin o dueño del contacto")
+    @Operation(summary = "Actualizar contacto")
     @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
-    public ResponseEntity<Contact> updateContact(
+    public ResponseEntity<ContactDTOs.ContactDetailResponse> updateContact(
             @PathVariable Long id,
             @RequestBody @Valid ContactDTOs.CreateContactRequest request,
-            @AuthenticationPrincipal User currentUser
-    ) {
+            @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(contactService.updateContact(id, request, currentUser));
     }
 
     @PatchMapping("/{id}/funnel-status")
-    @Operation(summary = "Actualizar estado del funnel", description = "Cambia el estado del contacto en el proceso de ventas")
+    @Operation(summary = "Actualizar estado del funnel")
     @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
     public ResponseEntity<Contact> updateFunnelStatus(
             @PathVariable Long id,
             @RequestParam FunnelStatus status,
-            @AuthenticationPrincipal User currentUser
-    ) {
+            @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(contactService.updateFunnelStatus(id, status, currentUser));
     }
 
     @PatchMapping("/{id}/assign")
-    @Operation(
-            summary = "Reasignar contacto a vendedor",
-            description = "Solo Admin puede reasignar contactos. Cambia el owner del contacto a otro vendedor."
-    )
+    @Operation(summary = "Reasignar contacto a vendedor")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Contact> reassignContact(
             @PathVariable Long id,
             @RequestParam Long newOwnerId,
-            @AuthenticationPrincipal User currentUser
-    ) {
+            @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(contactService.reassignContact(id, newOwnerId, currentUser));
     }
-
 }
