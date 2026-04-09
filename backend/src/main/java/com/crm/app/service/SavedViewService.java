@@ -178,15 +178,17 @@ public class SavedViewService {
     // Y que los campos dentro del JSON sean válidos según la entidad
     private void validateFiltersByEntity(JsonNode filters, EntityType entity) {
         
+        // El JSON de filtros puede ser vacío ({}), pero no puede ser null ni otro tipo (ej: array, string, etc)
         if (filters == null || filters.isNull()) {
             throw new IllegalArgumentException("Filters no puede ser null");
         }
 
-        
-        if (!filters.isObject() || filters.size() == 0) {
-            throw new IllegalArgumentException("Filters debe ser un objeto JSON no vacío");
+        // El JSON puede ser vacío ({}), pero no puede ser otro tipo (ej: array, string, etc)
+        if (!filters.isObject()) {
+            throw new IllegalArgumentException("Filters debe ser un objeto JSON");
         }
 
+        // Validar campos permitidos según la entidad
         switch (entity) {
             case CONTACTS -> validateContactFilters(filters);
             case TASKS -> validateTaskFilters(filters);

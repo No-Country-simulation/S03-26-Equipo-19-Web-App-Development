@@ -11,6 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -18,6 +21,8 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements ApplicationRunner {
+    
+    ObjectMapper mapper = new ObjectMapper();
 
     private final UserRepository userRepository;
     private final ContactRepository contactRepository;
@@ -406,10 +411,10 @@ public class DataSeeder implements ApplicationRunner {
         // Admin global view - CONTACTS
         SavedView adminView = SavedView.builder()
                 .name("Todos los contactos activos")
-                .filters("{\"funnelStatus\":[\"NEW_LEAD\",\"CONTACTED\",\"IN_NEGOTIATION\",\"PROPOSAL_SENT\"]}")
-                .entity(SavedView.EntityType.CONTACTS)
+                .filters(json("{\"funnelStatus\":[\"NEW_LEAD\",\"CONTACTED\",\"IN_NEGOTIATION\",\"PROPOSAL_SENT\"]}"))
+                .entity(EntityType.CONTACTS)
                 .sortBy("createdAt")
-                .sortOrder(SavedView.SortOrder.DESC)
+                .sortOrder(SortOrder.DESC)
                 .global(true)
                 .user(admin)
                 .build();
@@ -419,10 +424,10 @@ public class DataSeeder implements ApplicationRunner {
         // Salesperson personal view - CONTACTS
         SavedView sellerView = SavedView.builder()
                 .name("Mis leads calientes")
-                .filters("{\"tagIds\":[1,2],\"funnelStatus\":\"IN_NEGOTIATION\"}")
-                .entity(SavedView.EntityType.CONTACTS)
+                .filters(json("{\"tagIds\":[1,2],\"funnelStatus\":\"IN_NEGOTIATION\"}"))
+                .entity(EntityType.CONTACTS)
                 .sortBy("updatedAt")
-                .sortOrder(SavedView.SortOrder.DESC)
+                .sortOrder(SortOrder.DESC)
                 .global(false)
                 .user(salesperson)
                 .build();
@@ -432,14 +437,22 @@ public class DataSeeder implements ApplicationRunner {
         // Tasks view - TASKS
         SavedView tasksView = SavedView.builder()
                 .name("Tareas vencidas")
-                .filters("{\"status\":\"PENDING\",\"dueDate\":{\"$lt\":\"today\"}}")
-                .entity(SavedView.EntityType.TASKS)
+                .filters(json("{\"status\":\"PENDING\",\"dueDateTo\":\"2026-04-08\"}"))
+                .entity(EntityType.TASKS)
                 .sortBy("dueDate")
-                .sortOrder(SavedView.SortOrder.ASC)
+                .sortOrder(SortOrder.ASC)
                 .global(true)
                 .user(admin)
                 .build();
         savedViewRepository.save(tasksView);
         log.info("Saved view seeded: {}", tasksView.getName());
     }
+
+    private JsonNode json(String value) {
+        try {
+                return mapper.readTree(value);
+        } catch (Exception e) {
+                throw new RuntimeException("JSON inválido en seed", e);
+        }
+        }
 }
