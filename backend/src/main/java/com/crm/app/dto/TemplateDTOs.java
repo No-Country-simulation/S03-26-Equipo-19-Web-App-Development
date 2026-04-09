@@ -4,6 +4,7 @@ import com.crm.app.model.enums.Channel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 public class TemplateDTOs {
@@ -37,26 +38,28 @@ public class TemplateDTOs {
             @NotNull
             Channel channel,
 
-            Map<String, String>
-            variableValues
+            Map<String, String> variableValues
     ) {}
 
-    @Schema(description = "Respuesta de plantilla")
+    // ==================== RESPUESTAS OPTIMIZADAS ====================
+
+    @Schema(description = "Información resumida del creador")
+    public record CreatorInfo(
+            Long id,
+            String name,
+            String email,
+            String role
+    ) {}
+
+    @Schema(description = "Respuesta de plantilla (versión optimizada)")
     public record TemplateResponse(
             Long id,
-
             String name,
-
             Channel channel,
-
             String subject,
-
             String body,
-
             Map<String, String> variables,
-
-            String createdBy,
-
-            String createdAt
+            CreatorInfo createdBy,
+            LocalDateTime createdAt
     ) {}
 }
