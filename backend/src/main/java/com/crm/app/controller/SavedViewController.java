@@ -30,7 +30,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/saved-views")
+@RequestMapping("/api/v1/saved-views")
 @RequiredArgsConstructor
 @Tag(name = "Saved Views", description = "Configuraciones de vistas guardadas por usuario")
 public class SavedViewController {

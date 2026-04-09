@@ -4,6 +4,7 @@ import com.crm.app.model.SavedView;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.EntityType;
 import com.crm.app.model.enums.FunnelStatus;
+import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.Role;
 import com.crm.app.model.enums.TaskStatus;
 import com.crm.app.model.enums.TaskType;
@@ -26,11 +27,18 @@ public class SavedViewService {
     private final SavedViewRepository repository;
 
     private static final Set<String> CONTACT_FIELDS = Set.of(
-        "funnelStatus", "ownerId", "company", "email"
+        "funnelStatus",
+        "ownerId",
+        "tagIds",
+        "preferredChannel"
     );
 
     private static final Set<String> TASK_FIELDS = Set.of(
-        "status", "type", "assignedTo", "contactId", "dueDateFrom", "dueDateTo"
+        "status",
+        "type",
+        "assignedTo",
+        "dueDateFrom",
+        "dueDateTo"
     );
 
     private static final Set<String> CONTACT_SORT_FIELDS = Set.of(
@@ -203,7 +211,7 @@ public class SavedViewService {
 
         if (filters.has("funnelStatus")) {
             try {
-                FunnelStatus.valueOf(filters.get("funnelStatus").asText());
+                FunnelStatus.valueOf(filters.get("funnelStatus").asText().toUpperCase());
             } catch (Exception e) {
                 throw new IllegalArgumentException("funnelStatus inválido");
             }
@@ -213,12 +221,30 @@ public class SavedViewService {
             throw new IllegalArgumentException("ownerId debe ser numérico");
         }
 
-        if (filters.has("company") && !filters.get("company").isTextual()) {
-            throw new IllegalArgumentException("company debe ser texto");
+        if (filters.has("preferredChannel")) {
+            try {
+                Channel.valueOf(filters.get("preferredChannel").asText().toUpperCase());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("preferredChannel inválido");
+            }
         }
 
-        if (filters.has("email") && !filters.get("email").isTextual()) {
-            throw new IllegalArgumentException("email debe ser texto");
+        if (filters.has("tagIds")) {
+            JsonNode tagIdsNode = filters.get("tagIds");
+
+            if (!tagIdsNode.isArray()) {
+                throw new IllegalArgumentException("tagIds debe ser un array");
+            }
+
+            if (tagIdsNode.isEmpty()) {
+                return; // no filtra por tags
+            }
+
+            for (JsonNode id : tagIdsNode) {
+                if (!id.canConvertToLong()) {
+                    throw new IllegalArgumentException("tagIds debe contener números");
+                }
+            }
         }
     }
 
@@ -229,7 +255,7 @@ public class SavedViewService {
 
         if (filters.has("status")) {
             try {
-                TaskStatus.valueOf(filters.get("status").asText());
+                TaskStatus.valueOf(filters.get("status").asText().toUpperCase());
             } catch (Exception e) {
                 throw new IllegalArgumentException("status inválido");
             }
@@ -237,7 +263,7 @@ public class SavedViewService {
 
         if (filters.has("type")) {
             try {
-                TaskType.valueOf(filters.get("type").asText());
+                TaskType.valueOf(filters.get("type").asText().toUpperCase());
             } catch (Exception e) {
                 throw new IllegalArgumentException("type inválido");
             }
@@ -245,10 +271,6 @@ public class SavedViewService {
 
         if (filters.has("assignedTo") && !filters.get("assignedTo").canConvertToLong()) {
             throw new IllegalArgumentException("assignedTo debe ser numérico");
-        }
-
-        if (filters.has("contactId") && !filters.get("contactId").canConvertToLong()) {
-            throw new IllegalArgumentException("contactId debe ser numérico");
         }
 
         validateDateField(filters, "dueDateFrom");
@@ -328,9 +350,17 @@ public class SavedViewService {
 
     // Validar que solo se usen campos permitidos en el JSON de filtros según la entidad
     private void validateAllowedFields(JsonNode filters, Set<String> allowed, String entityName) {
-        filters.fieldNames().forEachRemaining(field -> {
+
+        filters.fields().forEachRemaining(entry -> {
+            String field = entry.getKey();
+            JsonNode value = entry.getValue();
+
             if (!allowed.contains(field)) {
                 throw new IllegalArgumentException("Campo no permitido para " + entityName + ": " + field);
+            }
+
+            if (value == null || value.isNull()) {
+                throw new IllegalArgumentException(field + " no puede ser null");
             }
         });
     }

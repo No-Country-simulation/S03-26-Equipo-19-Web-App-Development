@@ -8,6 +8,8 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -41,7 +43,8 @@ public class SavedView {
      * Configuración de filtros serializada en JSON.
      * El backend interpreta este JSON para construir la query dinámica.
      */
-    @Column(nullable = false, columnDefinition = "jsonb")  // jsonb para PostgreSQL
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
     private JsonNode filters;
 
     /**
