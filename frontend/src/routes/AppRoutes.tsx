@@ -10,6 +10,7 @@ import { ContactsPage } from "../pages/ContactsPage";
 import { MessagesPage } from "../pages/MessagesPage";
 import { useAuthStore } from "../store/useAuthStore";
 import Home from "../components/dashboard/Home";
+import ContactDetailPage from "../pages/ContactDetailPage";
 
 // Admin pages
 import { AdminPanel } from "../pages/admin/AdminPanel";
@@ -58,6 +59,7 @@ export const AppRoutes: React.FC = () => {
 
                 {/* 2. Rutas que AMBOS comparten */}
                 <Route path={ROUTES.CONTACTS} element={<ContactsPage />} />
+                <Route path={ROUTES.CONTACT_DETALLE} element={<ContactDetailPage/>} />
                 <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
                 <Route path={ROUTES.TASKS} element={<TasksManagement />} />
 

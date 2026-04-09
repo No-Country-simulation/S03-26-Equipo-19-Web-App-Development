@@ -1,23 +1,31 @@
 import type { Channel } from './contact.types';
 
 export type MessageDirection = 'inbound' | 'outbound';
+export type MessageType = 'text' | 'media';
+export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 
-export interface Message {
-  id: string;
-  contactId: string;
+
+export interface MessageResType {
+  id: number;
+  userId: number;
   channel: Channel;
   direction: MessageDirection;
   content: string;
-  sentAt: string;
-  read: boolean;
+  createdAt: Date;
+  externalId: string;
+  messageType: MessageType;
+  fileUrl?: string;
+  status: MessageStatus;
+  conversationId: number;
 }
 
 export interface Conversation {
-  contactId: string;
-  contactName: string;
-  channel: Channel;
-  lastMessage: string;
-  lastMessageAt: string;
-  unreadCount: number;
-  messages: Message[];
+id: number;
+contactId: number;
+userId: number;
+status: 'open' | 'closed';
+channel: Channel; 
+createdAt: Date;
+updatedAt: Date;
 }
+
