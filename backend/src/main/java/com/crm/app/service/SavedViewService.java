@@ -33,6 +33,14 @@ public class SavedViewService {
         "status", "type", "assignedTo", "contactId", "dueDateFrom", "dueDateTo"
     );
 
+    private static final Set<String> CONTACT_SORT_FIELDS = Set.of(
+    "name", "email", "createdAt", "funnelStatus"
+    );
+
+    private static final Set<String> TASK_SORT_FIELDS = Set.of(
+        "dueDate", "status", "createdAt"
+    );
+
     // =========================
     // CREATE
     // =========================
@@ -287,19 +295,15 @@ public class SavedViewService {
             throw new IllegalArgumentException("sortBy es obligatorio");
         }
 
-        switch (entity) {
-            case CONTACTS -> {
-                List<String> allowed = List.of("name", "email", "createdAt", "funnelStatus");
-                if (!allowed.contains(sortBy)) {
-                    throw new IllegalArgumentException("Campo inválido para CONTACTS");
-                }
-            }
-            case TASKS -> {
-                List<String> allowed = List.of("dueDate", "status", "createdAt");
-                if (!allowed.contains(sortBy)) {
-                    throw new IllegalArgumentException("Campo inválido para TASKS");
-                }
-            }
+        Set<String> allowed = switch (entity) {
+            case CONTACTS -> CONTACT_SORT_FIELDS;
+            case TASKS -> TASK_SORT_FIELDS;
+        };
+
+        if (!allowed.contains(sortBy)) {
+            throw new IllegalArgumentException(
+                "Campo inválido para " + entity + ": " + sortBy
+            );
         }
     }
 
