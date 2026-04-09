@@ -295,8 +295,34 @@ public class DataSeeder implements ApplicationRunner {
     private void seedConversationsAndMessages(List<Contact> contacts, List<User> salespersons, List<Template> templates) {
         Random random = new Random();
 
+        String[] inboundMessages = {
+                "Perfecto, gracias!",
+                "¿Me podés contar más?",
+                "¿Cuánto cuesta?",
+                "Me interesa avanzar.",
+                "¿Tienen demo?",
+                "Lo reviso y te digo.",
+                "Buenísimo!",
+                "¿Cómo seguimos?",
+                "¿Hay algún descuento?",
+                "Gracias por la info."
+        };
+
+        String[] outboundMessages = {
+                "Genial, te cuento.",
+                "Te paso más detalles.",
+                "Podemos coordinar una demo.",
+                "Te envío info ahora.",
+                "Trabajamos con empresas similares.",
+                "Quedo atento.",
+                "Te explico cómo funciona.",
+                "Avancemos si querés.",
+                "Te paso propuesta.",
+                "Gracias por tu interés."
+        };
+
         for (Contact contact : contacts) {
-            // Create WhatsApp conversation
+
             Conversation whatsappConv = Conversation.builder()
                     .contact(contact)
                     .channel(Channel.WHATSAPP)
@@ -306,7 +332,6 @@ public class DataSeeder implements ApplicationRunner {
                     .build();
             conversationRepository.save(whatsappConv);
 
-            // Create Email conversation
             Conversation emailConv = Conversation.builder()
                     .contact(contact)
                     .channel(Channel.EMAIL)
@@ -316,7 +341,6 @@ public class DataSeeder implements ApplicationRunner {
                     .build();
             conversationRepository.save(emailConv);
 
-            // Add messages to WhatsApp conversation
             Template whatsappTemplate = templates.stream()
                     .filter(t -> t.getChannel() == Channel.WHATSAPP)
                     .findFirst()
@@ -329,6 +353,7 @@ public class DataSeeder implements ApplicationRunner {
                     .deliveryStatus(DeliveryStatus.DELIVERED)
                     .template(whatsappTemplate)
                     .sender(contact.getOwner())
+                    .providerId(generateWhatsAppProviderId())
                     .sentAt(LocalDateTime.now().minusDays(5))
                     .build();
             messageRepository.save(outbound);
@@ -338,11 +363,33 @@ public class DataSeeder implements ApplicationRunner {
                     .direction(MessageDirection.INBOUND)
                     .body("Hola! Gracias por contactarte. Me interesa saber más sobre sus servicios.")
                     .deliveryStatus(DeliveryStatus.READ)
+                    .providerId(generateWhatsAppProviderId())
                     .sentAt(LocalDateTime.now().minusDays(4))
                     .build();
             messageRepository.save(inbound);
 
-            // Add messages to Email conversation
+            // 🔥 NUEVOS 20 MENSAJES (solo WhatsApp, misma conversación)
+            LocalDateTime baseTime = LocalDateTime.now().minusDays(3);
+
+            for (int i = 0; i < 20; i++) {
+                boolean isOutbound = i % 2 == 0;
+
+                Message extraMessage = Message.builder()
+                        .conversation(whatsappConv)
+                        .direction(isOutbound ? MessageDirection.OUTBOUND : MessageDirection.INBOUND)
+                        .body(isOutbound
+                                ? outboundMessages[random.nextInt(outboundMessages.length)]
+                                : inboundMessages[random.nextInt(inboundMessages.length)])
+                        .deliveryStatus(isOutbound ? DeliveryStatus.DELIVERED : DeliveryStatus.READ)
+                        .template(isOutbound ? whatsappTemplate : null)
+                        .sender(isOutbound ? contact.getOwner() : null)
+                        .providerId(generateWhatsAppProviderId())
+                        .sentAt(baseTime.plusHours(i * 2))
+                        .build();
+
+                messageRepository.save(extraMessage);
+            }
+
             Template emailTemplate = templates.stream()
                     .filter(t -> t.getChannel() == Channel.EMAIL && t.getName().contains("Bienvenida"))
                     .findFirst()
@@ -355,12 +402,21 @@ public class DataSeeder implements ApplicationRunner {
                     .deliveryStatus(DeliveryStatus.DELIVERED)
                     .template(emailTemplate)
                     .sender(contact.getOwner())
+                    .providerId(generateEmailProviderId())
                     .sentAt(LocalDateTime.now().minusDays(3))
                     .build();
             messageRepository.save(emailOutbound);
 
             log.info("Conversations and messages seeded for contact: {}", contact.getName());
         }
+    }
+
+    private String generateWhatsAppProviderId() {
+        return "wamid.HBgM" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+    }
+
+    private String generateEmailProviderId() {
+        return "<" + System.currentTimeMillis() + "." + new Random().nextInt(100000) + "@smtp-relay.brevo.com>";
     }
 
     private void seedTasks(List<Contact> contacts, List<User> salespersons) {

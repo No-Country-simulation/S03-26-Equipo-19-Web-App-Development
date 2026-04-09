@@ -5,6 +5,7 @@ import com.crm.app.dto.ContactDTOs;
 import com.crm.app.dto.MessageDTOs;
 import com.crm.app.dto.WhatsAppWebhookDTO;
 import com.crm.app.exception.*;
+import com.crm.app.mapper.MessageMapper;
 import com.crm.app.model.Contact;
 import com.crm.app.model.Conversation;
 import com.crm.app.model.Message;
@@ -40,14 +41,28 @@ public class MessageService {
     private final EmailService emailService;
     private final UserRepository userRepository;
     private final TemplateRepository templateRepository;
-    private final TemplateService templateService;  // ✅ Agregado
+    private final TemplateService templateService;
+    private final MessageMapper messageMapper;
 
-    // ==================== MÉTODOS PÚBLICOS ====================
+    // ==================== MÉTODOS CON DTO ====================
 
-    /**
-     * Envía un mensaje desde el CRM a un contacto (WhatsApp o Email)
-     * Soporta mensaje libre o uso de plantillas
-     */
+    public MessageDTOs.MessageResponse sendMessageResponse(MessageDTOs.SendMessageRequest request, String userEmail) {
+        Message message = sendMessage(request, userEmail);
+        return messageMapper.toResponse(message);
+    }
+
+    public List<MessageDTOs.MessageResponse> getConversationHistoryResponse(Long conversationId, String userEmail) {
+        List<Message> messages = getConversationHistory(conversationId, userEmail);
+        return messageMapper.toResponseList(messages);
+    }
+
+    public List<MessageDTOs.MessageResponse> getContactConversationHistoryResponse(Long contactId, String userEmail) {
+        List<Message> messages = getContactConversationHistory(contactId, userEmail);
+        return messageMapper.toResponseList(messages);
+    }
+
+    // ==================== MÉTODOS ORIGINALES ====================
+
     public Message sendMessage(MessageDTOs.SendMessageRequest request, String userEmail) {
         // 1. Validar usuario autenticado
         if (userEmail == null || userEmail.isBlank()) {
@@ -89,8 +104,6 @@ public class MessageService {
         Template usedTemplate = null;
 
         if (request.templateId() != null) {
-            // ✅ Usar plantilla
-            // ✅ Correcto
             usedTemplate = templateService.getTemplate(request.templateId(), currentUser);
             Map<String, String> variables = request.variables();
 
@@ -104,7 +117,6 @@ public class MessageService {
             finalBody = templateService.renderTemplate(usedTemplate, variables);
             log.info("📝 Mensaje renderizado desde plantilla: {}", usedTemplate.getName());
         } else {
-            // ✅ Mensaje libre
             MessageDTOs.MessageContent content = request.content();
             if (content == null || content.body() == null || content.body().trim().isEmpty()) {
                 throw new BusinessRuleViolationException(
@@ -124,7 +136,6 @@ public class MessageService {
             message.setProviderId(providerId);
             message = messageRepository.save(message);
 
-            // 8. Actualizar última interacción
             conversation.setLastInteraction(LocalDateTime.now());
             conversationRepository.save(conversation);
 
@@ -157,9 +168,6 @@ public class MessageService {
         }
     }
 
-    /**
-     * Obtiene el historial de mensajes de una conversación
-     */
     public List<Message> getConversationHistory(Long conversationId, String userEmail) {
         if (userEmail == null || userEmail.isBlank()) {
             throw new UnauthorizedAccessException("Debes iniciar sesión para ver el historial");
@@ -170,13 +178,26 @@ public class MessageService {
                 currentUser.getEmail(), conversationId);
 
         Conversation conversation = conversationService.findByIdAndCheckAccess(conversationId, currentUser);
-        List<Message> history = messageRepository.findByConversationOrderBySentAtAsc(conversation);
-
-        log.info("📜 Historial recuperado: {} mensajes", history.size());
-        return history;
+        return messageRepository.findByConversationOrderBySentAtAsc(conversation);
     }
 
-    // ==================== MANEJO DE WEBHOOKS ====================
+    public List<Message> getContactConversationHistory(Long contactId, String userEmail) {
+        if (userEmail == null || userEmail.isBlank()) {
+            throw new UnauthorizedAccessException("Debes iniciar sesión para ver el historial");
+        }
+
+        User currentUser = getUserByEmail(userEmail);
+        Contact contact = contactService.findByIdAndCheckAccess(contactId, currentUser);
+
+        List<Conversation> conversations = conversationRepository.findByContact(contact);
+        if (conversations.isEmpty()) {
+            return List.of();
+        }
+
+        return messageRepository.findByConversationInOrderBySentAtAsc(conversations);
+    }
+
+    // ==================== WEBHOOKS ====================
 
     public void handleWhatsAppInbound(WhatsAppWebhookDTO.@Valid IncomingMessage webhook) {
         log.info("📱 Procesando mensaje entrante de WhatsApp: from={}, messageId={}",
@@ -184,40 +205,17 @@ public class MessageService {
 
         try {
             User admin = getDefaultAdmin();
+            Contact existingContact = contactService.findByExternalId(webhook.from(), Channel.WHATSAPP);
+            boolean isNewContact = (existingContact == null);
 
-            // 1. Buscar contacto existente
-            Contact contact = contactService.findByExternalId(webhook.from(), Channel.WHATSAPP);
-            boolean isNewContact = (contact == null);
+            Contact contact = getOrCreateContactFromWhatsApp(webhook.from(), admin);
+            Conversation conversation = getOrCreateConversation(contact, Channel.WHATSAPP);
 
-            if (isNewContact) {
-                contact = contactService.createContactFromWebhook(webhook.from(), Channel.WHATSAPP, admin);
-                log.info("🆕 Nuevo contacto creado desde WhatsApp: phone={}", webhook.from());
-            }
-
-            // 2. Hacer una copia final de contact para usar en la lambda
-            final Contact finalContact = contact;
-
-            // 3. Buscar conversación EXISTENTE antes de crear una nueva
-            Conversation conversation = conversationRepository.findByContactAndChannel(contact, Channel.WHATSAPP)
-                    .orElseGet(() -> {
-                        Conversation newConv = Conversation.builder()
-                                .contact(finalContact)
-                                .channel(Channel.WHATSAPP)
-                                .status(ConversationStatus.OPEN)
-                                .assignedTo(finalContact.getOwner())
-                                .lastInteraction(LocalDateTime.now())
-                                .build();
-                        log.info("💬 Nueva conversación WhatsApp creada para contacto: id={}", finalContact.getId());
-                        return conversationRepository.save(newConv);
-                    });
-
-            // 4. Verificar mensaje duplicado por providerId
             if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
                 log.warn("⚠️ Mensaje WhatsApp duplicado ignorado: messageId={}", webhook.messageId());
                 return;
             }
 
-            // 5. Guardar mensaje entrante
             Message inboundMessage = Message.builder()
                     .conversation(conversation)
                     .direction(MessageDirection.INBOUND)
@@ -227,15 +225,11 @@ public class MessageService {
                     .sentAt(LocalDateTime.now())
                     .build();
             messageRepository.save(inboundMessage);
-
-            // 6. Actualizar última interacción
-            conversation.setLastInteraction(LocalDateTime.now());
-            conversationRepository.save(conversation);
+            updateConversationLastInteraction(conversation);
 
             log.info("💾 Mensaje WhatsApp entrante guardado: id={}, conversationId={}",
                     inboundMessage.getId(), conversation.getId());
 
-            // 7. Enviar respuesta automática SOLO si es nuevo contacto
             if (isNewContact) {
                 sendWelcomeAutoReply(contact, conversation, admin);
             }
@@ -245,99 +239,20 @@ public class MessageService {
         }
     }
 
-    /**
-     * Envía respuesta automática de bienvenida usando plantilla
-     */
-    private void sendWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
-        try {
-            // Buscar plantilla de bienvenida para WhatsApp
-            Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
-                    "Bienvenida automática - WhatsApp", Channel.WHATSAPP);
-
-            if (welcomeTemplateOpt.isEmpty()) {
-                log.warn("⚠️ No se encontró plantilla de bienvenida. No se enviará respuesta automática.");
-                return;
-            }
-
-            Template welcomeTemplate = welcomeTemplateOpt.get();
-
-            // Preparar variables
-            String contactName = contact.getName();
-            if (contactName == null || contactName.isBlank()) {
-                contactName = "cliente";
-            }
-
-            Map<String, String> variables = Map.of("name", contactName);
-
-            // Renderizar mensaje
-            String welcomeMessage = templateService.renderTemplate(welcomeTemplate, variables);
-
-            // Enviar mensaje automático
-            String providerId = whatsAppService.sendMessage(contact.getPhone(), welcomeMessage);
-
-            // Guardar mensaje saliente automático
-            Message autoReply = Message.builder()
-                    .conversation(conversation)
-                    .direction(MessageDirection.OUTBOUND)
-                    .body(welcomeMessage)
-                    .deliveryStatus(DeliveryStatus.SENT)
-                    .sender(admin)
-                    .template(welcomeTemplate)
-                    .providerId(providerId)
-                    .sentAt(LocalDateTime.now())
-                    .build();
-            messageRepository.save(autoReply);
-
-            updateConversationLastInteraction(conversation);
-
-            log.info("🤖 Respuesta automática enviada a: {}", contact.getPhone());
-
-        } catch (Exception e) {
-            log.error("❌ Error enviando respuesta automática: {}", e.getMessage(), e);
-        }
-    }
-
     public void handleBrevoInbound(BrevoWebhookDTO.@Valid IncomingEmail webhook) {
         log.info("📧 Procesando mensaje entrante de Email: from={}, subject={}, messageId={}",
                 webhook.from(), webhook.subject(), webhook.messageId());
 
         try {
             User admin = getDefaultAdmin();
+            Contact existingContact = contactService.findByExternalId(webhook.from(), Channel.EMAIL);
+            boolean isNewContact = (existingContact == null);
 
-            // 1. Buscar contacto existente
-            Contact contact = contactService.findByExternalId(webhook.from(), Channel.EMAIL);
-            boolean isNewContact = (contact == null);
+            Contact contact = getOrCreateContactFromEmail(webhook, admin);
+            Conversation conversation = getOrCreateConversation(contact, Channel.EMAIL);
 
-            if (contact == null) {
-                contact = contactService.createContactFromWebhook(webhook.from(), Channel.EMAIL, admin);
-                log.info("🆕 Nuevo contacto creado desde Email: email={}", webhook.from());
-
-                if (webhook.fromName() != null && !webhook.fromName().isEmpty()) {
-                    updateContactName(contact, webhook.fromName(), admin);
-                }
-            }
-
-            // 2. Hacer una copia final de contact para usar en la lambda
-            final Contact finalContact = contact;
-
-            // 3. Obtener o crear conversación
-            Conversation conversation = conversationRepository.findByContactAndChannel(contact, Channel.EMAIL)
-                    .orElseGet(() -> {
-                        Conversation newConv = Conversation.builder()
-                                .contact(finalContact)
-                                .channel(Channel.EMAIL)
-                                .status(ConversationStatus.OPEN)
-                                .assignedTo(finalContact.getOwner())
-                                .lastInteraction(LocalDateTime.now())
-                                .build();
-                        log.info("💬 Nueva conversación Email creada para contacto: id={}", finalContact.getId());
-                        return conversationRepository.save(newConv);
-                    });
-
-            String brevoMessageId = webhook.messageId();
-
-            if (messageRepository.findByProviderId(brevoMessageId).isPresent()) {
-                log.warn("⚠️ Mensaje Email duplicado ignorado: messageId={}", brevoMessageId);
+            if (messageRepository.findByProviderId(webhook.messageId()).isPresent()) {
+                log.warn("⚠️ Mensaje Email duplicado ignorado: messageId={}", webhook.messageId());
                 return;
             }
 
@@ -351,7 +266,7 @@ public class MessageService {
                     .direction(MessageDirection.INBOUND)
                     .body(body)
                     .deliveryStatus(DeliveryStatus.DELIVERED)
-                    .providerId(brevoMessageId)
+                    .providerId(webhook.messageId())
                     .sentAt(LocalDateTime.now())
                     .build();
 
@@ -367,53 +282,6 @@ public class MessageService {
 
         } catch (Exception e) {
             log.error("❌ Error procesando mensaje Email entrante: {}", e.getMessage(), e);
-        }
-    }
-
-    private void sendEmailWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
-        try {
-            Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
-                    "Email de bienvenida", Channel.EMAIL);
-
-            if (welcomeTemplateOpt.isEmpty()) {
-                log.warn("⚠️ No se encontró plantilla de bienvenida para Email.");
-                return;
-            }
-
-            Template welcomeTemplate = welcomeTemplateOpt.get();
-
-            // Preparar variables
-            Map<String, String> variables = Map.of(
-                    "name", contact.getName() != null ? contact.getName() : "cliente",
-                    "company", contact.getCompany() != null ? contact.getCompany() : "tu empresa",
-                    "salesperson", "nuestro equipo"
-            );
-
-            // Renderizar mensaje
-            String welcomeMessage = templateService.renderTemplate(welcomeTemplate, variables);
-
-            // Enviar email automático
-            String providerId = emailService.sendMessage(contact.getEmail(), welcomeMessage, contact.getName());
-
-            // Guardar mensaje saliente automático
-            Message autoReply = Message.builder()
-                    .conversation(conversation)
-                    .direction(MessageDirection.OUTBOUND)
-                    .body(welcomeMessage)
-                    .deliveryStatus(DeliveryStatus.SENT)
-                    .sender(admin)
-                    .template(welcomeTemplate)
-                    .providerId(providerId)
-                    .sentAt(LocalDateTime.now())
-                    .build();
-            messageRepository.save(autoReply);
-
-            updateConversationLastInteraction(conversation);
-
-            log.info("🤖 Respuesta automática por Email enviada a: {}", contact.getEmail());
-
-        } catch (Exception e) {
-            log.error("❌ Error enviando respuesta automática por Email: {}", e.getMessage(), e);
         }
     }
 
@@ -438,20 +306,16 @@ public class MessageService {
         }
     }
 
-    // ==================== MÉTODOS AUXILIARES PRIVADOS ====================
+    // ==================== MÉTODOS PRIVADOS ====================
 
     private void validateContactHasChannelInfo(Contact contact, Channel channel) {
         if (channel == Channel.WHATSAPP && (contact.getPhone() == null || contact.getPhone().isEmpty())) {
             throw new BusinessRuleViolationException(
-                    "Envío de mensaje",
-                    "El contacto no tiene número de teléfono para enviar mensaje por WhatsApp"
-            );
+                    "El contacto no tiene número de teléfono para enviar mensaje por WhatsApp");
         }
         if (channel == Channel.EMAIL && (contact.getEmail() == null || contact.getEmail().isEmpty())) {
             throw new BusinessRuleViolationException(
-                    "Envío de mensaje",
-                    "El contacto no tiene dirección de email para enviar mensaje por correo"
-            );
+                    "El contacto no tiene dirección de email para enviar mensaje por correo");
         }
     }
 
@@ -462,7 +326,7 @@ public class MessageService {
                 .body(body)
                 .deliveryStatus(DeliveryStatus.SENT)
                 .sender(sender)
-                .template(template)  // ✅ Guardar referencia a la plantilla usada
+                .template(template)
                 .sentAt(LocalDateTime.now())
                 .build();
         return messageRepository.save(message);
@@ -475,8 +339,10 @@ public class MessageService {
             log.info("📱 Enviando WhatsApp a: {}", contact.getPhone());
             return whatsAppService.sendMessage(contact.getPhone(), body);
         } else {
+            String recipientName = (contact.getName() != null && !contact.getName().isBlank())
+                    ? contact.getName() : "Cliente";
             log.info("📧 Enviando Email a: {}", contact.getEmail());
-            return emailService.sendMessage(contact.getEmail(), body, contact.getName());
+            return emailService.sendMessage(contact.getEmail(), body, recipientName);
         }
     }
 
@@ -537,6 +403,87 @@ public class MessageService {
         conversationRepository.save(conversation);
     }
 
+    private void sendWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
+        try {
+            Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
+                    "Bienvenida automática - WhatsApp", Channel.WHATSAPP);
+
+            if (welcomeTemplateOpt.isEmpty()) {
+                log.warn("⚠️ No se encontró plantilla de bienvenida.");
+                return;
+            }
+
+            Template welcomeTemplate = welcomeTemplateOpt.get();
+            String contactName = (contact.getName() != null && !contact.getName().isBlank())
+                    ? contact.getName() : "cliente";
+
+            String welcomeMessage = templateService.renderTemplate(welcomeTemplate, Map.of("name", contactName));
+            String providerId = whatsAppService.sendMessage(contact.getPhone(), welcomeMessage);
+
+            Message autoReply = Message.builder()
+                    .conversation(conversation)
+                    .direction(MessageDirection.OUTBOUND)
+                    .body(welcomeMessage)
+                    .deliveryStatus(DeliveryStatus.SENT)
+                    .sender(admin)
+                    .template(welcomeTemplate)
+                    .providerId(providerId)
+                    .sentAt(LocalDateTime.now())
+                    .build();
+            messageRepository.save(autoReply);
+            updateConversationLastInteraction(conversation);
+
+            log.info("🤖 Respuesta automática enviada a: {}", contact.getPhone());
+
+        } catch (Exception e) {
+            log.error("❌ Error enviando respuesta automática: {}", e.getMessage(), e);
+        }
+    }
+
+    private void sendEmailWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
+        try {
+            Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
+                    "Email de bienvenida", Channel.EMAIL);
+
+            if (welcomeTemplateOpt.isEmpty()) {
+                log.warn("⚠️ No se encontró plantilla de bienvenida para Email.");
+                return;
+            }
+
+            Template welcomeTemplate = welcomeTemplateOpt.get();
+            String contactName = (contact.getName() != null && !contact.getName().isBlank())
+                    ? contact.getName() : "cliente";
+            String companyName = (contact.getCompany() != null && !contact.getCompany().isBlank())
+                    ? contact.getCompany() : "nuestra empresa";
+
+            String welcomeMessage = templateService.renderTemplate(welcomeTemplate, Map.of(
+                    "name", contactName,
+                    "company", companyName,
+                    "salesperson", "nuestro equipo"
+            ));
+
+            String providerId = emailService.sendMessage(contact.getEmail(), welcomeMessage, contactName);
+
+            Message autoReply = Message.builder()
+                    .conversation(conversation)
+                    .direction(MessageDirection.OUTBOUND)
+                    .body(welcomeMessage)
+                    .deliveryStatus(DeliveryStatus.SENT)
+                    .sender(admin)
+                    .template(welcomeTemplate)
+                    .providerId(providerId)
+                    .sentAt(LocalDateTime.now())
+                    .build();
+            messageRepository.save(autoReply);
+            updateConversationLastInteraction(conversation);
+
+            log.info("🤖 Respuesta automática por Email enviada a: {}", contact.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Error enviando respuesta automática por Email: {}", e.getMessage(), e);
+        }
+    }
+
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario con email: " + email));
@@ -545,10 +492,7 @@ public class MessageService {
     private User getDefaultAdmin() {
         List<User> admins = userRepository.findByRoleAndActiveTrue(Role.ADMIN);
         if (admins.isEmpty()) {
-            throw new BusinessRuleViolationException(
-                    "Configuración del sistema",
-                    "No hay un administrador activo en el sistema. Contacta al soporte técnico."
-            );
+            throw new BusinessRuleViolationException("No hay un administrador activo en el sistema");
         }
         return admins.getFirst();
     }
@@ -565,32 +509,7 @@ public class MessageService {
         if (currentUser == null) return false;
         if (currentUser.getRole() == Role.ADMIN) return true;
         return conversationRepository.findById(conversationId)
-                .map(conversation -> conversation.getAssignedTo().getId().equals(currentUser.getId()))
+                .map(conv -> conv.getAssignedTo().getId().equals(currentUser.getId()))
                 .orElse(false);
-    }
-
-    /**
-     * Obtiene TODOS los mensajes de un contacto (WhatsApp + Email combinados)
-     * Útil para ver el timeline completo de comunicación con un contacto
-     */
-    public List<Message> getContactConversationHistory(Long contactId, String userEmail) {
-        if (userEmail == null || userEmail.isBlank()) {
-            throw new UnauthorizedAccessException("Debes iniciar sesión para ver el historial");
-        }
-
-        User currentUser = getUserByEmail(userEmail);
-
-        // Verificar acceso al contacto
-        Contact contact = contactService.findByIdAndCheckAccess(contactId, currentUser);
-
-        // Obtener todas las conversaciones del contacto (WhatsApp y Email)
-        List<Conversation> conversations = conversationRepository.findByContact(contact);
-
-        if (conversations.isEmpty()) {
-            return List.of();
-        }
-
-        // Obtener todos los mensajes de todas las conversaciones y combinarlos
-        return messageRepository.findByConversationInOrderBySentAtAsc(conversations);
     }
 }

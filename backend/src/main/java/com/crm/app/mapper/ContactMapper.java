@@ -15,12 +15,10 @@ public interface ContactMapper {
 
     ContactMapper INSTANCE = Mappers.getMapper(ContactMapper.class);
 
-    // ✅ Respuesta completa (con tags)
     @Mapping(target = "owner", source = "owner")
     @Mapping(target = "tags", source = "tags")
     ContactDTOs.ContactDetailResponse toDetailResponse(Contact contact);
 
-    // ✅ Respuesta resumida (sin tags)
     @Mapping(target = "owner", source = "owner")
     ContactDTOs.ContactSummaryResponse toSummaryResponse(Contact contact);
 
