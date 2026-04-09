@@ -2,6 +2,7 @@ package com.crm.app.service;
 
 import com.crm.app.dto.TemplateDTOs;
 import com.crm.app.exception.*;
+import com.crm.app.mapper.TemplateMapper;
 import com.crm.app.model.Template;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.Channel;
@@ -24,9 +25,32 @@ import java.util.regex.Pattern;
 public class TemplateService {
 
     private final TemplateRepository templateRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final TemplateMapper templateMapper; // Inyectar mapper
+    private final ObjectMapper objectMapper;
 
-    // ==================== CREAR ====================
+    // ==================== MÉTODOS CON DTO ====================
+
+    public TemplateDTOs.TemplateResponse createTemplateResponse(TemplateDTOs.TemplateRequest request, User currentUser) {
+        Template template = createTemplate(request, currentUser);
+        return templateMapper.toResponse(template);
+    }
+
+    public TemplateDTOs.TemplateResponse updateTemplateResponse(Long id, TemplateDTOs.TemplateRequest request, User currentUser) {
+        Template template = updateTemplate(id, request, currentUser);
+        return templateMapper.toResponse(template);
+    }
+
+    public TemplateDTOs.TemplateResponse getTemplateResponse(Long id, User currentUser) {
+        Template template = getTemplate(id, currentUser);
+        return templateMapper.toResponse(template);
+    }
+
+    public List<TemplateDTOs.TemplateResponse> listTemplatesResponse(User currentUser, Channel channel) {
+        List<Template> templates = listTemplates(currentUser, channel);
+        return templateMapper.toResponseList(templates);
+    }
+
+    // ==================== MÉTODOS ORIGINALES ====================
 
     public Template createTemplate(TemplateDTOs.TemplateRequest request, User currentUser) {
         // Validar nombre único para este contexto
@@ -55,8 +79,6 @@ public class TemplateService {
         return templateRepository.save(template);
     }
 
-    // ==================== ACTUALIZAR ====================
-
     public Template updateTemplate(Long id, TemplateDTOs.TemplateRequest request, User currentUser) {
         Template template = templateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plantilla", id));
@@ -78,8 +100,6 @@ public class TemplateService {
         return templateRepository.save(template);
     }
 
-    // ==================== ELIMINAR ====================
-
     public void deleteTemplate(Long id, User currentUser) {
         Template template = templateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plantilla", id));
@@ -92,8 +112,6 @@ public class TemplateService {
         log.info("{} eliminó plantilla: {}", currentUser.getEmail(), template.getName());
     }
 
-    // ==================== LISTAR ====================
-
     public List<Template> listTemplates(User currentUser, Channel channel) {
         if (currentUser.getRole() == Role.ADMIN) {
             // Admin ve todas
@@ -105,8 +123,6 @@ public class TemplateService {
                     : templateRepository.findGlobalAndUserTemplates(currentUser);
         }
     }
-
-    // ==================== OBTENER UNA ====================
 
     public Template getTemplate(Long id, User currentUser) {
         Template template = templateRepository.findById(id)
@@ -123,8 +139,6 @@ public class TemplateService {
         throw new UnauthorizedAccessException("No tienes acceso a esta plantilla");
     }
 
-    // ==================== RENDERIZADO ====================
-
     public String renderTemplate(Template template, Map<String, String> values) {
         String rendered = template.getBody();
         Map<String, String> vars = fromJson(template.getVariables());
@@ -139,10 +153,10 @@ public class TemplateService {
         return rendered;
     }
 
-    // ==================== VALIDACIÓN ====================
+    // ==================== MÉTODOS PRIVADOS ====================
 
     private void validateVariables(String body, Map<String, String> declared) {
-        Pattern pattern = Pattern.compile("\\{\\{(\\w+)\\}\\}");
+        Pattern pattern = Pattern.compile("\\{\\{(\\w+)}}");
         Matcher matcher = pattern.matcher(body);
         Set<String> bodyVars = new HashSet<>();
         while (matcher.find()) bodyVars.add(matcher.group(1));
@@ -155,13 +169,18 @@ public class TemplateService {
     }
 
     private String toJson(Map<String, String> map) {
-        try { return map == null ? "{}" : objectMapper.writeValueAsString(map); }
-        catch (Exception e) { return "{}"; }
+        try {
+            return map == null ? "{}" : objectMapper.writeValueAsString(map);
+        } catch (Exception e) {
+            return "{}";
+        }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, String> fromJson(String json) {
-        try { return json == null ? Map.of() : objectMapper.readValue(json, Map.class); }
-        catch (Exception e) { return Map.of(); }
+        try {
+            return json == null ? Map.of() : objectMapper.readValue(json, Map.class);
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 }
