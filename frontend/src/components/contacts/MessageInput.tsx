@@ -1,4 +1,4 @@
-import { Send, ChevronDown } from "lucide-react"
+import { Send, ChevronDown, Paperclip } from "lucide-react"
 import { Textarea } from "../ui/textarea"
 import { Button } from "../ui/Button"
 import {
@@ -25,9 +25,6 @@ interface Props {
 export function MessageInput({ activeChannel, contact }: Props) {
 
   const { data: templates = [], isLoading } = useGetTemplates()
-
-  console.log({ templates });
-
 
   const [message, setMessage] = useState("")
 
@@ -66,58 +63,65 @@ export function MessageInput({ activeChannel, contact }: Props) {
   </div>;
 
   return (
-    <div className="flex gap-2 items-start">
-      <DropdownMenu>
-        <DropdownMenuTrigger /* asChild */>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex gap-1.5 h-10 items-center justify-between w-[150px]"
-          >
-            Plantillas
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-64 bg-white rounded-lg shadow-lg p-2 ring-0">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Plantillas rápidas</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {filteredTemplates?.length === 0 && (
-              <div className="p-2 text-sm">
-                No hay plantillas para este canal
-              </div>
-            )}
-            {filteredTemplates?.map((template) => (
+    <div className="flex flex-col md:flex-row gap-2 items-start ">
+      <div className="flex justify-between md:flex-col md:items-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger /* asChild */>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex gap-1.5 h-10 items-center justify-between w-[150px]"
+            >
+              Plantillas
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64 bg-white rounded-lg shadow-lg p-2 ring-0">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Plantillas rápidas</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {filteredTemplates?.length === 0 && (
+                <div className="p-2 text-sm">
+                  No hay plantillas para este canal
+                </div>
+              )}
+              {filteredTemplates?.map((template) => (
 
-              <DropdownMenuItem
-                key={template.id}
-                onClick={() => handleSelectTemplate(template.id)}
-                className="flex flex-col items-start gap-1 py-2"
-              >
-                <span className="font-medium">{template.name}</span>
-                <span className="text-xs text-neutro-2/80 line-clamp-1">
-                  {template.body.substring(0, 50)}...
-                </span>
-              </DropdownMenuItem>
+                <DropdownMenuItem
+                  key={template.id}
+                  onClick={() => handleSelectTemplate(template.id)}
+                  className="flex flex-col items-start gap-1 py-2"
+                >
+                  <span className="font-medium">{template.name}</span>
+                  <span className="text-xs text-neutro-2/80 line-clamp-1">
+                    {template.body.substring(0, 50)}...
+                  </span>
+                </DropdownMenuItem>
 
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button onClick={onSend} variant="outline"
+          className="transition-all flex items-center justify-center w-15">
+          <Paperclip size={20} />
+        </Button>
+      </div>
+      <div className="w-full flex flex-col gap-2 items-end md:flex-row md:items-start">
+        <Textarea
+          value={message}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={`Escribe un ${activeChannel === "EMAIL" ? "email..." : "mensaje..."}`}
+          className="flex-1 min-h-40 max-h-150 resize-none scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-muted/50"
+          rows={1}
+        />
 
-      <Textarea
-        value={message}
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={`Escribe un ${activeChannel === "email" ? "email..." : "mensaje..."}`}
-        className="flex-1 min-h-40 max-h-150 resize-none scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-muted/50"
-        rows={1}
-      />
-
-      <Button onClick={onSend} disabled={!message.trim()} variant="secondary"
-        className="transition-all flex items-center justify-center">
-        <Send size={20} />
-      </Button>
+        <Button onClick={onSend} disabled={!message.trim()} variant="secondary"
+          className="transition-all flex items-center justify-center mb-15 w-15">
+          <Send size={20} />
+        </Button>
+      </div>
     </div>
   )
 }

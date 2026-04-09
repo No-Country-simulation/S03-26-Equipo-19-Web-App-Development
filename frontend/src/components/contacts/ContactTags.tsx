@@ -1,7 +1,6 @@
-import React, { useCallback }from 'react'
+import React from 'react'
 import { Badge } from '../ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu'
-import { Button } from '../ui/Button'
 import { Plus, X } from 'lucide-react'
 import { ScrollArea } from '../ui/scroll-area'
 import { mockAvailableTags } from '../../constants/mocks'
@@ -48,7 +47,7 @@ const ContactTags = ({ contact }: Props) => {
     return (
         <div className="space-y-2.5">
             <label className="text-sm font-semibold text-foreground">
-                Tags
+                Etiquetas
             </label>
             <div className="flex flex-wrap gap-2.5 mt-3">
                 {contact.tags.map((tag: Tag) => (

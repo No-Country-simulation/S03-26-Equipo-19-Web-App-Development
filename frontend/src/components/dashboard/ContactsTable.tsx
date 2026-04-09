@@ -5,6 +5,8 @@ import { timeAgo } from '../../utils/timeAgo';
 import type { ContactResType } from '../../types/contact.types';
 import { useNavigate } from 'react-router-dom';
 import { getStatusLabel } from '../../utils/formateStatusLabel';
+import { Avatar } from '@base-ui/react';
+import AvatarContact from '../ui/AvatarContact';
 
 
   
@@ -51,9 +53,7 @@ export const ContactsTable = () => {
             {contactsData?.map((contact : ContactResType) => (
               <tr key={contact.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors text-slate-600">
                 <td className="py-4 px-2 font-medium text-neutro-1 flex items-center gap-3 min-w-0">
-                  <span className="w-8 h-8 flex-shrink-0 border-2 border-primary rounded-full flex items-center justify-center text-primary font-bold">
-                    {getInitials(contact?.name ?? undefined, contact?.lastName ?? undefined)}
-                  </span>
+                  <AvatarContact name={contact.name} lastName={contact.lastName} size='sm'/>
                   <span className="truncate text-xs">{contact.name} {contact.lastName}</span>
                 </td>
                 <td className="py-4 px-2">

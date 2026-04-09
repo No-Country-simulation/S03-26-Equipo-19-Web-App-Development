@@ -6,7 +6,7 @@ export type FunnelStage =
   | "CLOSED_WON"
   | "CLOSED_LOST";
 
-export type Channel = "whatsapp" | "email";
+export type Channel = "WHATSAPP" | "EMAIL";
 
 export interface ContactResType {
   id: number;

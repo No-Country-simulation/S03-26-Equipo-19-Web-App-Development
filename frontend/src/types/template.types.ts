@@ -1,6 +1,6 @@
 import type { Channel } from "./contact.types";
 
-type TemplateAuthor = {
+export type Author = {
       id: number;
         name: string;
         email: string;
@@ -18,7 +18,7 @@ export interface TemplateResType {
     subject?: string;
     body: string;   
     variables: string; // JSON string con las variables disponibles
-    createdBy: TemplateAuthor;
+    createdBy: Author;
     createdAt: Date;
     updatedAt: Date;
 }
