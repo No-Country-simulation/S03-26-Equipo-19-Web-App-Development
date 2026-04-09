@@ -27,17 +27,17 @@ const sidebarItemsSales = [
 ];
 
 const sidebarItemsAdmin = [
-  { icon: LayoutDashboard, path: ROUTES.DASHBOARD },
-  { icon: UserRoundCog, path: `/dashboard/${ROUTES.CONTACTS}` },
-  { icon: MessagesSquare, path: `/dashboard/${ROUTES.MESSAGES}` },
-  { icon: ListTodo, path: `/dashboard/${ROUTES.TASKS}` },
-  { icon: Bookmark, path: `/dashboard/${ROUTES.SAVED_VIEWS}` },
-  { icon: ChartNoAxesCombined, path: `/dashboard/${ROUTES.METRICS}` },
-  { icon: Funnel, path: `/dashboard/${ROUTES.FUNNEL}` },
-  { icon: UserRoundCog, path: `/dashboard/${ROUTES.SALESPERSONS}` },
-  { icon: Tag, path: `/dashboard/${ROUTES.TAGS}` },
-  { icon: FileText, path: `/dashboard/${ROUTES.TEMPLATES}` },
-  { icon: Download, path: `/dashboard/${ROUTES.REPORTS}` },
+  { icon: LayoutDashboard, path: ROUTES.ADMIN_DASHBOARD },
+  { icon: UserRoundCog, path: `/dashboard/admin/${ROUTES.CONTACTS}` },
+  { icon: MessagesSquare, path: `/dashboard/admin/${ROUTES.MESSAGES}` },
+  { icon: ListTodo, path: `/dashboard/admin/${ROUTES.TASKS}` },
+  { icon: Bookmark, path: `/dashboard/admin/${ROUTES.SAVED_VIEWS}` },
+  { icon: ChartNoAxesCombined, path: `/dashboard/admin/${ROUTES.METRICS}` },
+  { icon: Funnel, path: `/dashboard/admin/${ROUTES.FUNNEL}` },
+  { icon: UserRoundCog, path: `/dashboard/admin/${ROUTES.SALESPERSONS}` },
+  { icon: Tag, path: `/dashboard/admin/${ROUTES.TAGS}` },
+  { icon: FileText, path: `/dashboard/admin/${ROUTES.TEMPLATES}` },
+  { icon: Download, path: `/dashboard/admin/${ROUTES.REPORTS}` },
 ];
 
 

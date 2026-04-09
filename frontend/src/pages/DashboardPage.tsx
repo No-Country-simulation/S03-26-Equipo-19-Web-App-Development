@@ -1,4 +1,4 @@
-import { KpiCard } from '../components/dashboard/KpiCard';
+import { KpiCard } from '../components/ui/KpiCard';
 import { MessagesChart } from '../components/dashboard/MessagesChart';
 import { GrowthChart } from '../components/dashboard/GrowthChart';
 import { ChannelsChart } from '../components/dashboard/ChannelsChart';
@@ -16,9 +16,31 @@ export const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <KpiCard title="Contactos Activos" value="1,452" trend="8.5%" isPositive={true} icon={<Users size={28} strokeWidth={2.5} />} />
-        <KpiCard title="Mensajes Enviados" value="31,890" trend="2.1%" isPositive={false} icon={<Mail size={28} strokeWidth={2.5} />} />
-        <KpiCard title="Tasa de Respuesta" value="28.4%" trend="4.3%" isPositive={true} icon={<MessageSquare size={28} strokeWidth={2.5} />} />
+        <KpiCard 
+  title="Contactos Activos"
+  value="1,452"
+  trend="8.5%"
+  isPositive={true}
+  color="primary"
+  icon={<Users size={28} strokeWidth={2.5} />}
+/>
+       <KpiCard 
+  title="Mensajes Enviados"
+  value="31,890"
+  trend="2.1%"
+  isPositive={false}
+  color="secondary"
+  icon={<Mail size={28} strokeWidth={2.5} />}
+/>
+
+<KpiCard 
+  title="Tasa de Respuesta"
+  value="28.4%"
+  trend="4.3%"
+  isPositive={true}
+  color="success"
+  icon={<MessageSquare size={28} strokeWidth={2.5} />}
+/>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

@@ -1,18 +1,24 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
+import { useAuthStore } from "../store/useAuthStore";
+
+// Layouts y Rutas Protegidas
 import PublicRoute from "../routes/PublicRoute";
-import Login from "../pages/Login";
 import ProtectedRoute from "./ProtectedRoute";
+import { DashboardLayout } from "../components/layout/DashboardLayout"; // ✅ Dirección corregida
+
+// Páginas Públicas
+import Login from "../pages/Login";
 import Register from "../pages/Register";
-import { DashboardPage } from "../pages/DashboardPage";
+
+// Páginas de Vendedor / Generales
+import Home from "../components/dashboard/Home"; // ✅ Usamos el Home que pasaste
 import { ContactsPage } from "../pages/ContactsPage";
 import { MessagesPage } from "../pages/MessagesPage";
-import { useAuthStore } from "../store/useAuthStore";
-import Home from "../components/dashboard/Home";
 import ContactDetailPage from "../pages/ContactDetailPage";
 
-// Admin pages
+// Páginas de Admin
 import { AdminPanel } from "../pages/admin/AdminPanel";
 import { UsersManagement } from "../pages/admin/UsersManagement";
 import { Funnels } from "../pages/admin/Funnels";
@@ -22,66 +28,75 @@ import { ExportsManagement } from "../pages/admin/ExportsManagement";
 import { MetricsPage } from "../pages/admin/MetricsPage";
 import { Conversations } from "../pages/admin/Conversations";
 import { TasksManagement } from "../pages/admin/TasksManagement";
+import { SalespersonsManagement } from "../pages/admin/SalespersonsManagement";
+import { SavedViewsPage } from "../pages/admin/SavedViewsPage";
 
-// 1. Modificamos el redirect para que evalúe el rol del usuario
+// Redirección inicial según rol
 const RootRedirect: React.FC = () => {
-    const { isAuthenticated, user } = useAuthStore();
-    
-    if (!isAuthenticated) {
-        return <Navigate to={ROUTES.LOGIN} replace />;
-    }
-
-    // Si es ADMIN va a su ruta, si no, al dashboard de ventas
-    return <Navigate to={user?.role === 'ADMIN' ? ROUTES.ADMIN : ROUTES.DASHBOARD} replace />;
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
+  return <Navigate to={user?.role === 'ADMIN' ? ROUTES.ADMIN_DASHBOARD : ROUTES.DASHBOARD} replace />;
 };
 
 export const AppRoutes: React.FC = () => {
-    const { user } = useAuthStore();
-    const isAdmin = user?.role === 'ADMIN';
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
 
-    return (
-        <Routes>
-            {/* Rutas Públicas */}
-            <Route path={ROUTES.LOGIN} element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path={ROUTES.REGISTER} element={<PublicRoute><Register /></PublicRoute>} />
+  return (
+    <Routes>
+      {/* RUTAS PÚBLICAS */}
+      <Route path={ROUTES.LOGIN} element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path={ROUTES.REGISTER} element={<PublicRoute><Register /></PublicRoute>} />
 
-            {/* ÚNICO bloque para /dashboard */}
-            <Route
-                path="/dashboard" 
-                element={
-                    <ProtectedRoute>
-                        <DashboardPage />
-                    </ProtectedRoute>
-                }
-            >
-                {/* 1. Index dinámico según rol */}
-                <Route index element={isAdmin ? <AdminPanel /> : <Home />} />
+      {/* BLOQUE PRIVADO */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        {/* Al entrar a /dashboard, decidimos qué componente mostrar en el Outlet */}
+        <Route 
+          index 
+          element={isAdmin ? <Navigate to="admin" replace /> : <Home />} 
+        />
 
-                {/* 2. Rutas que AMBOS comparten */}
-                <Route path={ROUTES.CONTACTS} element={<ContactsPage />} />
-                <Route path={ROUTES.CONTACT_DETALLE} element={<ContactDetailPage/>} />
-                <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
-                <Route path={ROUTES.TASKS} element={<TasksManagement />} />
+        {/* VISTA VENDEDOR (solo si NO es admin) */}
+        {!isAdmin && (
+          <>
+            <Route path={ROUTES.CONTACTS} element={<ContactsPage />} />
+            <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
+            <Route path={ROUTES.TASKS} element={<TasksManagement />} />
+            <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
+          </>
+        )}
 
-                {/* 3. Rutas que SOLO ve el admin bajo /dashboard/xxx */}
-                {isAdmin && (
-                    <>
-                        <Route path={ROUTES.USERS} element={<UsersManagement />} />
-                        <Route path={ROUTES.FUNNEL} element={<Funnels />} />
-                        <Route path={ROUTES.METRICS} element={<MetricsPage />} />
-                        <Route path={ROUTES.TAGS} element={<TagsManagement />} />
-                        <Route path={ROUTES.TEMPLATES} element={<EmailTemplates />} />
-                        <Route path={ROUTES.EXPORTS} element={<ExportsManagement />} />
-                        <Route path={ROUTES.CONVERSATIONS} element={<Conversations />} />
-                    </>
-                )}
-            </Route>
+        {/* VISTA ADMIN */}
+        {isAdmin && (
+          <Route path="admin">
+            <Route index element={<AdminPanel />} />
+            <Route path={ROUTES.CONTACTS} element={<UsersManagement />} />
+            <Route path={ROUTES.MESSAGES} element={<Conversations />} />
+            <Route path={ROUTES.TASKS} element={<TasksManagement />} />
+            <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
+            <Route path={ROUTES.METRICS} element={<MetricsPage />} />
+            <Route path={ROUTES.FUNNEL} element={<Funnels />} />
+            <Route path={ROUTES.SALESPERSONS} element={<SalespersonsManagement />} />
+            <Route path={ROUTES.TAGS} element={<TagsManagement />} />
+            <Route path={ROUTES.TEMPLATES} element={<EmailTemplates />} />
+            <Route path={ROUTES.REPORTS} element={<ExportsManagement />} />
+          </Route>
+        )}
+        
+        <Route path={ROUTES.CONTACT_DETALLE} element={<ContactDetailPage />} />
+      </Route>
 
-            {/* Redirecciones */}
-            <Route path={ROUTES.HOME} element={<RootRedirect />} />
-            <Route path="*" element={<RootRedirect />} />
-        </Routes>
-    );
+      <Route path={ROUTES.HOME} element={<RootRedirect />} />
+      <Route path="*" element={<RootRedirect />} />
+    </Routes>
+  );
 };
 
 export default AppRoutes;

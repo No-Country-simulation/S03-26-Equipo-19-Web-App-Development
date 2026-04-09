@@ -13,27 +13,27 @@ export const useAuthStore = create<AuthState>()(
       loading: false,
       error: null,
 
-      login: async (data) => {
-        try {
-          set({ loading: true, error: null });
+    login: async (data) => {
+      try {
+        set({ loading: true, error: null });
 
-          // Validación con Zod
-          const parsed = userSchema.parse(data);
+        // Si data ya trae el usuario validado del backend, esto está perfecto
+        const parsed = userSchema.parse(data);
 
-          set({
-            user: parsed,
-            token: data.token,
-            isAuthenticated: true,
-            loading: false,
-          });
-        } catch (err) {
-          console.error(err);
-          set({
-            error: 'Login failed',
-            loading: false,
-          });
-        }
-      },
+        set({
+          user: parsed,
+          token: data.token,
+          isAuthenticated: true,
+          loading: false, // Asegura que el spinner desaparezca
+        });
+      } catch (err) {
+        console.error("Error detectado:", err);
+        set({
+          error: 'Error al iniciar sesión. Revisa tus credenciales.',
+          loading: false, // Si falla, el botón debe volver a ser clickable
+        });
+      }
+    },
 
       logout: () =>
         set({
