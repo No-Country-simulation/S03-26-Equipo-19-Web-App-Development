@@ -3,8 +3,9 @@ package com.crm.app.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Etiqueta de clasificación libre definida por el Admin.
@@ -27,7 +28,8 @@ public class Tag {
     /**
      * Nombre visible de la etiqueta. Ej: "Alta prioridad", "Fintech", "Referido".
      */
-    @Column(nullable = false, unique = true)
+
+    @Column(nullable = false, length = 150, unique = true)
     private String name;
 
     /**
@@ -36,12 +38,6 @@ public class Tag {
     @Column(nullable = false, length = 7)
     @Builder.Default
     private String color = "#6366F1";
-
-    /**
-     * Descripción opcional para que el equipo entienda cuándo usar esta etiqueta.
-     */
-    @Column(columnDefinition = "TEXT")
-    private String description;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
