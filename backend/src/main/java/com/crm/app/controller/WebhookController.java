@@ -2,7 +2,7 @@ package com.crm.app.controller;
 
 import com.crm.app.dto.BrevoWebhookDTO;
 import com.crm.app.service.MessageService;
-import com.crm.app.service.WebhookProcessingService;
+import com.crm.app.service.api.WebhookProcessingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
