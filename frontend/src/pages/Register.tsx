@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Importar useNavigate
+import { Link } from "react-router-dom";
 import { Input } from "../components/ui/Input";
 import { ROUTES } from "../constants/routes";
 import { Button } from "../components/ui/Button";
@@ -9,18 +9,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { registerformSchema, type RegisterFormValues } from "../schemas/registerForm_schema";
 import { RegisterMutationsService } from "../services/use_mutations/register-mutation";
 
-// ✅ Interfaz para evitar el 'any' en el error
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-}
 
 const Register: React.FC = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
+
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -32,17 +24,10 @@ const Register: React.FC = () => {
 
   const { mutationPostRegister } = RegisterMutationsService();
 
+  // Handler para enviar el formulario y disparar la mutación
   const onSubmit = (data: RegisterFormValues) => {
-    mutationPostRegister.mutate(data, {
-      onSuccess: () => {
-        // Redirigir al login después de un registro exitoso
-        navigate(ROUTES.LOGIN);
-      }
-    });
+    mutationPostRegister.mutate(data);
   };
-
-  // ✅ Tipado seguro para el error
-  const error = mutationPostRegister.error as ApiError;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-neutro-1">
@@ -83,14 +68,18 @@ const Register: React.FC = () => {
                   error={errors.password?.message}
                 />
 
-                <div 
-                  className="absolute top-9 right-3 cursor-pointer text-slate-500"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeClosed size={16} /> : <Eye size={16} />}
-                </div>
+                {showPassword ? (
+                  <EyeClosed
+                    onClick={() => setShowPassword(false)}
+                    className="absolute top-8.5 right-3 w-4 cursor-pointer"
+                  />
+                ) : (
+                  <Eye
+                    onClick={() => setShowPassword(true)}
+                    className="absolute top-8.5 right-3 w-4 cursor-pointer"
+                  />
+                )}
               </div>
-
               <div className="relative">
                 <Input
                   label="Confirmar contraseña"
@@ -100,27 +89,26 @@ const Register: React.FC = () => {
                   error={errors.confirmPass?.message}
                 />
 
-                <div 
-                  className="absolute top-9 right-3 cursor-pointer text-slate-500"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeClosed size={16} /> : <Eye size={16} />}
-                </div>
+                {showPassword ? (
+                  <EyeClosed
+                    onClick={() => setShowPassword(false)}
+                    className="absolute top-8.5 right-3 w-4 cursor-pointer"
+                  />
+                ) : (
+                  <Eye
+                    onClick={() => setShowPassword(true)}
+                    className="absolute top-8.5 right-3 w-4 cursor-pointer"
+                  />
+                )}
               </div>
             </div>
-
             {mutationPostRegister.isError && (
               <p className="text-red-500 text-sm text-center">
-                {error?.response?.data?.message || "Ocurrió un error al registrarse"}
+                {(mutationPostRegister.error as any)?.response?.data?.message ||
+                  "Credenciales incorrectas"}
               </p>
             )}
-
-            <Button 
-              type="submit" 
-              variant="primary" 
-              className="w-full mt-4" 
-              disabled={mutationPostRegister.isPending}
-            >
+            <Button type="submit" variant="primary" className="w-full mt-4" disabled={mutationPostRegister.isPending}>
               {mutationPostRegister.isPending ? "Registrando..." : "Registrate"}
             </Button>
           </form>

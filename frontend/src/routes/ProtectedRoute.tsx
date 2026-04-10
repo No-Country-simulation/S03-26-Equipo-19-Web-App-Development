@@ -25,8 +25,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  //return isAuthenticated ? <>{children}</> : <Navigate to={redirectTo} replace />;
-  return <>{children}</>;
+  return isAuthenticated ? <>{children}</> : <Navigate to={redirectTo} replace />;
 };
 
 export default ProtectedRoute;
