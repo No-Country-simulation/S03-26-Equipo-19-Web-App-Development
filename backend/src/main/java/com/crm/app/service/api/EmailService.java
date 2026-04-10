@@ -1,4 +1,4 @@
-package com.crm.app.service;
+package com.crm.app.service.api;
 
 import com.crm.app.exception.ExternalServiceException;
 import com.fasterxml.jackson.databind.JsonNode;
