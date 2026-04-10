@@ -1,5 +1,8 @@
 package com.crm.app.service;
 
+import com.crm.app.exception.BusinessRuleViolationException;
+import com.crm.app.exception.ResourceNotFoundException;
+import com.crm.app.exception.UnauthorizedAccessException;
 import com.crm.app.model.SavedView;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.EntityType;
@@ -42,7 +45,7 @@ public class SavedViewService {
     );
 
     private static final Set<String> CONTACT_SORT_FIELDS = Set.of(
-    "name", "email", "createdAt", "funnelStatus"
+    "name", "createdAt", "funnelStatus"
     );
 
     private static final Set<String> TASK_SORT_FIELDS = Set.of(
@@ -64,20 +67,37 @@ public class SavedViewService {
 
         // Validar nombre duplicado
         if (repository.existsByNameAndUser(view.getName(), currentUser)) {
-            throw new IllegalArgumentException("Ya existe una vista con ese nombre");
+           throw new BusinessRuleViolationException(
+            "SavedView",
+            "Ya existe una vista con ese nombre"
+            );
         }
 
         // Validar permisos de global
         if (view.isGlobal() && currentUser.getRole() != Role.ADMIN) {
-            throw new IllegalArgumentException("Solo ADMIN puede crear vistas globales");
+            throw new BusinessRuleViolationException(
+            "SavedView",
+            "Solo ADMIN puede crear vistas globales"
+            );
         }
 
         // Validar entidad
         if (view.getEntity() == null) {
-            throw new IllegalArgumentException("entity es obligatorio");
+            throw new BusinessRuleViolationException(
+            "SavedView",
+            "entity es obligatorio"
+            );
         }
 
         EntityType entity = view.getEntity();
+
+        if (view.getSortBy() == null || view.getSortBy().isBlank()) {
+            if (view.getEntity() == EntityType.CONTACTS) {
+                view.setSortBy("createdAt");
+            } else if (view.getEntity() == EntityType.TASKS) {
+                view.setSortBy("dueDate");
+            }
+        }
 
         validateSortBy(view.getSortBy(), entity);
 
@@ -103,7 +123,7 @@ public class SavedViewService {
     // =========================
     public SavedView getById(Long id, User currentUser) {
         SavedView view = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vista no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("SavedView", id));
 
         validateReadAccess(view, currentUser);
 
@@ -116,7 +136,7 @@ public class SavedViewService {
     public SavedView update(Long id, SavedView updated, User currentUser) {
         // Traer la vista original
         SavedView existing = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vista no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("SavedView", id));
 
         // Validar que el usuario tenga permisos para modificar (owner o ADMIN)
         validateOwnership(existing, currentUser);
@@ -129,24 +149,44 @@ public class SavedViewService {
         // Validar nombre duplicado (si cambia)
         if (!existing.getName().equals(updated.getName()) &&
                 repository.existsByNameAndUser(updated.getName(), currentUser)) {
-            throw new IllegalArgumentException("Ya existe una vista con ese nombre");
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "Ya existe una vista con ese nombre"
+            );
         }
 
         // Validar global
         if (updated.isGlobal() && currentUser.getRole() != Role.ADMIN) {
-            throw new IllegalArgumentException("Solo ADMIN puede usar vistas globales");
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "Solo ADMIN puede usar vistas globales"
+            );
         }
         
         // Validar entidad
         if (updated.getEntity() == null) {
-            throw new IllegalArgumentException("entity es obligatorio");
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "entity es obligatorio"
+            );
         }
 
         if (!existing.getEntity().equals(updated.getEntity())) {
-            throw new IllegalArgumentException("No se puede cambiar la entidad de la vista");
+            throw new BusinessRuleViolationException(
+        "SavedView",
+        "No se puede cambiar la entidad de la vista"
+            );
         }
 
         EntityType entity = updated.getEntity();
+
+        if (updated.getSortBy() == null || updated.getSortBy().isBlank()) {
+            if (updated.getEntity() == EntityType.CONTACTS) {
+                updated.setSortBy("createdAt");
+            } else if (updated.getEntity() == EntityType.TASKS) {
+                updated.setSortBy("dueDate");
+            }
+        }
 
         validateSortBy(updated.getSortBy(), entity);
 
@@ -170,7 +210,7 @@ public class SavedViewService {
     public void delete(Long id, User currentUser) {
 
         SavedView view = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vista no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("SavedView", id));
 
         validateOwnership(view, currentUser);
 
@@ -188,19 +228,28 @@ public class SavedViewService {
         
         // El JSON de filtros puede ser vacío ({}), pero no puede ser null ni otro tipo (ej: array, string, etc)
         if (filters == null || filters.isNull()) {
-            throw new IllegalArgumentException("Filters no puede ser null");
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "Filters no puede ser null"
+            );
         }
 
         // El JSON puede ser vacío ({}), pero no puede ser otro tipo (ej: array, string, etc)
         if (!filters.isObject()) {
-            throw new IllegalArgumentException("Filters debe ser un objeto JSON");
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "Filters debe ser un objeto JSON"
+            );
         }
 
         // Validar campos permitidos según la entidad
         switch (entity) {
             case CONTACTS -> validateContactFilters(filters);
             case TASKS -> validateTaskFilters(filters);
-            default -> throw new IllegalArgumentException("Entidad no soportada");
+            default -> throw new BusinessRuleViolationException(
+                "SavedView",
+                "Entidad no soportada"
+            );
         }
     }
 
@@ -213,19 +262,28 @@ public class SavedViewService {
             try {
                 FunnelStatus.valueOf(filters.get("funnelStatus").asText().toUpperCase());
             } catch (Exception e) {
-                throw new IllegalArgumentException("funnelStatus inválido");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    "funnelStatus inválido"
+                );
             }
         }
 
         if (filters.has("ownerId") && !filters.get("ownerId").canConvertToLong()) {
-            throw new IllegalArgumentException("ownerId debe ser numérico");
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "ownerId debe ser numérico"
+            );
         }
 
         if (filters.has("preferredChannel")) {
             try {
                 Channel.valueOf(filters.get("preferredChannel").asText().toUpperCase());
             } catch (Exception e) {
-                throw new IllegalArgumentException("preferredChannel inválido");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    "preferredChannel inválido"
+                );
             }
         }
 
@@ -233,7 +291,10 @@ public class SavedViewService {
             JsonNode tagIdsNode = filters.get("tagIds");
 
             if (!tagIdsNode.isArray()) {
-                throw new IllegalArgumentException("tagIds debe ser un array");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    "tagIds debe ser un array"
+                );
             }
 
             if (tagIdsNode.isEmpty()) {
@@ -242,7 +303,10 @@ public class SavedViewService {
 
             for (JsonNode id : tagIdsNode) {
                 if (!id.canConvertToLong()) {
-                    throw new IllegalArgumentException("tagIds debe contener números");
+                    throw new BusinessRuleViolationException(
+                        "SavedView",
+                        "tagIds debe contener números"
+                    );
                 }
             }
         }
@@ -257,7 +321,10 @@ public class SavedViewService {
             try {
                 TaskStatus.valueOf(filters.get("status").asText().toUpperCase());
             } catch (Exception e) {
-                throw new IllegalArgumentException("status inválido");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    "status inválido"
+                );
             }
         }
 
@@ -265,12 +332,18 @@ public class SavedViewService {
             try {
                 TaskType.valueOf(filters.get("type").asText().toUpperCase());
             } catch (Exception e) {
-                throw new IllegalArgumentException("type inválido");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    "type inválido"
+                );
             }
         }
 
         if (filters.has("assignedTo") && !filters.get("assignedTo").canConvertToLong()) {
-            throw new IllegalArgumentException("assignedTo debe ser numérico");
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "assignedTo debe ser numérico"
+            );
         }
 
         validateDateField(filters, "dueDateFrom");
@@ -281,7 +354,10 @@ public class SavedViewService {
             LocalDate to = LocalDate.parse(filters.get("dueDateTo").asText());
 
             if (from.isAfter(to)) {
-                throw new IllegalArgumentException("dueDateFrom no puede ser mayor a dueDateTo");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    "dueDateFrom no puede ser mayor a dueDateTo"
+                );
             }
         }
     }
@@ -292,7 +368,7 @@ public class SavedViewService {
         if (currentUser.getRole() == Role.ADMIN) return;
 
         if (!view.getUser().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("No tenés permisos para modificar esta vista");
+            throw new UnauthorizedAccessException("SavedView", view.getId());
         }
     }
 
@@ -309,14 +385,17 @@ public class SavedViewService {
         // Si es propia → ok
         if (view.getUser().getId().equals(currentUser.getId())) return;
 
-        throw new RuntimeException("No tenés acceso a esta vista");
+        throw new UnauthorizedAccessException("SavedView", view.getId());
     }
 
     // Validar que el campo sortBy sea uno permitido según la entidad
     private void validateSortBy(String sortBy, EntityType entity) {
 
         if (sortBy == null || sortBy.isBlank()) {
-            throw new IllegalArgumentException("sortBy es obligatorio");
+            throw new BusinessRuleViolationException( 
+                "SavedView",
+                "sortBy es obligatorio"
+            );
         }
 
         Set<String> allowed = switch (entity) {
@@ -325,8 +404,9 @@ public class SavedViewService {
         };
 
         if (!allowed.contains(sortBy)) {
-            throw new IllegalArgumentException(
-                "Campo inválido para " + entity + ": " + sortBy
+            throw new BusinessRuleViolationException(
+                "SavedView",
+                "sortBy inválido para " + entity + ". Permitidos: " + allowed
             );
         }
     }
@@ -337,13 +417,19 @@ public class SavedViewService {
             JsonNode node = filters.get(fieldName);
 
             if (!node.isTextual()) {
-                throw new IllegalArgumentException(fieldName + " debe ser fecha (YYYY-MM-DD)");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    fieldName + " debe ser fecha (YYYY-MM-DD)"
+                );
             }
 
             try {
                 LocalDate.parse(node.asText());
             } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException(fieldName + " formato inválido (YYYY-MM-DD)");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    fieldName + " formato inválido (YYYY-MM-DD)"
+                );
             }
         }
     } 
@@ -356,11 +442,17 @@ public class SavedViewService {
             JsonNode value = entry.getValue();
 
             if (!allowed.contains(field)) {
-                throw new IllegalArgumentException("Campo no permitido para " + entityName + ": " + field);
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    "Campo no permitido para " + entityName + ": " + field
+                );
             }
 
             if (value == null || value.isNull()) {
-                throw new IllegalArgumentException(field + " no puede ser null");
+                throw new BusinessRuleViolationException(
+                    "SavedView",
+                    field + " no puede ser null"
+                );
             }
         });
     }

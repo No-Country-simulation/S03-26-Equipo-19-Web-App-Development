@@ -29,13 +29,7 @@ public class SwaggerConfig {
                                 .name("Equipo 19 / CRM-Cross-Industry")
                         )
                 )
-                .addServersItem(new Server()
-                        .url("https://crm-cross-industry.onrender.com") // <- esta es tu URL real
-                        .description("Servidor de Producción (Render)"))
-
-                .addServersItem(new Server()
-                        .url("http://localhost:8080") // URL de desarrollo local
-                        .description("Servidor de Desarrollo Local"))
+                .addServersItem(new Server().url("/")) // Asegura que las rutas sean relativas al contexto de la aplicación
 
                 .addSecurityItem(new SecurityRequirement().addList("TOKEN"))
                 .components(new Components()
