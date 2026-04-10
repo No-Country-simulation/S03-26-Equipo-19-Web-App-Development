@@ -1,11 +1,12 @@
 import { ChevronLeft, Mail, MessageCircleMore } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs"
-
-
 import type { Channel, ContactResType } from "../../types/contact.types"
 import { useCallback } from "react"
 import { Badge } from "../ui/Badge"
 import AvatarContact from "../ui/AvatarContact"
+import { useNavigate } from "react-router-dom"
+import { ROUTES } from "../../constants/routes"
+import { cn } from "../../lib/utils"
 
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
   channelCounts: Record<Channel, number>
   activeChannel: Channel
   setActiveChannel: (channel: Channel) => void
+  onBack?: () => void
 }
 
 export function ContactHeader({
@@ -20,18 +22,30 @@ export function ContactHeader({
   channelCounts,
   activeChannel = "WHATSAPP",
   setActiveChannel = () => { },
+  onBack
 }: Props) {
 
+  const navigate = useNavigate()
 
-  const handleBackToList = useCallback(() => {
-    window.history.back();
-  }, [])
+  const handleBack = useCallback(() => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(`${ROUTES.DASHBOARD}/${ROUTES.CONTACTS}`);
+    }
+  }, [onBack, navigate]);
 
 
   return (
     <div className="flex flex-col md:flex-row md:justify-between items-center gap-4 rounded-t-lg bg-neutro-3 py-4">
       <div className="flex items-center gap-4 rounded-t-lg bg-neutro-3 lg:px-6 py-4">
-        <button onClick={handleBackToList}>
+        <button
+          onClick={handleBack}
+          className={cn(
+            "flex items-center justify-center",
+            onBack ? "block lg:hidden" : "block"
+          )}
+        >
           <ChevronLeft className="h-5 w-5 text-primary" />
         </button>
 
@@ -42,8 +56,9 @@ export function ContactHeader({
           <p className="text-sm text-muted-foreground">{contact.email}</p>
         </div>
       </div>
-
-      <Tabs value={activeChannel} onValueChange={(v) => setActiveChannel(v as Channel)} className={"md:pr-6"}>
+<div className="flex flex-col items-end md:pr-6 gap-0.5">
+  <p className="text-xs mr-2">Conversaciones activas</p>
+      <Tabs value={activeChannel} onValueChange={(v) => setActiveChannel(v as Channel)} >
         <TabsList className="bg-neutro-2/50 rounded-2xl">
           <TabsTrigger value="WHATSAPP">
             <MessageCircleMore className="h-4 w-4 text-success" />
@@ -64,6 +79,7 @@ export function ContactHeader({
           </TabsTrigger>
         </TabsList>
       </Tabs>
+      </div>
     </div>
   )
 }
