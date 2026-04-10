@@ -1,4 +1,4 @@
-import { Building2, Mail, Phone, Smartphone } from "lucide-react"
+import { Building2, Mail, Smartphone } from "lucide-react"
 
 import type { ContactResType } from "../../types/contact.types"
 import AvatarContact from "../ui/AvatarContact"
