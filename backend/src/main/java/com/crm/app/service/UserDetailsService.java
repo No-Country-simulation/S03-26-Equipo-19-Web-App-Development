@@ -1,4 +1,4 @@
-package com.crm.app.service.impl;
+package com.crm.app.service;
 
 import com.crm.app.model.User;
 import com.crm.app.repository.UserRepository;
@@ -11,7 +11,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class UserDetailsServiceImpl implements UserDetailsService {
+public class UserDetailsService implements org.springframework.security.core.userdetails.UserDetailsService {
 
     private final UserRepository repository;
 

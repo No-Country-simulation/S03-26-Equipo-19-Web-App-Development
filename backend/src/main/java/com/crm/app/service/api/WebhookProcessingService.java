@@ -1,7 +1,8 @@
-package com.crm.app.service;
+package com.crm.app.service.api;
 
 import com.crm.app.dto.WhatsAppWebhookDTO;
 import com.crm.app.model.enums.DeliveryStatus;
+import com.crm.app.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
