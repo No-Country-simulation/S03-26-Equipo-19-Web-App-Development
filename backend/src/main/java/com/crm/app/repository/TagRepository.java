@@ -8,10 +8,11 @@ import java.util.Optional;
 
 public interface TagRepository extends JpaRepository<Tag, Long> {
 
-    Optional<Tag> findByName(String name);
+    Optional<Tag> findByNameIgnoreCase(String name);
 
-    boolean existsByName(String name);
+    boolean existsByNameIgnoreCase(String name);
 
-    // Búsqueda por nombre parcial para autocompletado en la UI
     List<Tag> findByNameContainingIgnoreCase(String name);
+
+    List<Tag> findAllByOrderByNameAsc();
 }
