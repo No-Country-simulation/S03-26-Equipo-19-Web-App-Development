@@ -24,9 +24,6 @@ const ContactDetailPage = () => {
     const { data: contactData, isLoading } = useGetContactById(parsedId!);
     const { data: conversationsData } = useGetConversationsByContactId(parsedId!);
 
-    console.log({activeChannel});
-    
-
     const messages = useMemo(() => {
         return mockMessages.filter(m => m.channel === activeChannel)
     }, [activeChannel])

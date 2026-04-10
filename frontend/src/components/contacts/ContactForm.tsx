@@ -1,15 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Channel, ContactReqType } from '../../types/contact.types';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 
-
 interface ContactFormProps {
   onSubmit: (data: ContactReqType) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
+  initialData?: ContactReqType; //Enviar para update
+  isLoading?: boolean;
 }
 
-export const ContactForm = ({ onSubmit, onCancel }: ContactFormProps) => {
+export const ContactForm = ({
+  onSubmit,
+  onCancel,
+  initialData,
+  isLoading = false,
+}: ContactFormProps) => {
+
   const [form, setForm] = useState<ContactReqType>({
     contact: {
       name: '',
@@ -17,14 +24,16 @@ export const ContactForm = ({ onSubmit, onCancel }: ContactFormProps) => {
       email: '',
       phone: '',
       company: '',
-      normalizedPhone: '',
     },
-    funnelStatus: 'NEW_LEAD',
-    source: '',
-    preferredChannel: 'whatsapp',
-    ownerId: 0,
-    tags: [],
+    preferredChannel: 'WHATSAPP',
   });
+
+
+  useEffect(() => {
+    if (initialData) {
+      setForm(initialData);
+    }
+  }, [initialData]);
 
   const handleContactChange = (
     field: keyof ContactReqType['contact'],
@@ -49,27 +58,44 @@ export const ContactForm = ({ onSubmit, onCancel }: ContactFormProps) => {
     }));
   };
 
+  const buildPayload = (): ContactReqType => {
+    return {
+      contact: {
+        name: form.contact.name,
+        lastName: form.contact.lastName,
+        email: form.contact.email,
+        phone: form.contact.phone,
+        ...(form.contact.company && { company: form.contact.company }),
+      },
+      preferredChannel: form.preferredChannel.toUpperCase() as Channel,
+    };
+  };
 
   const handleSubmit = () => {
     if (!form.contact.name || !form.contact.email) return;
-    onSubmit(form);
+
+    const cleanData = buildPayload();
+    onSubmit(cleanData);
   };
 
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
         <Input
           label="Nombre"
           placeholder="Ej: Ana"
           value={form.contact.name}
           onChange={e => handleContactChange('name', e.target.value)}
         />
+
         <Input
           label="Apellido"
           placeholder="Ej: García"
           value={form.contact.lastName}
           onChange={e => handleContactChange('lastName', e.target.value)}
         />
+
         <Input
           label="Email"
           type="email"
@@ -77,6 +103,7 @@ export const ContactForm = ({ onSubmit, onCancel }: ContactFormProps) => {
           value={form.contact.email}
           onChange={e => handleContactChange('email', e.target.value)}
         />
+
         <Input
           label="Teléfono"
           placeholder="+54 351 123 4567"
@@ -95,21 +122,44 @@ export const ContactForm = ({ onSubmit, onCancel }: ContactFormProps) => {
           <label className="text-sm font-medium">Canal preferido</label>
           <select
             value={form.preferredChannel}
-            onChange={e => handleRootChange('preferredChannel', e.target.value as Channel)}
-            className=" bg-white border border-neutro-2 text-neutro-1
-          rounded-xl px-4 py-2.5 text-sm
-          focus:outline-none focus:border-secondary
-          placeholder:text-neutro-2"
+            onChange={e =>
+              handleRootChange(
+                'preferredChannel',
+                e.target.value as Channel
+              )
+            }
+            className="bg-white border border-neutro-2 text-neutro-1
+              rounded-xl px-4 py-2.5 text-sm
+              focus:outline-none focus:border-secondary"
           >
-            <option value="whatsapp">WhatsApp</option>
-            <option value="email">Email</option>
+            <option value="WHATSAPP">WhatsApp</option>
+            <option value="EMAIL">Email</option>
           </select>
         </div>
+
       </div>
-      <div className="flex justify-center">
-        <Button className="mt-8 w-full" onClick={handleSubmit}>
-          CREAR CONTACTO
+
+      <div className="flex justify-center gap-2">
+        
+        {onCancel && (
+          <Button
+            variant="outline"
+            className="mt-8 w-full"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>
+        )}
+
+        <Button
+          className="mt-8 w-full"
+          onClick={handleSubmit}
+          disabled={isLoading}
+        >
+          {initialData ? 'GUARDAR CAMBIOS' : 'CREAR CONTACTO'}
         </Button>
+
       </div>
     </>
   );

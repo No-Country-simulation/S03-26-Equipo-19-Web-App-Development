@@ -6,7 +6,8 @@ import { FileUser, Speech, UsersRound, UserStar } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { ContactForm } from '../components/contacts/ContactForm';
 import { useState } from 'react';
-import { useContactsStore } from '../store/useContactsStore';
+import type { ContactReqType } from '../types/contact.types';
+import { ContactsMutationsService } from '../services/use_mutations/contacts-mutation';
 
 
 
@@ -14,14 +15,22 @@ export const ContactsPage = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  const addContact = useContactsStore((state) => state.addContact);
+  const { mutationPostContact } = ContactsMutationsService();
+
+  const addContact = (data: ContactReqType) => {
+    mutationPostContact.mutate(data, {
+      onSuccess: () => {
+        setModalOpen(false);
+      }
+    });
+  };
 
 
   return (
     <>
       <div className="flex justify-center md:justify-between mb-6">
         <TitleSection text="Mis contactos" className='hidden md:flex' />
-        <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={() => setModalOpen(true)}> 
+        <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={() => setModalOpen(true)}>
           Nuevo contacto
         </Button>
       </div>

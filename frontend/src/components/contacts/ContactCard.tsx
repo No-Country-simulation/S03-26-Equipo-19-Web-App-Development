@@ -23,15 +23,15 @@ export function ContactCard({ contact }: Props) {
           <div className="mt-6 flex flex-col gap-0.5 w-full text-sm">
             <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-1 hover:bg-muted/50">
               <Smartphone className="h-4 w-4 shrink-0 text-primary" />
-              <span>{contact.phone}</span>
+              <span>{contact.phone ?? "No hay dato"}</span>
             </div>
             <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-1 hover:bg-muted/50">
               <Mail className="h-4 w-4 shrink-0 text-primary" />
-              <span className="truncate">{contact.email}</span>
+              <span className="truncate">{contact.email ?? "No hay dato"}</span>
             </div>
             <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-1 hover:bg-muted/50">
               <Building2 className="h-4 w-4 shrink-0 text-primary" />
-              <span>Acme Corporation</span>
+              <span>{contact.company ?? "No hay dato"}</span>
             </div>
           </div>
         </div>

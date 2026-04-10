@@ -1,4 +1,4 @@
-import { Eye, Mail, MessageCircleMore, UserRoundPlus } from "lucide-react"
+import { Eye, Mail, MessageCircleMore} from "lucide-react"
 import type { ConversationResType } from "../../types/conversation.types"
 import { formatDateTime } from "../../utils/formateDate"
 import { useState } from "react"

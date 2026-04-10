@@ -28,15 +28,14 @@ export interface ContactReqType {
   contact: {
     name: string;
     lastName: string;
-    email: string;
-    phone: string;
-    company: string;
+    email?: string;
+    phone?: string;
+    company?: string;
   };
-  funnelStatus: FunnelStage;
   preferredChannel: Channel;
-  ownerId: number;
-  tags: Tag[];
+  ownerId?: number;
 }
+
 
 export interface Owner {
   id: number;

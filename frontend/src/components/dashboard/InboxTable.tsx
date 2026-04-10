@@ -1,35 +1,36 @@
 import { SlidersHorizontal, MessageCircleMore, Mail, UserRoundPlus } from 'lucide-react';
 import type { MessageResType } from '../../types/message.types';
 import { formatDateTime } from '../../utils/formateDate';
-import { useContactsStore } from '../../store/useContactsStore';
 import { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { ContactForm } from '../contacts/ContactForm';
+import type { ContactReqType } from '../../types/contact.types';
+import { ContactsMutationsService } from '../../services/use_mutations/contacts-mutation';
 
 
 const DATA: MessageResType[] = [
   {
     id: 1,
     userId: 6,
-    channel: "whatsapp",
-    direction: "inbound",
-    content: "Hola, estoy interesado en sus servicios. ¿Podrían darme más detalles?",
-    createdAt: new Date(),
+    channel: "WHATSAPP",
+    direction: "INBOUND",
+    body: "Hola, estoy interesado en sus servicios. ¿Podrían darme más detalles?",
+    createdAt: "2026-04-09T11:22:37.151164",
     externalId: "2",
-    messageType: "text",
-    status: "delivered",
+    messageType: "TEXT",
+    status: "DELIVERED",
     conversationId: 1,
   },
   {
     id: 2,
     userId: 1,
-    channel: "email",
-    direction: "inbound",
-    content: "Hola, estoy interesado en sus servicios. ¿Podrían darme más detalles?",
-    createdAt: new Date(),
+    channel: "EMAIL",
+    direction: "INBOUND",
+    body: "Hola, estoy interesado en sus servicios. ¿Podrían darme más detalles?",
+    createdAt: "2026-04-09T11:22:37.151164",
     externalId: "2",
-    messageType: "text",
-    status: "delivered",
+    messageType: "TEXT",
+    status: "DELIVERED",
     conversationId: 1,
   },
 
@@ -47,7 +48,15 @@ export const InboxTable = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  const addContact = useContactsStore((state) => state.addContact);
+  const { mutationPostContact } = ContactsMutationsService();
+
+  const addContact = (data: ContactReqType) => {
+      mutationPostContact.mutate(data, {
+      onSuccess: () => {
+        setModalOpen(false);
+      }
+    });
+  };
 
 
   return (
@@ -73,24 +82,24 @@ export const InboxTable = () => {
                 <tr key={message.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors text-slate-600">
                   <td className="py-4 px-1 font-medium text-neutro-1 flex items-center gap-3 min-w-0">
                     <span className="">
-                      {message?.channel === 'whatsapp' ? <MessageCircleMore size={24} className='text-success' /> : <Mail size={24} className='text-primary' />}
+                      {message?.channel === 'WHATSAPP' ? <MessageCircleMore size={24} className='text-success' /> : <Mail size={24} className='text-primary' />}
                     </span>
 
                   </td>
                   <td className="py-4 px-1">
                     <span className={`px-1 py-1 rounded-md font-medium whitespace-nowrap `}>
-                      {message.content.length > 30 ? message.content.substring(0, 30) + '...' : message.content}
+                      {message.body.length > 30 ? message.body.substring(0, 30) + '...' : message.body}
                     </span>
                   </td>
                   <td className="py-4 px-2 w-[220px] min-w-[220px]">
-                    {message?.channel === 'whatsapp' ? <span className="text-sm text-slate-500">+54 9 11 1234-5678</span> : <span className="text-sm text-slate-500">john.doe@example.com</span>}
+                    {message?.channel === 'WHATSAPP' ? <span className="text-sm text-slate-500">+54 9 11 1234-5678</span> : <span className="text-sm text-slate-500">john.doe@example.com</span>}
                   </td>
                   <td className="py-4 px-2">{formatDateTime(message?.createdAt)}hs</td>
 
                   <td className="py-2 px-2 flex justify-end gap-3">
 
                     <button
-                      aria-label={`Eliminar a ${message.content}`}
+                      aria-label={`Eliminar a ${message.body}`}
                       title="Crear contacto"
                       className={`p-1 rounded-md text-primary hover:bg-secondary hover:text-white transition-colors flex items-center justify-center`}
                       onClick={() => setModalOpen(true)}

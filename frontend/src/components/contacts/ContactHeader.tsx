@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger } from "../ui/tabs"
 
 import type { Channel, ContactResType } from "../../types/contact.types"
 import { useCallback } from "react"
-import { Badge } from "../ui/badge"
+import { Badge } from "../ui/Badge"
 import AvatarContact from "../ui/AvatarContact"
 
 
