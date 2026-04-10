@@ -2,6 +2,7 @@ package com.crm.app.mapper;
 
 import com.crm.app.dto.ContactDTOs;
 import com.crm.app.model.Contact;
+import com.crm.app.model.Conversation;
 import com.crm.app.model.Tag;
 import com.crm.app.model.User;
 import org.mapstruct.Mapper;
@@ -27,4 +28,17 @@ public interface ContactMapper {
     ContactDTOs.TagInfo toTagInfo(Tag tag);
 
     List<ContactDTOs.ContactDetailResponse> toDetailResponseList(List<Contact> contacts);
+
+    // En ContactMapper.java - Agrega estos métodos
+
+    // ==================== NUEVOS MAPPINGS PARA DASHBOARD ====================
+
+    @Mapping(target = "conversations", source = "conversations")
+    @Mapping(target = "totalUnreadCount", source = "totalUnreadCount")
+    ContactDTOs.ContactDashboardResponse toDashboardResponse(
+            Contact contact,
+            List<Conversation> conversations,
+            Long totalUnreadCount);
+
+    ContactDTOs.ConversationBriefInfo toConversationBriefInfo(Conversation conversation);
 }

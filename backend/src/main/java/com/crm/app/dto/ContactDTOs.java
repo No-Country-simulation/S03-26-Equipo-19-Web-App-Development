@@ -1,6 +1,7 @@
 package com.crm.app.dto;
 
 import com.crm.app.model.enums.Channel;
+import com.crm.app.model.enums.ConversationStatus;
 import com.crm.app.model.enums.FunnelStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -9,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public class ContactDTOs {
+
+    // ==================== DTOs EXISTENTES ====================
 
     @Schema(description = "Datos básicos de contacto")
     public record ContactBase(
@@ -33,7 +36,6 @@ public class ContactDTOs {
             @Schema(description = "Opcional. Solo Admin puede setearlo") Long ownerId
     ) {}
 
-    // ✅ Respuesta completa (con tags) para GET y PATCH
     @Schema(description = "Respuesta completa de contacto (con tags)")
     public record ContactDetailResponse(
             Long id,
@@ -50,7 +52,6 @@ public class ContactDTOs {
             LocalDateTime updatedAt
     ) {}
 
-    // ✅ Respuesta resumida (sin tags) para POST (creación)
     @Schema(description = "Respuesta resumida de contacto (sin tags)")
     public record ContactSummaryResponse(
             Long id,
@@ -77,5 +78,66 @@ public class ContactDTOs {
             Long id,
             String name,
             String color
+    ) {}
+
+    // ==================== NUEVOS DTOs PARA DASHBOARD DE CONTACTOS ====================
+
+    @Schema(description = "Información de conversación para el dashboard de contactos")
+    public record ConversationBriefInfo(
+            Long id,
+            Channel channel,
+            ConversationStatus status,
+            LocalDateTime lastInteraction,
+            @Schema(description = "Cantidad de mensajes NO LEÍDOS en esta conversación")
+            Long unreadCount
+    ) {}
+
+    @Schema(description = "Dashboard de contacto con métricas y conversaciones")
+    public record ContactDashboardResponse(
+            Long id,
+            String name,
+            String lastName,
+            String email,
+            String phone,
+            String company,
+            FunnelStatus funnelStatus,
+            Channel preferredChannel,
+            OwnerInfo owner,
+            List<TagInfo> tags,
+            LocalDateTime createdAt,
+            List<ConversationBriefInfo> conversations,
+            @Schema(description = "Total de mensajes NO LEÍDOS de este contacto (todas las conversaciones)")
+            Long totalUnreadCount
+    ) {}
+
+    // ==================== MÉTRICAS GLOBALES ====================
+
+    @Schema(description = "Métricas globales del dashboard")
+    public record DashboardMetrics(
+            @Schema(description = "Total de contactos del usuario")
+            Long totalContacts,
+
+            @Schema(description = "Total de mensajes NO LEÍDOS en todas las conversaciones del usuario")
+            Long totalUnreadMessages,
+
+            @Schema(description = "Desglose de no leídos por canal")
+            UnreadByChannel unreadByChannel
+    ) {}
+
+    @Schema(description = "Desglose de mensajes no leídos por canal")
+    public record UnreadByChannel(
+            @Schema(description = "Mensajes no leídos en WhatsApp")
+            Long whatsapp,
+
+            @Schema(description = "Mensajes no leídos en Email")
+            Long email
+    ) {}
+
+    // ==================== RESPUESTA FINAL DEL DASHBOARD ====================
+
+    @Schema(description = "Respuesta completa del dashboard de contactos")
+    public record ContactDashboardListResponse(
+            DashboardMetrics metrics,
+            List<ContactDashboardResponse> contacts
     ) {}
 }
