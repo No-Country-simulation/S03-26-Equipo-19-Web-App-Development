@@ -55,4 +55,46 @@ public interface ContactRepository extends JpaRepository<Contact, Long>,
     @Query("SELECT COUNT(c) FROM Contact c WHERE c.createdAt BETWEEN :start AND :end")
     long countNewContactsInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    // En ContactRepository.java - Agrega estos métodos
+
+    // Obtener todos los contactos con sus conversaciones (para evitar N+1)
+    @Query("SELECT DISTINCT c FROM Contact c " +
+            "LEFT JOIN FETCH c.tags " +
+            "LEFT JOIN FETCH c.owner " +
+            "WHERE c.owner = :owner " +
+            "ORDER BY c.createdAt DESC")
+    List<Contact> findByOwnerWithConversations(@Param("owner") User owner);
+
+    @Query("SELECT DISTINCT c FROM Contact c " +
+            "LEFT JOIN FETCH c.tags " +
+            "LEFT JOIN FETCH c.owner " +
+            "ORDER BY c.createdAt DESC")
+    List<Contact> findAllWithConversations();
+
+    // Contar mensajes no leídos por contacto
+    @Query("SELECT m.conversation.contact.id, COUNT(m) FROM Message m " +
+            "WHERE m.conversation.assignedTo = :user " +
+            "AND m.direction = 'INBOUND' " +
+            "AND m.deliveryStatus = 'DELIVERED' " +
+            "AND m.conversation.status = 'OPEN' " +
+            "GROUP BY m.conversation.contact.id")
+    List<Object[]> countUnreadMessagesByContact(@Param("user") User user);
+
+    // Contar mensajes no leídos por canal
+    @Query("SELECT m.conversation.channel, COUNT(m) FROM Message m " +
+            "WHERE m.conversation.assignedTo = :user " +
+            "AND m.direction = 'INBOUND' " +
+            "AND m.deliveryStatus = 'DELIVERED' " +
+            "AND m.conversation.status = 'OPEN' " +
+            "GROUP BY m.conversation.channel")
+    List<Object[]> countUnreadMessagesByChannel(@Param("user") User user);
+
+    // Total de mensajes no leídos del usuario
+    @Query("SELECT COUNT(m) FROM Message m " +
+            "WHERE m.conversation.assignedTo = :user " +
+            "AND m.direction = 'INBOUND' " +
+            "AND m.deliveryStatus = 'DELIVERED' " +
+            "AND m.conversation.status = 'OPEN'")
+    long countTotalUnreadMessages(@Param("user") User user);
+
 }

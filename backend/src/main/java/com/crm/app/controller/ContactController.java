@@ -120,6 +120,34 @@ public class ContactController {
         return ResponseEntity.ok(contactService.getMyContactsDetailResponse(currentUser));
     }
 
+    @GetMapping("/dashboard")
+    @Operation(
+            summary = "Dashboard de contactos con métricas",
+            description = """
+                    Retorna la lista de contactos del usuario autenticado con:
+                    - Métricas globales (total contactos, mensajes no leídos)
+                    - Conversaciones asociadas a cada contacto
+                    - Mensajes no leídos por contacto
+                    
+                    **Ordenamiento:** 
+                    1. Contactos con mensajes NO LEÍDOS primero
+                    2. Luego por fecha de creación (más reciente primero)
+                    
+                    **Permisos:**
+                    - **ADMIN**: Ve todos los contactos
+                    - **VENDEDOR**: Solo ve sus propios contactos
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dashboard obtenido exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ContactDTOs.ContactDashboardListResponse> getContactDashboard(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(contactService.getContactDashboard(currentUser));
+    }
+
     @GetMapping("/{id}")
     @Operation(
             summary = "Obtener contacto por ID",
