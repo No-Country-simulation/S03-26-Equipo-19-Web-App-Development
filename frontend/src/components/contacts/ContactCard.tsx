@@ -1,7 +1,7 @@
-import { Building2, Mail, Phone } from "lucide-react"
+import { Building2, Mail, Smartphone } from "lucide-react"
 
 import type { ContactResType } from "../../types/contact.types"
-import {Avatar} from "../ui/Avatar"
+import AvatarContact from "../ui/AvatarContact"
 
 
 interface Props {
@@ -14,24 +14,24 @@ export function ContactCard({ contact }: Props) {
 
   return (
     <div className="bg-white border-border shadow-md rounded-lg">
-      <div className="p-5">
-        <div className="flex flex-col items-center text-center">
-          <Avatar user={{ name: contact.name }} />
+      <div className="flex items-start gap-5 px-10 py-4">
+        <AvatarContact name={contact.name} lastName={contact.lastName} size="lg" />
+        <div className="mt-3">
           <h3 className="font-semibold text-lg text-foreground">
-            {contact.name}
+            {contact.name} {contact.lastName}
           </h3>
-          <div className="mt-4 flex flex-col gap-2.5 w-full text-sm">
-            <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-2 hover:bg-muted/50">
+          <div className="mt-6 flex flex-col gap-0.5 w-full text-sm">
+            <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-1 hover:bg-muted/50">
+              <Smartphone className="h-4 w-4 shrink-0 text-primary" />
+              <span>{contact.phone ?? "No hay dato"}</span>
+            </div>
+            <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-1 hover:bg-muted/50">
               <Mail className="h-4 w-4 shrink-0 text-primary" />
-              <span className="truncate">{contact.email}</span>
+              <span className="truncate">{contact.email ?? "No hay dato"}</span>
             </div>
-            <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-2 hover:bg-muted/50">
-              <Phone className="h-4 w-4 shrink-0 text-primary" />
-              <span>{contact.phone}</span>
-            </div>
-            <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-2 hover:bg-muted/50">
+            <div className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors rounded-lg p-1 hover:bg-muted/50">
               <Building2 className="h-4 w-4 shrink-0 text-primary" />
-              <span>Acme Corporation</span>
+              <span>{contact.company ?? "No hay dato"}</span>
             </div>
           </div>
         </div>

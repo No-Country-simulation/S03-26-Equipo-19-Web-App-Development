@@ -1,8 +1,8 @@
 import type { Channel } from './contact.types';
 
-export type MessageDirection = 'inbound' | 'outbound';
-export type MessageType = 'text' | 'media';
-export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
+export type MessageDirection = 'INBOUND' | 'OUTBOUND';
+export type MessageType = 'TEXT' | 'MEDIA';
+export type MessageStatus = 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
 
 
 export interface MessageResType {
@@ -10,8 +10,8 @@ export interface MessageResType {
   userId: number;
   channel: Channel;
   direction: MessageDirection;
-  content: string;
-  createdAt: Date;
+  body: string;
+  createdAt: string;
   externalId: string;
   messageType: MessageType;
   fileUrl?: string;
@@ -23,9 +23,9 @@ export interface Conversation {
 id: number;
 contactId: number;
 userId: number;
-status: 'open' | 'closed';
+status: 'OPEN' | 'CLOSED';
 channel: Channel; 
-createdAt: Date;
-updatedAt: Date;
+createdAt: string;
+updatedAt: string;
 }
 

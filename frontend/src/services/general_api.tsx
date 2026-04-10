@@ -20,6 +20,10 @@ export const apiTemplatesService = axios.create({
     baseURL: `${import.meta.env.VITE_URL_BASE}/templates`
 })
 
+export const apiConversationsService = axios.create({
+    baseURL: `${import.meta.env.VITE_URL_BASE}/conversations`
+})
+
 export const apiWebhooksService = axios.create({
     baseURL: `${import.meta.env.VITE_URL_BASE}/webhooks`
 })

@@ -21,7 +21,7 @@ export function TaskList({ tasks, onToggleTask }: Props) {
 return (
   <div className="space-y-3">
     <div className="flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-foreground">Tasks</h3>
+      <h3 className="text-sm font-semibold text-foreground">Tareas</h3>
       <button
         onClick={() => setIsNewTaskOpen(true)}
         className="flex h-7 gap-1 text-xs text-primary hover:text-primary"
