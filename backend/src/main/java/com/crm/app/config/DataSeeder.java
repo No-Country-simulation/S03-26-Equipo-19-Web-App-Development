@@ -68,13 +68,13 @@ public class DataSeeder implements ApplicationRunner {
         seedTasks(contacts, salespersons);
 
         // 8. Seed saved views
-        seedSavedViews(admin, salespersons.getFirst());
+       seedSavedViews(admin, salespersons.getFirst(), tags);
 
         log.info("Data seeding completed successfully!");
     }
 
     private boolean alreadySeeded() {
-        return contactRepository.count() > 0;
+        return savedViewRepository.count() > 0;
     }
 
     private void seedAdmin() {
@@ -463,11 +463,15 @@ public class DataSeeder implements ApplicationRunner {
         };
     }
 
-    private void seedSavedViews(User admin, User salesperson) {
+    private void seedSavedViews(User admin, User salesperson, List<Tag> tags) {
+
+        Long tag1 = tags.get(0).getId();
+        Long tag2 = tags.get(1).getId();
+
         // Admin global view - CONTACTS
         SavedView adminView = SavedView.builder()
-                .name("Todos los contactos activos")
-                .filters(json("{\"funnelStatus\":[\"NEW_LEAD\",\"CONTACTED\",\"IN_NEGOTIATION\",\"PROPOSAL_SENT\"]}"))
+                .name("Contactos en negociación")
+                .filters(json("{\"funnelStatus\":\"IN_NEGOTIATION\"}"))
                 .entity(EntityType.CONTACTS)
                 .sortBy("createdAt")
                 .sortOrder(SortOrder.DESC)
@@ -475,20 +479,18 @@ public class DataSeeder implements ApplicationRunner {
                 .user(admin)
                 .build();
         savedViewRepository.save(adminView);
-        log.info("Saved view seeded (global): {}", adminView.getName());
 
         // Salesperson personal view - CONTACTS
         SavedView sellerView = SavedView.builder()
                 .name("Mis leads calientes")
-                .filters(json("{\"tagIds\":[1,2],\"funnelStatus\":\"IN_NEGOTIATION\"}"))
+                .filters(json("{\"tagIds\":[" + tag1 + "," + tag2 + "],\"funnelStatus\":\"IN_NEGOTIATION\"}"))
                 .entity(EntityType.CONTACTS)
-                .sortBy("updatedAt")
+                .sortBy("createdAt") // ⚠️ cambiado
                 .sortOrder(SortOrder.DESC)
                 .global(false)
                 .user(salesperson)
                 .build();
         savedViewRepository.save(sellerView);
-        log.info("Saved view seeded (personal): {}", sellerView.getName());
 
         // Tasks view - TASKS
         SavedView tasksView = SavedView.builder()
@@ -501,8 +503,7 @@ public class DataSeeder implements ApplicationRunner {
                 .user(admin)
                 .build();
         savedViewRepository.save(tasksView);
-        log.info("Saved view seeded: {}", tasksView.getName());
-    }
+        }
 
     private JsonNode json(String value) {
         try {
