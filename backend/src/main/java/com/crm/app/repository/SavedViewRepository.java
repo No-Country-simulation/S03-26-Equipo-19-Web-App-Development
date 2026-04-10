@@ -1,5 +1,6 @@
 package com.crm.app.repository;
 
+import com.crm.app.model.enums.EntityType;
 import com.crm.app.model.SavedView;
 import com.crm.app.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,11 +29,29 @@ public interface SavedViewRepository extends JpaRepository<SavedView, Long> {
             "AND v.entity = :entity ORDER BY v.global DESC, v.name ASC")
     List<SavedView> findAccessibleByUserAndEntity(
             @Param("user") User user,
-            @Param("entity") SavedView.EntityType entity
+            @Param("entity") EntityType entity
     );
 
     // Verificar acceso antes de editar o eliminar:
     Optional<SavedView> findByIdAndUser(Long id, User user);
 
     boolean existsByNameAndUser(String name, User user);
+
+    // Filtros adicionales para vistas globales:
+    @Query("SELECT v FROM SavedView v WHERE (v.user = :user OR v.global = true) " +
+        "AND v.global = :global ORDER BY v.global DESC, v.name ASC")
+        List<SavedView> findAccessibleByUserAndGlobal(
+                @Param("user") User user,
+                @Param("global") boolean global
+        );
+
+        // Filtros adicionales para vistas de una entidad específica:
+    @Query("SELECT v FROM SavedView v WHERE (v.user = :user OR v.global = true) " +
+        "AND v.entity = :entity AND v.global = :global " +
+        "ORDER BY v.global DESC, v.name ASC")
+        List<SavedView> findAccessibleByUserAndEntityAndGlobal(
+                @Param("user") User user,
+                @Param("entity") EntityType entity,
+                @Param("global") boolean global
+        );
 }

@@ -1,10 +1,15 @@
 package com.crm.app.model;
 
+import com.crm.app.model.enums.EntityType;
+import com.crm.app.model.enums.SortOrder;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -25,19 +30,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class SavedView {
-        /**
-     * Tipos de entidades sobre las que aplica la vista
-     */
-    public enum EntityType {
-        CONTACTS, TASKS
-    }
-
-    /**
-     * Orden de la vista
-     */
-    public enum SortOrder {
-        ASC, DESC
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,8 +43,9 @@ public class SavedView {
      * Configuración de filtros serializada en JSON.
      * El backend interpreta este JSON para construir la query dinámica.
      */
-    @Column(nullable = false, columnDefinition = "TEXT")  // <- Cambiar a TEXT
-    private String filters;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private JsonNode filters;
 
     /**
      * Entidad sobre la que opera esta vista.
