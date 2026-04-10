@@ -2,7 +2,7 @@ package com.crm.app.security;
 
 import com.crm.app.model.User;
 import com.crm.app.repository.UserRepository;  // ✅ Agregar import
-import com.crm.app.service.impl.UserDetailsServiceImpl;
+import com.crm.app.service.UserDetailsService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -29,7 +29,7 @@ import java.io.IOException;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsService userDetailsService;
     private final UserRepository userRepository;
 
     @Override

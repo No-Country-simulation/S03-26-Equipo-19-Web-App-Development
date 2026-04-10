@@ -16,6 +16,8 @@ import com.crm.app.repository.ConversationRepository;
 import com.crm.app.repository.MessageRepository;
 import com.crm.app.repository.TemplateRepository;
 import com.crm.app.repository.UserRepository;
+import com.crm.app.service.api.EmailService;
+import com.crm.app.service.api.WhatsAppService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,7 +1,6 @@
 package com.crm.app.service;
 
 import com.crm.app.exception.ResourceNotFoundException;
-import com.crm.app.exception.TokenExpiredException;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.Role;
 import com.crm.app.repository.UserRepository;
