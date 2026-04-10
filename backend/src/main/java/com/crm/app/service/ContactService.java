@@ -4,11 +4,13 @@ import com.crm.app.dto.ContactDTOs;
 import com.crm.app.exception.*;
 import com.crm.app.mapper.ContactMapper;
 import com.crm.app.model.Contact;
+import com.crm.app.model.Conversation;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.FunnelStatus;
 import com.crm.app.model.enums.Role;
 import com.crm.app.repository.ContactRepository;
+import com.crm.app.repository.ConversationRepository;
 import com.crm.app.repository.UserRepository;
 import com.crm.app.util.PhoneNumberNormalizer;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,6 +34,7 @@ public class ContactService {
     private final UserRepository userRepository;
     private final PhoneNumberNormalizer phoneNormalizer;
     private final ContactMapper contactMapper;
+    private final ConversationRepository conversationRepository;
 
     // ==================== CREATE MANUAL ====================
 
@@ -256,5 +263,110 @@ public class ContactService {
 
         contact.setOwner(newOwner);
         return contactRepository.save(contact);
+    }
+
+    // En ContactService.java - Agrega estos métodos
+
+    // ==================== DASHBOARD DE CONTACTOS CON MÉTRICAS ====================
+
+    public ContactDTOs.ContactDashboardListResponse getContactDashboard(User currentUser) {
+        // 1. Obtener contactos del usuario
+        List<Contact> contacts;
+        if (currentUser.getRole() == Role.ADMIN) {
+            contacts = contactRepository.findAllWithConversations();
+        } else {
+            contacts = contactRepository.findByOwnerWithConversations(currentUser);
+        }
+
+        // 2. Obtener estadísticas de mensajes no leídos por contacto
+        List<Object[]> unreadStats = contactRepository.countUnreadMessagesByContact(currentUser);
+        Map<Long, Long> unreadByContactId = new HashMap<>();
+        for (Object[] stat : unreadStats) {
+            Long contactId = ((Number) stat[0]).longValue();
+            Long count = ((Number) stat[1]).longValue();
+            unreadByContactId.put(contactId, count);
+        }
+
+        // 3. Obtener conversaciones para cada contacto
+        Map<Long, List<Conversation>> conversationsByContactId = new HashMap<>();
+        for (Contact contact : contacts) {
+            List<Conversation> conversations = conversationRepository.findByContact(contact);
+            conversationsByContactId.put(contact.getId(), conversations);
+        }
+
+        // 4. Construir respuesta para cada contacto
+        List<ContactDTOs.ContactDashboardResponse> contactResponses = new ArrayList<>();
+        for (Contact contact : contacts) {
+            List<Conversation> conversations = conversationsByContactId.getOrDefault(contact.getId(), List.of());
+
+            // Calcular no leídos por contacto
+            Long totalUnread = unreadByContactId.getOrDefault(contact.getId(), 0L);
+
+            // Mapear conversaciones
+            List<ContactDTOs.ConversationBriefInfo> conversationInfos = conversations.stream()
+                    .map(this::toConversationBriefInfo)
+                    .collect(Collectors.toList());
+
+            contactResponses.add(new ContactDTOs.ContactDashboardResponse(
+                    contact.getId(),
+                    contact.getName(),
+                    contact.getLastName(),
+                    contact.getEmail(),
+                    contact.getPhone(),
+                    contact.getCompany(),
+                    contact.getFunnelStatus(),
+                    contact.getPreferredChannel(),
+                    contactMapper.toOwnerInfo(contact.getOwner()),
+                    contact.getTags().stream().map(contactMapper::toTagInfo).collect(Collectors.toList()),
+                    contact.getCreatedAt(),
+                    conversationInfos,
+                    totalUnread
+            ));
+        }
+
+        // 5. Calcular métricas globales
+        long totalContacts = contacts.size();
+        long totalUnreadMessages = contactRepository.countTotalUnreadMessages(currentUser);
+
+        // No leídos por canal
+        List<Object[]> channelStats = contactRepository.countUnreadMessagesByChannel(currentUser);
+        long whatsappUnread = 0;
+        long emailUnread = 0;
+        for (Object[] stat : channelStats) {
+            Channel channel = (Channel) stat[0];
+            long count = ((Number) stat[1]).longValue();
+            if (channel == Channel.WHATSAPP) {
+                whatsappUnread = count;
+            } else if (channel == Channel.EMAIL) {
+                emailUnread = count;
+            }
+        }
+
+        ContactDTOs.DashboardMetrics metrics = new ContactDTOs.DashboardMetrics(
+                totalContacts,
+                totalUnreadMessages,
+                new ContactDTOs.UnreadByChannel(whatsappUnread, emailUnread)
+        );
+
+        // 6. Ordenar contactos: los que tienen NO LEÍDOS primero, luego por fecha de creación
+        contactResponses.sort((a, b) -> {
+            // Primero por no leídos (descendente)
+            int unreadCompare = Long.compare(b.totalUnreadCount(), a.totalUnreadCount());
+            if (unreadCompare != 0) return unreadCompare;
+            // Luego por fecha de creación (más reciente primero)
+            return b.createdAt().compareTo(a.createdAt());
+        });
+
+        return new ContactDTOs.ContactDashboardListResponse(metrics, contactResponses);
+    }
+
+    private ContactDTOs.ConversationBriefInfo toConversationBriefInfo(Conversation conv) {
+        return new ContactDTOs.ConversationBriefInfo(
+                conv.getId(),
+                conv.getChannel(),
+                conv.getStatus(),
+                conv.getLastInteraction(),
+                null // El unreadCount por conversación se puede calcular si es necesario
+        );
     }
 }
