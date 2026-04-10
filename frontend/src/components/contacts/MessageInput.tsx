@@ -14,6 +14,7 @@ import type { Channel, ContactResType } from "../../types/contact.types"
 import { useState } from "react"
 import { useGetTemplates } from "../../services/use_queries/templates-query"
 import { parseTemplate } from "../../utils/parseTemplate"
+import { MessagesMutationsService } from "../../services/use_mutations/messages-mutation"
 
 
 
@@ -27,6 +28,8 @@ export function MessageInput({ activeChannel, contact }: Props) {
   const { data: templates = [], isLoading } = useGetTemplates()
 
   const [message, setMessage] = useState("")
+
+  const { mutationPostMessage } = MessagesMutationsService();
 
   const filteredTemplates = templates.filter(
     (template) =>
@@ -43,19 +46,31 @@ export function MessageInput({ activeChannel, contact }: Props) {
     }
   }
 
-  const onSend = () => {
-    if (!message.trim()) return
-    // Falta lógica para enviar el mensaje
-    console.log(`Enviando mensaje por ${activeChannel}:`, message)
-    setMessage("")
-  }
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       onSend()
     }
   }
+
+  const onSend = () => {
+  if (!message.trim() || mutationPostMessage.isPending) return;
+
+  mutationPostMessage.mutate(
+    {
+      contactId: contact.id,
+      channel: activeChannel,
+      content: {
+        body: message,
+      },
+    },
+    {
+      onSuccess: () => {
+        setMessage("");
+      },
+    }
+  );
+};
 
 
   if (isLoading) return <div className="flex items-center justify-center">
@@ -117,8 +132,8 @@ export function MessageInput({ activeChannel, contact }: Props) {
           rows={1}
         />
 
-        <Button onClick={onSend} disabled={!message.trim()} variant="secondary"
-          className="transition-all flex items-center justify-center mb-15 w-15">
+        <Button onClick={onSend} disabled={!message.trim() || mutationPostMessage.isPending} variant="secondary"
+          className="transition-all flex items-center justify-center mb-15 w-15" >
           <Send size={20} />
         </Button>
       </div>

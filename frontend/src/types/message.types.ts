@@ -20,6 +20,15 @@ export interface MessageResType {
   conversationId: number;
 }
 
+
+export interface MessageReqType {
+  contactId: number,
+  channel: Channel,
+  content: {
+    body: string
+  }
+}
+
 export interface Conversation {
 id: number;
 contactId: number;
