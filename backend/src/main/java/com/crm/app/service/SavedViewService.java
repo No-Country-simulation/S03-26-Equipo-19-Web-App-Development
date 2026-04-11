@@ -18,10 +18,13 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.List;
 import java.util.Set;
 
+@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 public class SavedViewService {
@@ -55,6 +58,7 @@ public class SavedViewService {
     // =========================
     // CREATE
     // =========================
+    @Transactional
     public SavedView create(SavedView view, User currentUser) {
 
         // Setear owner SIEMPRE
@@ -133,6 +137,7 @@ public class SavedViewService {
     // =========================
     // UPDATE
     // =========================
+    @Transactional
     public SavedView update(Long id, SavedView updated, User currentUser) {
         // Traer la vista original
         SavedView existing = repository.findById(id)
@@ -207,6 +212,7 @@ public class SavedViewService {
     // =========================
     // DELETE
     // =========================
+    @Transactional
     public void delete(Long id, User currentUser) {
 
         SavedView view = repository.findById(id)
