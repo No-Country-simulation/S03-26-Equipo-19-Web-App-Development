@@ -1,5 +1,6 @@
 package com.crm.app.service;
 
+import com.crm.app.exception.BusinessRuleViolationException;
 import com.crm.app.exception.DuplicateResourceException;
 import com.crm.app.exception.ResourceNotFoundException;
 import com.crm.app.exception.UnauthorizedAccessException;
@@ -37,17 +38,21 @@ public class TagService {
     public List<Tag> search(String name, User user) {
 
         if (name == null || name.isBlank()) {
-            return List.of();
+            return tagRepository.findAllByOrderByNameAsc();
         }
         return tagRepository.findByNameContainingIgnoreCase(name.trim());
     }
-    
+
     // ==================== CREATE ====================
     @Transactional
     public Tag create(String name, String color, User user)  {
         validateAdmin(user);
 
-        String normalizedName = name.trim();
+        if (name == null || name.isBlank()) {
+            throw new BusinessRuleViolationException("El nombre es obligatorio");
+        }
+
+        String normalizedName = name.trim().toLowerCase();  
 
         if (tagRepository.existsByNameIgnoreCase(normalizedName)) {
             throw new DuplicateResourceException("Ya existe una etiqueta con nombre: " + normalizedName);
@@ -55,7 +60,7 @@ public class TagService {
 
         String finalColor = (color == null || color.isBlank())
             ? DEFAULT_COLOR
-            : color;
+            : color.toUpperCase();
 
         Tag tag = Tag.builder()
             .name(normalizedName)
@@ -70,7 +75,11 @@ public class TagService {
     public Tag update(Long id, String name, String color, User user) {
         validateAdmin(user);
 
-        String normalizedName = name.trim();
+        if (name == null || name.isBlank()) {
+            throw new BusinessRuleViolationException("El nombre es obligatorio");
+        }
+
+        String normalizedName = name.trim().toLowerCase();
 
         Tag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tag no encontrada con id: " + id));
@@ -83,7 +92,7 @@ public class TagService {
         tag.setName(normalizedName);
 
         if (color != null && !color.isBlank()) {
-            tag.setColor(color);
+            tag.setColor(color.toUpperCase());
         }
 
         return tagRepository.save(tag);
