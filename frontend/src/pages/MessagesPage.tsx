@@ -1,41 +1,51 @@
 import { useState } from "react";
-import { ConversationList } from "../components/messages/ConversationList"
-import { useGetConversations } from "../services/use_queries/conversations-query";
+import { ConversationList } from "../components/messages/ConversationList";
 import MessagePanel from "../components/messages/MessagePanel";
+import { useGetContactsDashboard } from "../services/use_queries/contacts-query";
+import type { ContactResType } from "../types/contact.types";
+import type { ConversationResType } from "../types/conversation.types";
+
+type ActiveChatType = {
+  contact: ContactResType;
+  conversations: ConversationResType[];
+} | null;
 
 export const MessagesPage = () => {
 
-  const [activeChatId, setActiveChatId] = useState<number | null>(null);
-  const { data: conversationsData = [] } = useGetConversations();
+  const [activeChat, setActiveChat] = useState<ActiveChatType>(null);
 
-  const activeConversation = conversationsData.find(
-    (c) => c.contact.id === activeChatId
-  );
+  const { data: contactsDashboard, isLoading } = useGetContactsDashboard();
 
-  const activeContact = activeConversation?.contact;
+
+if (isLoading) {
+  return <div>Cargando...</div>;
+}
+
 
   return (
     <div className="grid lg:grid-cols-[30%_1fr] h-screen gap-4">
 
-      <div className={`${activeChatId ? 'hidden' : 'block'} lg:block`}>
+      <div className={`${activeChat ? 'hidden' : 'block'} lg:block`}>
         <ConversationList
-          conversations={conversationsData}
-          activeChatId={activeChatId}
-          onSelect={setActiveChatId}
-        />
-      </div>
-      <div className={`${!activeChatId ? 'hidden' : 'block'} lg:block`}>
-        <MessagePanel
-          conversations={conversationsData}
-          contact={activeContact}
-          activeChatId={activeChatId}
-          onBack={() => setActiveChatId(null)}
+          contacts={contactsDashboard?.contacts!}
+          activeChatId={activeChat?.contact.id ?? null}
+          onSelect={(contact, openConversations) =>
+            setActiveChat({
+              contact,
+              conversations: openConversations
+            })
+          }
         />
       </div>
 
+      <div className={`${!activeChat ? 'hidden' : 'block'} lg:block`}>
+        <MessagePanel
+          contact={activeChat?.contact}
+          conversations={activeChat?.conversations || []}
+          onBack={() => setActiveChat(null)}
+        />
+      </div>
 
     </div>
-  )
-}
-
-
+  );
+};

@@ -10,4 +10,5 @@ export interface ConversationResType {
   lastInteraction: string;
   createdAt: string;
   updatedAt: string;
+  unreadCount?: number
 }

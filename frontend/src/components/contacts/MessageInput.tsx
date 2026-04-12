@@ -15,6 +15,7 @@ import { useState } from "react"
 import { useGetTemplates } from "../../services/use_queries/templates-query"
 import { parseTemplate } from "../../utils/parseTemplate"
 import { MessagesMutationsService } from "../../services/use_mutations/messages-mutation"
+import { useQueryClient } from "@tanstack/react-query"
 
 
 
@@ -28,6 +29,8 @@ export function MessageInput({ activeChannel, contact }: Props) {
   const { data: templates = [], isLoading } = useGetTemplates()
 
   const [message, setMessage] = useState("")
+
+  const queryClient = useQueryClient();
 
   const { mutationPostMessage } = MessagesMutationsService();
 
@@ -67,6 +70,9 @@ export function MessageInput({ activeChannel, contact }: Props) {
     {
       onSuccess: () => {
         setMessage("");
+        queryClient.invalidateQueries({
+          queryKey: ["messages"],
+        });
       },
     }
   );
@@ -81,7 +87,7 @@ export function MessageInput({ activeChannel, contact }: Props) {
     <div className="flex flex-col md:flex-row gap-2 items-start ">
       <div className="flex justify-between md:flex-col md:items-end">
         <DropdownMenu>
-          <DropdownMenuTrigger /* asChild */>
+          <DropdownMenuTrigger asChild >
             <Button
               variant="outline"
               size="sm"

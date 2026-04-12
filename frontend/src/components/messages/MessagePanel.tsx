@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ContactHeader } from '../contacts/ContactHeader'
 
 import type { ConversationResType } from '../../types/conversation.types'
@@ -11,23 +11,17 @@ interface MessagePanelProps {
     conversations: ConversationResType[]
     contact?: ContactResType
     activeChatId?: number | null
-     onBack?: () => void
+    onBack?: () => void
 }
 
 
-const MessagePanel = ({ conversations, contact, activeChatId, onBack}: MessagePanelProps) => {
+const MessagePanel = ({ conversations, contact, activeChatId, onBack }: MessagePanelProps) => {
 
     const [activeChannel, setActiveChannel] = useState<Channel>("WHATSAPP")
 
-    const resolvedContact = contact ?? conversations.find(
-        c => c.contact.id === activeChatId
-    )?.contact;
 
     const activeConversation = conversations.find(
-        (c) =>
-            c.contact.id === resolvedContact?.id &&
-            c.channel === activeChannel &&
-            c.status === "OPEN"
+        (c) => c.channel === activeChannel && c.status === "OPEN"
     );
     const conversationId = activeConversation?.id;
 
@@ -35,21 +29,26 @@ const MessagePanel = ({ conversations, contact, activeChatId, onBack}: MessagePa
 
     const channelCounts = useMemo(() => {
         return {
-            WHATSAPP: messagesData.filter((m) => m.channel === "WHATSAPP").length,
-            EMAIL: messagesData.filter((m) => m.channel === "EMAIL").length,
-        }
-    }, [messagesData, activeChannel])
+            WHATSAPP: conversations
+                .filter(c => c.channel === "WHATSAPP")
+                .reduce((acc, c) => acc + (c.unreadCount || 0), 0),
 
-    const hasConversation = Boolean(activeConversation);
+            EMAIL: conversations
+                .filter(c => c.channel === "EMAIL")
+                .reduce((acc, c) => acc + (c.unreadCount || 0), 0),
+        };
+    }, [conversations]);
+
+    const hasConversation = !!activeConversation;
 
     if (!activeChatId && !contact) {
-        return <div className="flex items-center justify-center"> <p className="text-lg font-medium text-primary">Seleccioná una conversación </p></div>;
+        return <div className="flex items-center justify-center h-150 bg-white/35 shadow-lg"> <p className="text-lg font-medium text-primary">Seleccioná un contacto </p></div>;
     }
 
     return (
         <div className="flex flex-col gap-4">
             <div className=" bg-white rounded-lg shadow">
-                <ContactHeader contact={contact!} channelCounts={channelCounts} activeChannel={activeChannel} setActiveChannel={setActiveChannel} onBack={onBack}/>
+                <ContactHeader contact={contact!} channelCounts={channelCounts} activeChannel={activeChannel} setActiveChannel={setActiveChannel} onBack={onBack} />
                 <ConversationPanel messages={messagesData} activeConversation={hasConversation} isLoading={isLoading} />
             </div>
             <MessageInput contact={contact!} activeChannel={activeChannel} />
