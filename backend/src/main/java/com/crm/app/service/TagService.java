@@ -20,6 +20,8 @@ public class TagService {
 
     private final TagRepository tagRepository;
 
+    private static final String DEFAULT_COLOR = "#6366F1";
+
     // ==================== READ ====================
 
     public List<Tag> getAll(User user) {
@@ -33,39 +35,56 @@ public class TagService {
     }
 
     public List<Tag> search(String name, User user) {
-        return tagRepository.findByNameContainingIgnoreCase(name);
-    }
 
+        if (name == null || name.isBlank()) {
+            return List.of();
+        }
+        return tagRepository.findByNameContainingIgnoreCase(name.trim());
+    }
+    
     // ==================== CREATE ====================
     @Transactional
-    public Tag create(String name, User user) {
+    public Tag create(String name, String color, User user)  {
         validateAdmin(user);
 
-        if (tagRepository.existsByNameIgnoreCase(name)) {
-            throw new DuplicateResourceException("Ya existe una etiqueta con nombre: " + name);
+        String normalizedName = name.trim();
+
+        if (tagRepository.existsByNameIgnoreCase(normalizedName)) {
+            throw new DuplicateResourceException("Ya existe una etiqueta con nombre: " + normalizedName);
         }
 
+        String finalColor = (color == null || color.isBlank())
+            ? DEFAULT_COLOR
+            : color;
+
         Tag tag = Tag.builder()
-                .name(name.trim())
-                .build();
+            .name(normalizedName)
+            .color(finalColor)
+            .build();
 
         return tagRepository.save(tag);
     }
 
     // ==================== UPDATE ====================
     @Transactional
-    public Tag update(Long id, String name, User user) {
+    public Tag update(Long id, String name, String color, User user) {
         validateAdmin(user);
+
+        String normalizedName = name.trim();
 
         Tag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tag no encontrada con id: " + id));
 
-        if (tagRepository.existsByNameIgnoreCase(name)
-                && !tag.getName().equalsIgnoreCase(name)) {
-            throw new DuplicateResourceException("Ya existe una etiqueta con nombre: " + name);
+        if (tagRepository.existsByNameIgnoreCase(normalizedName)
+                && !tag.getName().equalsIgnoreCase(normalizedName)) {
+            throw new DuplicateResourceException("Ya existe una etiqueta con nombre: " + normalizedName);
         }
 
-        tag.setName(name.trim());
+        tag.setName(normalizedName);
+
+        if (color != null && !color.isBlank()) {
+            tag.setColor(color);
+        }
 
         return tagRepository.save(tag);
     }
