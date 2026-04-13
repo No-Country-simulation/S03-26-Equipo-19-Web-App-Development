@@ -34,4 +34,31 @@ public class ConversationDTOs {
             LocalDateTime lastInteraction,
             LocalDateTime createdAt
     ) {}
+
+    @Schema(description = "Item de bandeja de entrada unificada")
+    public record InboxItemResponse(
+            @Schema(description = "ID del contacto")
+            Long contactId,
+
+            @Schema(description = "ID de la conversación")
+            Long conversationId,
+
+            @Schema(description = "ID del último mensaje")
+            Long lastMessageId,
+
+            @Schema(description = "Canal de la conversación (WHATSAPP/EMAIL)")
+            Channel channel,
+
+            @Schema(description = "Texto del último mensaje (truncado para vista previa)")
+            String lastMessagePreview,
+
+            @Schema(description = "Email o teléfono del contacto según corresponda")
+            String contactIdentifier,
+
+            @Schema(description = "Nombre del contacto")
+            String contactName,
+
+            @Schema(description = "Fecha y hora del último mensaje")
+            LocalDateTime lastMessageAt
+    ) {}
 }
