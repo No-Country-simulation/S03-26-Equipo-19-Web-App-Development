@@ -10,20 +10,21 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface TaskRepository extends JpaRepository<Task, Long> {
+public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
 
     // Tareas de un vendedor — vista del Vendedor
     List<Task> findByAssignedTo(User assignedTo);
 
-    // Tareas pendientes de un vendedor ordenadas por vencimiento
+    // Tareas de un vendedor filtradas por estado
     List<Task> findByAssignedToAndStatusOrderByDueDateAsc(User assignedTo, TaskStatus status);
 
-    // Todas las tareas de un contacto — para mostrar en el detalle del contacto
+    // Todas las tareas de un contacto
     List<Task> findByContact(Contact contact);
 
     // Tareas de un contacto asignadas a un vendedor específico
@@ -49,12 +50,12 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             "WHERE t.status = 'PENDING' AND t.dueDate < :now")
     int markOverdueTasks(@Param("now") LocalDateTime now);
 
-    // Tareas completadas vs vencidas por vendedor — para métricas
+    // Conteo de tareas por estado para un vendedor — para métricas en el dashboard
     @Query("SELECT t.status, COUNT(t) FROM Task t WHERE t.assignedTo = :user " +
             "GROUP BY t.status")
     List<Object[]> countByStatusForUser(@Param("user") User user);
 
-    // Tareas completadas vs vencidas globales — para métricas del Admin
+    // Conteo global de tareas por estado — para métricas del Admin
     @Query("SELECT t.status, COUNT(t) FROM Task t GROUP BY t.status")
     List<Object[]> countByStatusGlobal();
 
