@@ -7,11 +7,13 @@ import com.crm.app.exception.UnauthorizedAccessException;
 import com.crm.app.mapper.ConversationMapper;
 import com.crm.app.model.Contact;
 import com.crm.app.model.Conversation;
+import com.crm.app.model.Message;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.ConversationStatus;
 import com.crm.app.model.enums.Role;
 import com.crm.app.repository.ConversationRepository;
+import com.crm.app.repository.MessageRepository;
 import com.crm.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +37,7 @@ public class ConversationService {
     private final ContactService contactService;
     private final UserRepository userRepository;
     private final ConversationMapper conversationMapper;
+    private final MessageRepository messageRepository;
 
     // ==================== MÉTODOS CON DTO ====================
 
@@ -180,5 +187,69 @@ public class ConversationService {
         return conversationRepository.findById(conversationId)
                 .map(conv -> conv.getAssignedTo().getId().equals(currentUser.getId()))
                 .orElse(false);
+    }
+
+    // ==================== BANDEJA DE ENTRADA - SOLO NEW_LEAD ====================
+
+    public List<ConversationDTOs.InboxItemResponse> getInbox(User currentUser) {
+        List<Message> lastMessages;
+
+        if (currentUser.getRole() == Role.ADMIN) {
+            lastMessages = messageRepository.findLastMessagePerAllNewLeadConversations();
+            log.info("📥 Admin {} obteniendo bandeja de entrada NEW_LEAD (todas las conversaciones)",
+                    currentUser.getEmail());
+        } else {
+            lastMessages = messageRepository.findLastMessagePerNewLeadConversationForUser(currentUser);
+            log.info("📥 Usuario {} obteniendo bandeja de entrada NEW_LEAD ({} conversaciones)",
+                    currentUser.getEmail(), lastMessages.size());
+        }
+
+        return lastMessages.stream()
+                .map(this::mapToInboxItem)
+                .collect(Collectors.toList());
+    }
+
+    private ConversationDTOs.InboxItemResponse mapToInboxItem(Message message) {
+        Conversation conversation = message.getConversation();
+        Contact contact = conversation.getContact();
+
+        // Determinar el identificador del contacto (email o teléfono)
+        String contactIdentifier;
+        if (conversation.getChannel() == Channel.WHATSAPP) {
+            contactIdentifier = contact.getPhone();
+        } else {
+            contactIdentifier = contact.getEmail();
+        }
+
+        // Si el identificador es null, usar el otro disponible
+        if (contactIdentifier == null || contactIdentifier.isBlank()) {
+            contactIdentifier = contact.getEmail() != null ? contact.getEmail() : contact.getPhone();
+        }
+
+        // Nombre del contacto
+        String contactName = contact.getName();
+        if (contactName == null || contactName.isBlank()) {
+            contactName = contact.getLastName();
+        }
+        if (contactName == null || contactName.isBlank()) {
+            contactName = "Contacto sin nombre";
+        }
+
+        // Preview del mensaje (truncado a 50 caracteres)
+        String preview = message.getBody();
+        if (preview != null && preview.length() > 50) {
+            preview = preview.substring(0, 47) + "...";
+        }
+
+        return new ConversationDTOs.InboxItemResponse(
+                contact.getId(),
+                conversation.getId(),
+                message.getId(),
+                conversation.getChannel(),
+                preview,
+                contactIdentifier,
+                contactName,
+                message.getSentAt()
+        );
     }
 }

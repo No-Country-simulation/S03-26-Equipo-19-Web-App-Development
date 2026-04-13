@@ -47,4 +47,18 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     @Query("SELECT c FROM Conversation c ORDER BY c.lastInteraction DESC NULLS LAST")
     List<Conversation> findAllByOrderByLastInteractionDesc();
+
+    /**
+     * Obtiene todas las conversaciones abiertas del usuario con su último mensaje
+     * Optimizado con JOIN FETCH para evitar N+1 queries
+     */
+    @Query("SELECT DISTINCT c FROM Conversation c " +
+            "LEFT JOIN FETCH c.contact " +
+            "LEFT JOIN FETCH c.assignedTo " +
+            "WHERE c.status = 'OPEN' " +
+            "AND (:isAdmin = true OR c.assignedTo = :currentUser) " +
+            "ORDER BY c.lastInteraction DESC")
+    List<Conversation> findOpenConversationsWithLastMessage(
+            @Param("currentUser") User currentUser,
+            @Param("isAdmin") boolean isAdmin);
 }
