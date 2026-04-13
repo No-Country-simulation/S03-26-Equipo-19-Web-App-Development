@@ -4,6 +4,7 @@ import com.crm.app.model.User;
 import com.crm.app.model.enums.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,4 +21,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByActiveTrue();
 
     List<User> findByRole(Role role);
+
+    long countByActiveTrue();
+
+    long countByCreatedAtAfter(LocalDateTime date);
 }
