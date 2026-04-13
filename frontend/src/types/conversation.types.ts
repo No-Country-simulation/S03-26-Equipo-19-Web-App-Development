@@ -7,7 +7,8 @@ export interface ConversationResType {
   channel: string;
   status: string;
   assignedTo: Author;
-  lastInteraction: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  lastInteraction: string;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount?: number
 }

@@ -40,6 +40,26 @@ export const getContacts = async (token: string) => {
   }
 };
 
+//  lista de contactos del usuario autenticado con metricas, msjs no leidos 
+export const getContactsDashboard = async (token: string) => {
+  if (!token) {
+    throw new Error("No hay token de autenticación.");
+  }
+  try {
+    const res = await apiContactsService.get("/dashboard", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+console.log("Data dashboard", res);
+
+    return res.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Error de conexión");
+  }
+};
+
+
 // Contacto por ID
 export const getContactById = async (token: string, contactId: number) => {
   if (!token) {
@@ -56,6 +76,10 @@ export const getContactById = async (token: string, contactId: number) => {
     throw new Error(error.response?.data?.message || "Error de conexión");
   }
 };
+
+
+
+
 
 //Actualizar contacto por ID
 export const updateContactById = async (contactId: number, data: ContactReqType) => {

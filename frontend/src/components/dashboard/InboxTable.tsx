@@ -6,6 +6,7 @@ import { Modal } from '../ui/Modal';
 import { ContactForm } from '../contacts/ContactForm';
 import type { ContactReqType } from '../../types/contact.types';
 import { ContactsMutationsService } from '../../services/use_mutations/contacts-mutation';
+import { useGetContactsDashboard } from '../../services/use_queries/contacts-query';
 
 
 const DATA: MessageResType[] = [
@@ -40,9 +41,9 @@ const DATA: MessageResType[] = [
 
 export const InboxTable = () => {
 
-  /*   const { data: messagesData, isLoading } = useGetMessages();
+  /*   const { data: contactsDashboard, isLoading } = useGetContactsDashboard(); */
   
-    if (isLoading) return <div className="flex items-center justify-center">
+/*     if (isLoading) return <div className="flex items-center justify-center">
       <p className="text-lg font-medium text-primary">Cargando datos...</p>
     </div>; */
 
@@ -58,6 +59,8 @@ export const InboxTable = () => {
     });
   };
 
+
+  
 
   return (
     <>

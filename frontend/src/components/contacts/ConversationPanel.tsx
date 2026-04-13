@@ -1,28 +1,16 @@
 import { ScrollArea } from "../ui/scroll-area"
 import { MessageSquare } from "lucide-react"
 import { ChatMessage } from "../contacts/ChatMessage"
-
-import type { Channel } from "../../types/contact.types"
-import type { ConversationResType } from "../../types/conversation.types"
-import { useGetMessagesByConversationId } from "../../services/use_queries/messages-query"
 import { useEffect, useRef } from "react"
+import type { MessageResType } from "../../types/message.types"
 
 interface Props {
-  conversations: ConversationResType[]
-  activeChannel: Channel
+  messages: MessageResType[]
+  activeConversation: boolean
+  isLoading: boolean  
 }
 
-export function ConversationPanel({ conversations, activeChannel }: Props) {
-
-  const openConversations = conversations.filter((c) => c.status === "OPEN")
-
-  const activeConversation = openConversations.find(
-    (c) => c.channel === activeChannel
-  );
-
-  const conversationId = activeConversation?.id;
-
-  const { data: messages = [], isLoading } = useGetMessagesByConversationId(conversationId);
+export function ConversationPanel({messages, activeConversation, isLoading}: Props) {
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +19,7 @@ export function ConversationPanel({ conversations, activeChannel }: Props) {
   }, [messages]);
 
   return (
-    <ScrollArea className="h-[calc(100vh-200px)] p-6">
+    <ScrollArea className="h-[calc(100vh-400px)] p-6">
       {!activeConversation ? (
         <div className="text-center py-20">
           <MessageSquare className="mx-auto mb-4" />
