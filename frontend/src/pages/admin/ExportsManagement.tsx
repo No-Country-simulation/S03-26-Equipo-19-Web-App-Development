@@ -1,137 +1,94 @@
+import { useState } from 'react';
 import { Plus, FileText, Download, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { useMutation } from '@tanstack/react-query';
+import { exportData, downloadBlob } from '../../services/use_cases/export-service';
+import type { ExportEntity, ExportFormat } from '../../types/admin.types';
 
-// --- TIPOS ---
-type ExportType = 'CSV' | 'PDF';
-type ExportStatus = 'COMPLETADA' | 'EN PROCESO' | 'FALLIDA';
+type ExportStatus = 'idle' | 'loading' | 'done' | 'error';
 
-interface ExportItem {
+interface ExportJob {
   id: number;
-  type: ExportType;
-  entity: string;
+  format: ExportFormat;
+  entity: ExportEntity;
   date: string;
   status: ExportStatus;
 }
 
-interface KpiCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  trend: string;
-  isPositive: boolean;
-}
-
-// --- MOCK DATA ---
-const kpiData: KpiCardProps[] = [
-  {
-    icon: <FileText size={20} className="text-blue-600" />,
-    label: 'Total de exportaciones',
-    value: '15',
-    trend: '+15.0%',
-    isPositive: true,
-  },
-  {
-    icon: <FileText size={20} className="text-blue-600" />,
-    label: 'Exportaciones csv',
-    value: '09',
-    trend: '+4.8%',
-    isPositive: true,
-  },
-  {
-    icon: <FileText size={20} className="text-blue-600" />,
-    label: 'Exportaciones pdf',
-    value: '125',
-    trend: '+1.5%',
-    isPositive: true,
-  },
-  {
-    icon: <FileText size={20} className="text-blue-600" />,
-    label: 'Exportaciones completadas',
-    value: '94%',
-    trend: '+10.8%',
-    isPositive: true,
-  },
-];
-
-const mockExports: ExportItem[] = [
-  { id: 1, type: 'CSV', entity: 'Contacts', date: '24 de octubre de 2023', status: 'COMPLETADA' },
-  { id: 2, type: 'PDF', entity: 'Users', date: 'En este momento', status: 'EN PROCESO' },
-  { id: 3, type: 'CSV', entity: 'Tasks', date: '12 de octubre de 2023', status: 'FALLIDA' },
-  { id: 4, type: 'PDF', entity: 'Funnel_Stages', date: '10 de octubre de 2023', status: 'COMPLETADA' },
-];
-
-// --- SUBCOMPONENTES ---
-const KpiCard = ({ icon, label, value, trend, isPositive }: KpiCardProps) => (
+const KpiCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
   <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-start gap-4">
-    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-      {icon}
-    </div>
+    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">{icon}</div>
     <div>
       <p className="text-slate-500 text-xs font-medium mb-1">{label}</p>
       <p className="text-2xl font-bold text-[#13316b]">{value}</p>
-      <span className={`text-xs font-semibold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-        {trend}
-      </span>
     </div>
-  </div>
-);
-
-const TypeBadge = ({ type }: { type: ExportType }) => (
-  <div className="flex items-center gap-2">
-    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-      <FileText size={15} className="text-blue-600" />
-    </div>
-    <span className="text-slate-700 font-medium text-sm">{type}</span>
   </div>
 );
 
 const StatusBadge = ({ status }: { status: ExportStatus }) => {
-  const styles: Record<ExportStatus, string> = {
-    'COMPLETADA': 'text-green-600',
-    'EN PROCESO': 'text-yellow-500',
-    'FALLIDA': 'text-red-500',
+  const map: Record<ExportStatus, { label: string; dot: string; text: string }> = {
+    idle: { label: 'PENDIENTE', dot: 'bg-slate-400', text: 'text-slate-500' },
+    loading: { label: 'EN PROCESO', dot: 'bg-yellow-400', text: 'text-yellow-500' },
+    done: { label: 'COMPLETADA', dot: 'bg-green-500', text: 'text-green-600' },
+    error: { label: 'FALLIDA', dot: 'bg-red-400', text: 'text-red-500' },
   };
-  const dots: Record<ExportStatus, string> = {
-    'COMPLETADA': 'bg-green-500',
-    'EN PROCESO': 'bg-yellow-400',
-    'FALLIDA': 'bg-red-400',
-  };
-
+  const { label, dot, text } = map[status];
   return (
-    <span className={`flex items-center gap-1.5 text-xs font-semibold ${styles[status]}`}>
-      <span className={`w-2 h-2 rounded-full ${dots[status]}`} />
-      {status}
+    <span className={`flex items-center gap-1.5 text-xs font-semibold ${text}`}>
+      <span className={`w-2 h-2 rounded-full ${dot}`} />
+      {label}
     </span>
-  );
-};
-
-const ActionButton = ({ status }: { status: ExportStatus }) => {
-  if (status === 'COMPLETADA') {
-    return (
-      <button className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors">
-        <Download size={15} />
-      </button>
-    );
-  }
-  if (status === 'EN PROCESO') {
-    return (
-      <button className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 cursor-not-allowed">
-        <RefreshCw size={15} className="animate-spin" />
-      </button>
-    );
-  }
-  return (
-    <button className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors">
-      <RefreshCw size={15} />
-    </button>
   );
 };
 
 // --- PÁGINA PRINCIPAL ---
 export const ExportsManagement = () => {
+  const [jobs, setJobs] = useState<ExportJob[]>([]);
+  const [nextId, setNextId] = useState(1);
+  const [form, setForm] = useState<{ format: ExportFormat; entity: ExportEntity }>({
+    format: 'CSV',
+    entity: 'contacts',
+  });
+
+  const mutation = useMutation({
+    mutationFn: ({ format, entity }: { format: ExportFormat; entity: ExportEntity }) =>
+      exportData({ format, entity }),
+    onMutate: ({ format, entity }) => {
+      const id = nextId;
+      setNextId(n => n + 1);
+      setJobs(prev => [
+        {
+          id,
+          format,
+          entity,
+          date: new Date().toLocaleString('es-AR'),
+          status: 'loading',
+        },
+        ...prev,
+      ]);
+      return { id };
+    },
+    onSuccess: (blob, { format, entity }, context) => {
+      const { id } = context as { id: number };
+      setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'done' } : j));
+      downloadBlob(blob, `export_${entity}_${Date.now()}.${format.toLowerCase()}`);
+    },
+    onError: (_err, _vars, context) => {
+      const { id } = context as { id: number };
+      setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'error' } : j));
+    },
+  });
+
+  const handleCreate = () => {
+    mutation.mutate({ format: form.format, entity: form.entity });
+  };
+
+  const csvCount = jobs.filter(j => j.format === 'CSV').length;
+  const pdfCount = jobs.filter(j => j.format === 'PDF').length;
+  const doneCount = jobs.filter(j => j.status === 'done').length;
+
   return (
     <div>
-      {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#13316b]">Gestión de Exportaciones</h1>
@@ -139,17 +96,47 @@ export const ExportsManagement = () => {
             Organiza y controla tus datos. Guarda registros de relaciones en formatos descargables.
           </p>
         </div>
-        <Button variant="primary" size="md" className="flex items-center gap-2 whitespace-nowrap">
-          <Plus size={16} />
-          Crear Exportación
-        </Button>
+
+        {/* Form inline para crear exportación */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={form.format}
+            onChange={e => setForm(f => ({ ...f, format: e.target.value as ExportFormat }))}
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400"
+          >
+            <option value="CSV">CSV</option>
+            <option value="PDF">PDF</option>
+          </select>
+          <select
+            value={form.entity}
+            onChange={e => setForm(f => ({ ...f, entity: e.target.value as ExportEntity }))}
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400"
+          >
+            <option value="contacts">Contactos</option>
+            <option value="users">Usuarios</option>
+            <option value="tasks">Tareas</option>
+            <option value="funnel_stages">Etapas del embudo</option>
+            <option value="salespersons">Vendedores</option>
+            <option value="conversations">Conversaciones</option>
+          </select>
+          <Button
+            variant="primary" size="md"
+            className="flex items-center gap-2 whitespace-nowrap"
+            onClick={handleCreate}
+            disabled={mutation.isPending}
+          >
+            <Plus size={16} /> Crear Exportación
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {kpiData.map((kpi, i) => (
-          <KpiCard key={i} {...kpi} />
-        ))}
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Total de exportaciones" value={String(jobs.length)} />
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Exportaciones CSV" value={String(csvCount)} />
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Exportaciones PDF" value={String(pdfCount)} />
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Completadas"
+          value={jobs.length > 0 ? `${Math.round((doneCount / jobs.length) * 100)}%` : '—'} />
       </div>
 
       {/* Tabla */}
@@ -158,7 +145,7 @@ export const ExportsManagement = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-slate-400 text-left text-xs uppercase tracking-wide">
-                <th className="px-6 py-4 font-medium">Tipo de documento</th>
+                <th className="px-6 py-4 font-medium">Tipo</th>
                 <th className="px-6 py-4 font-medium">Entidad</th>
                 <th className="px-6 py-4 font-medium">Fecha</th>
                 <th className="px-6 py-4 font-medium">Estado</th>
@@ -166,27 +153,57 @@ export const ExportsManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {mockExports.map(exp => (
-                <tr key={exp.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <TypeBadge type={exp.type} />
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">{exp.entity}</td>
-                  <td className="px-6 py-4 text-slate-500">{exp.date}</td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={exp.status} />
-                  </td>
-                  <td className="px-6 py-4">
-                    <ActionButton status={exp.status} />
+              {jobs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-slate-400">
+                    No hay exportaciones. Creá una arriba.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                jobs.map(job => (
+                  <tr key={job.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                          <FileText size={15} className="text-blue-600" />
+                        </div>
+                        <span className="text-slate-700 font-medium">{job.format}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 font-medium capitalize">{job.entity}</td>
+                    <td className="px-6 py-4 text-slate-500">{job.date}</td>
+                    <td className="px-6 py-4"><StatusBadge status={job.status} /></td>
+                    <td className="px-6 py-4">
+                      {job.status === 'loading' && (
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                          <RefreshCw size={15} className="animate-spin" />
+                        </div>
+                      )}
+                      {job.status === 'error' && (
+                        <button
+                          className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors"
+                          onClick={() => mutation.mutate({ format: job.format, entity: job.entity })}
+                        >
+                          <RefreshCw size={15} />
+                        </button>
+                      )}
+                      {job.status === 'done' && (
+                        <button
+                          className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors"
+                          onClick={() => mutation.mutate({ format: job.format, entity: job.entity })}
+                        >
+                          <Download size={15} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Footer */}
       <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-400">
         <span>© 2026 Conversa CRM. Todos los derechos reservados.</span>
         <div className="flex gap-4">

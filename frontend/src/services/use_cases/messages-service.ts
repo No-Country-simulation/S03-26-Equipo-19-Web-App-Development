@@ -12,8 +12,9 @@ export const getMessages = async (token: string) => {
     },
   })
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 
@@ -30,7 +31,8 @@ export const getMessagesByConversationId = async (token: string, conversationId:
       },
     });
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };

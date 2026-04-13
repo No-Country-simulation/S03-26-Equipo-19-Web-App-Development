@@ -17,8 +17,9 @@ export const postContact = async (data: ContactReqType) => {
 
     console.log("Se registró exitosamente el contacto");
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 
@@ -35,8 +36,9 @@ export const getContacts = async (token: string) => {
     });
 
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 
@@ -52,8 +54,9 @@ export const getContactById = async (token: string, contactId: number) => {
       },
     });
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 
@@ -70,8 +73,9 @@ export const updateContactById = async (contactId: number, data: ContactReqType)
       },
     });
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 
@@ -97,8 +101,9 @@ export const updateFunnelStatusByContactId = async ( contactId: number, status: 
     );
 
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 

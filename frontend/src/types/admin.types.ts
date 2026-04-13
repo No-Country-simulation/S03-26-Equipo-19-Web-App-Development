@@ -1,0 +1,102 @@
+// ---- SALESPERSONS ----
+export interface SalespersonResponse {
+  id: number;
+  name: string;
+  email: string;
+  status: "ACTIVE" | "INACTIVE";
+  assignedContacts: number;
+  messagesSent: number;
+  responseRate: number;
+  lastActivity: string;
+}
+
+export interface CreateSalespersonRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface UpdateSalespersonRequest {
+  name?: string;
+  email?: string;
+  status?: "ACTIVE" | "INACTIVE";
+}
+
+// ---- TAGS ----
+export interface TagResponse {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface TagRequest {
+  name: string;
+  color: string;
+}
+
+// ---- METRICS ----
+export interface DashboardMetrics {
+  conversionRate: number;
+  responseRate: number;
+  completedTasks: number;
+  totalContacts: number;
+  totalMessages: number;
+  pendingTasks: number;
+  bestSalesperson?: string;
+}
+
+export interface PeriodMetrics {
+  date: string;
+  inbound: number;
+  outbound: number;
+}
+
+export interface AgentMetrics {
+  id: number;
+  name: string;
+  status: "active" | "inactive";
+  messagesSent: number;
+  responseRate: number;
+}
+
+// ---- EXPORT ----
+export type ExportFormat = "CSV" | "PDF";
+export type ExportEntity = "contacts" | "users" | "tasks" | "funnel_stages" | "salespersons" | "conversations";
+
+export interface ExportRequest {
+  format: ExportFormat;
+  entity: ExportEntity;
+  filters?: Record<string, unknown>;
+}
+
+// ---- SAVED VIEWS ----
+export interface SavedViewResponse {
+  id: number;
+  name: string;
+  entity: "contacts" | "tasks";
+  isDefault?: boolean;
+  isGlobal?: boolean;
+  filters: Record<string, unknown>;
+  creator: string;
+}
+
+export interface SavedViewRequest {
+  name: string;
+  entity: "contacts" | "tasks";
+  isDefault?: boolean;
+  isGlobal?: boolean;
+  filters: Record<string, unknown>;
+}
+
+// ---- FUNNEL ----
+export interface FunnelStageResponse {
+  id: number;
+  name: string;
+  order: number;
+  status: "ACTIVE" | "INACTIVE";
+}
+
+export interface FunnelStageRequest {
+  name: string;
+  order: number;
+}

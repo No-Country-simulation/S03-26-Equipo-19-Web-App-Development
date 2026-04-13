@@ -1,49 +1,32 @@
 import { useState } from 'react';
 import { Plus, Filter, Download, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { useGetFunnelStages, useFunnelMutations } from '../../services/use_queries/funnels-query';
+import type { FunnelStageResponse } from '../../types/admin.types';
 
-// --- TIPOS ---
-type FunnelStatus = 'Active' | 'Inactive';
-
-interface FunnelStage {
-  id: number;
-  name: string;
-  order: number;
-  status: FunnelStatus;
-}
-
-// --- MOCK DATA ---
-const mockStages: FunnelStage[] = [
-  { id: 1, name: 'Lead', order: 1, status: 'Active' },
-  { id: 2, name: 'Contactado', order: 2, status: 'Active' },
-  { id: 3, name: 'Interesado', order: 3, status: 'Inactive' },
-  { id: 4, name: 'En Negociación', order: 4, status: 'Active' },
-  { id: 5, name: 'Cliente', order: 5, status: 'Active' },
-  { id: 6, name: 'Perdido', order: 6, status: 'Active' },
-];
-
-// --- SUBCOMPONENTES ---
-const StatusDot = ({ status }: { status: FunnelStatus }) => (
+const StatusDot = ({ status }: { status: string }) => (
   <span className="flex items-center gap-1.5 text-sm">
-    <span className={`w-2 h-2 rounded-full ${status === 'Active' ? 'bg-green-500' : 'bg-red-400'}`} />
-    <span className={status === 'Active' ? 'text-green-600' : 'text-red-500'}>{status}</span>
+    <span className={`w-2 h-2 rounded-full ${status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-400'}`} />
+    <span className={status === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}>
+      {status === 'ACTIVE' ? 'Active' : 'Inactive'}
+    </span>
   </span>
 );
 
-// --- PÁGINA PRINCIPAL ---
 export const Funnels = () => {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const totalStages = 20;
 
-  const filtered = mockStages.filter(s =>
+  const { data: stages = [], isLoading, isError } = useGetFunnelStages();
+  const { remove } = useFunnelMutations();
+
+  const filtered = stages.filter((s: FunnelStageResponse) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.status.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div>
-      {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#13316b]">Gestión del Embudo de Ventas</h1>
@@ -52,15 +35,11 @@ export const Funnels = () => {
           </p>
         </div>
         <Button variant="primary" size="md" className="flex items-center gap-2 whitespace-nowrap">
-          <Plus size={16} />
-          Añadir Etapa
+          <Plus size={16} /> Añadir Etapa
         </Button>
       </div>
 
-      {/* Tabla */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-
-        {/* Barra de búsqueda y exportar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 w-full sm:w-80">
             <Filter size={14} className="text-slate-400 shrink-0" />
@@ -73,12 +52,10 @@ export const Funnels = () => {
             />
           </div>
           <Button variant="primary" size="sm" className="flex items-center gap-2 whitespace-nowrap">
-            <Download size={14} />
-            Exportar
+            <Download size={14} /> Exportar
           </Button>
         </div>
 
-        {/* Tabla de etapas */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -86,18 +63,18 @@ export const Funnels = () => {
                 <th className="px-6 py-4 font-medium">Etapa</th>
                 <th className="px-6 py-4 font-medium">Orden</th>
                 <th className="px-6 py-4 font-medium">Estado</th>
-                <th className="px-6 py-4 font-medium">Actions</th>
+                <th className="px-6 py-4 font-medium">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
-                    No se encontraron etapas
-                  </td>
-                </tr>
+              {isLoading ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-slate-400">Cargando etapas...</td></tr>
+              ) : isError ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-red-400">Error al cargar etapas</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-slate-400">No se encontraron etapas</td></tr>
               ) : (
-                filtered.map(stage => (
+                filtered.map((stage: FunnelStageResponse) => (
                   <tr key={stage.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-slate-700 font-medium">{stage.name}</td>
                     <td className="px-6 py-4">
@@ -105,15 +82,14 @@ export const Funnels = () => {
                         {stage.order}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <StatusDot status={stage.status} />
-                    </td>
+                    <td className="px-6 py-4"><StatusDot status={stage.status} /></td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <button className="text-blue-500 hover:text-blue-700 transition-colors">
-                          <Pencil size={16} />
-                        </button>
-                        <button className="text-slate-400 hover:text-red-500 transition-colors">
+                        <button className="text-blue-500 hover:text-blue-700 transition-colors"><Pencil size={16} /></button>
+                        <button
+                          className="text-slate-400 hover:text-red-500 transition-colors"
+                          onClick={() => remove.mutate(stage.id)}
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -125,43 +101,23 @@ export const Funnels = () => {
           </table>
         </div>
 
-        {/* Paginación */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
-          <p className="text-sm text-slate-500">
-            Mostrando 1-6 de {totalStages} etapas
-          </p>
+          <p className="text-sm text-slate-500">Mostrando {filtered.length} de {stages.length} etapas</p>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors text-sm"
-            >
-              {'<'}
-            </button>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors text-sm">{'<'}</button>
             {[1, 2, 3].map(page => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
+              <button key={page} onClick={() => setCurrentPage(page)}
                 className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === page
-                    ? 'bg-[#13316b] text-white'
-                    : 'text-slate-500 hover:bg-slate-100'
-                }`}
-              >
-                {page}
-              </button>
+                  currentPage === page ? 'bg-[#13316b] text-white' : 'text-slate-500 hover:bg-slate-100'
+                }`}>{page}</button>
             ))}
-            <button
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition-colors text-sm"
-            >
-              {'>'}
-            </button>
+            <button onClick={() => setCurrentPage(p => p + 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition-colors text-sm">{'>'}</button>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
       <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-400">
         <span>© 2026 Conversa CRM. Todos los derechos reservados.</span>
         <div className="flex gap-4">

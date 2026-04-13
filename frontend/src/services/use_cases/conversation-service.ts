@@ -1,58 +1,47 @@
 import { apiConversationsService } from "../general_api";
+import type { ConversationResType } from "../../types/conversation.types";
 
-export const getConversations = async (token: string) => {
-  if (!token) {
-    throw new Error("No hay token de autenticación.");
-  }
+export const getConversations = async (token: string): Promise<ConversationResType[]> => {
+  if (!token) throw new Error("No hay token de autenticación.");
   try {
     const res = await apiConversationsService.get("", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
-
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 
-//Conversación por Id
 export const getConversationById = async (
   token: string,
   conversationId: number,
-) => {
-  if (!token) {
-    throw new Error("No hay token de autenticación.");
-  }
+): Promise<ConversationResType> => {
+  if (!token) throw new Error("No hay token de autenticación.");
   try {
     const res = await apiConversationsService.get(`/${conversationId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
 
-//Conversaciones por id Contacto
 export const getConversationsByContactId = async (
   token: string,
   contactId: number,
-) => {
-  if (!token) {
-    throw new Error("No hay token de autenticación.");
-  }
+): Promise<ConversationResType[]> => {
+  if (!token) throw new Error("No hay token de autenticación.");
   try {
     const res = await apiConversationsService.get(`/contact/${contactId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Error de conexión");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
   }
 };
