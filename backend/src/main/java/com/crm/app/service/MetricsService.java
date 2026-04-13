@@ -61,37 +61,124 @@ public class MetricsService {
         // Determinar owner según rol
         User owner = resolveOwner(currentUser, salespersonEmail);
 
-        // 1. Métricas de contactos
+        // 1. Métricas de contactos por funnel
         MetricsDTOs.FunnelMetrics funnelMetrics = getFunnelMetrics(owner);
 
-        // 2. Métricas de mensajes
+        // 2. Métricas de contactos específicos (negociación y cerrados)
+        MetricsDTOs.ContactStatusMetrics contactStatusMetrics = getContactStatusMetrics(owner);
+
+        // 3. Métricas de mensajes
         MetricsDTOs.MessageMetrics messageMetrics = getMessageMetrics(owner, start, end);
 
-        // 3. Métricas de tareas
+        // 4. Métricas de tareas (con tareas para hoy)
         MetricsDTOs.TaskMetrics taskMetrics = getTaskMetrics(owner);
+
+        // 5. Métricas de usuarios (solo para ADMIN)
+        MetricsDTOs.UserMetrics userMetrics = getUserMetrics(currentUser);
 
         String salespersonInfo = owner != null ? owner.getEmail() : null;
 
-        return new MetricsDTOs.DashboardMetrics(funnelMetrics, messageMetrics, taskMetrics, periodDesc, salespersonInfo);
+        return new MetricsDTOs.DashboardMetrics(
+                funnelMetrics,
+                contactStatusMetrics,
+                messageMetrics,
+                taskMetrics,
+                userMetrics,
+                periodDesc,
+                salespersonInfo
+        );
     }
 
-    private User resolveOwner(User currentUser, String salespersonEmail) {
-        if (currentUser.getRole() != Role.ADMIN) {
-            // Vendedor solo ve sus propios datos
-            return currentUser;
-        }
+    // ==================== MÉTRICAS DE CONTACTOS ESPECÍFICOS ====================
 
-        // Admin puede filtrar por vendedor
-        if (salespersonEmail != null && !salespersonEmail.isEmpty()) {
-            User owner = userRepository.findByEmail(salespersonEmail)
-                    .orElseThrow(() -> new ResourceNotFoundException("Vendedor", salespersonEmail));
-            if (owner.getRole() != Role.SALESPERSON) {
-                throw new BusinessRuleViolationException("El usuario no es un vendedor");
+    private MetricsDTOs.ContactStatusMetrics getContactStatusMetrics(User owner) {
+        long inNegotiation = 0;
+        long proposalSent = 0;
+        long closedWon = 0;
+        long closedLost = 0;
+
+        if (owner != null) {
+            // Para un vendedor específico
+            List<Object[]> stats = contactRepository.countByFunnelStatusAndOwner(owner);
+            for (Object[] stat : stats) {
+                FunnelStatus status = (FunnelStatus) stat[0];
+                Long count = (Long) stat[1];
+                switch (status) {
+                    case IN_NEGOTIATION -> inNegotiation = count;
+                    case PROPOSAL_SENT -> proposalSent = count;
+                    case CLOSED_WON -> closedWon = count;
+                    case CLOSED_LOST -> closedLost = count;
+                    default -> {}
+                }
             }
-            return owner;
+        } else {
+            // Para todos los vendedores
+            List<Object[]> stats = contactRepository.countByFunnelStatus();
+            for (Object[] stat : stats) {
+                FunnelStatus status = (FunnelStatus) stat[0];
+                Long count = (Long) stat[1];
+                switch (status) {
+                    case IN_NEGOTIATION -> inNegotiation = count;
+                    case PROPOSAL_SENT -> proposalSent = count;
+                    case CLOSED_WON -> closedWon = count;
+                    case CLOSED_LOST -> closedLost = count;
+                    default -> {}
+                }
+            }
         }
-        return null; // null = todos los vendedores
+
+        long totalClosed = closedWon + closedLost;
+        double conversionRate = totalClosed > 0 ? Math.round((closedWon * 100.0 / totalClosed) * 10) / 10.0 : 0.0;
+
+        return new MetricsDTOs.ContactStatusMetrics(inNegotiation, proposalSent, closedWon, closedLost, conversionRate);
     }
+
+    // ==================== MÉTRICAS DE USUARIOS ====================
+
+    private MetricsDTOs.UserMetrics getUserMetrics(User currentUser) {
+        // Solo ADMIN puede ver métricas de usuarios
+        if (currentUser.getRole() != Role.ADMIN) {
+            return new MetricsDTOs.UserMetrics(0, 0, 0, 0);
+        }
+
+        long totalUsers = userRepository.count();
+        long activeUsers = userRepository.countByActiveTrue();
+        long inactiveUsers = totalUsers - activeUsers;
+
+        // Nuevos usuarios en los últimos 30 días
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        long newUsers = userRepository.countByCreatedAtAfter(thirtyDaysAgo);
+
+        log.info("👥 Métricas de usuarios: total={}, activos={}, inactivos={}, nuevos={}",
+                totalUsers, activeUsers, inactiveUsers, newUsers);
+
+        return new MetricsDTOs.UserMetrics(totalUsers, activeUsers, inactiveUsers, newUsers);
+    }
+
+    // ==================== MÉTRICAS DE TAREAS (ACTUALIZADO) ====================
+
+    private MetricsDTOs.TaskMetrics getTaskMetrics(User owner) {
+        long completed, overdue, pending, dueToday;
+
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime todayEnd = LocalDate.now().atTime(23, 59, 59);
+
+        if (owner != null) {
+            completed = taskRepository.countByAssignedToAndStatus(owner, TaskStatus.COMPLETED);
+            overdue = taskRepository.countByAssignedToAndStatus(owner, TaskStatus.OVERDUE);
+            pending = taskRepository.countByAssignedToAndStatus(owner, TaskStatus.PENDING);
+            dueToday = taskRepository.countByAssignedToAndDueDateBetween(owner, todayStart, todayEnd);
+        } else {
+            completed = taskRepository.countByStatus(TaskStatus.COMPLETED);
+            overdue = taskRepository.countByStatus(TaskStatus.OVERDUE);
+            pending = taskRepository.countByStatus(TaskStatus.PENDING);
+            dueToday = taskRepository.countByDueDateBetween(todayStart, todayEnd);
+        }
+
+        return new MetricsDTOs.TaskMetrics(completed, overdue, pending, dueToday);
+    }
+
+    // ==================== MÉTRICAS DE CONTACTOS POR FUNNEL ====================
 
     private MetricsDTOs.FunnelMetrics getFunnelMetrics(User owner) {
         List<Object[]> stats;
@@ -115,6 +202,8 @@ public class MetricsService {
 
         return new MetricsDTOs.FunnelMetrics(byStatus, totalActive);
     }
+
+    // ==================== MÉTRICAS DE MENSAJES ====================
 
     private MetricsDTOs.MessageMetrics getMessageMetrics(User owner, LocalDateTime start, LocalDateTime end) {
         long sent, received;
@@ -143,23 +232,23 @@ public class MetricsService {
         return new MetricsDTOs.MessageMetrics(sent, received, responseRate, byChannel);
     }
 
-    private MetricsDTOs.TaskMetrics getTaskMetrics(User owner) {
-        long completed, overdue, pending;
+    // ==================== MÉTODOS EXISTENTES (sin cambios) ====================
 
-        if (owner != null) {
-            completed = taskRepository.countByAssignedToAndStatus(owner, TaskStatus.COMPLETED);
-            overdue = taskRepository.countByAssignedToAndStatus(owner, TaskStatus.OVERDUE);
-            pending = taskRepository.countByAssignedToAndStatus(owner, TaskStatus.PENDING);
-        } else {
-            completed = taskRepository.countByStatus(TaskStatus.COMPLETED);
-            overdue = taskRepository.countByStatus(TaskStatus.OVERDUE);
-            pending = taskRepository.countByStatus(TaskStatus.PENDING);
+    private User resolveOwner(User currentUser, String salespersonEmail) {
+        if (currentUser.getRole() != Role.ADMIN) {
+            return currentUser;
         }
 
-        return new MetricsDTOs.TaskMetrics(completed, overdue, pending);
+        if (salespersonEmail != null && !salespersonEmail.isEmpty()) {
+            User owner = userRepository.findByEmail(salespersonEmail)
+                    .orElseThrow(() -> new ResourceNotFoundException("Vendedor", salespersonEmail));
+            if (owner.getRole() != Role.SALESPERSON) {
+                throw new BusinessRuleViolationException("El usuario no es un vendedor");
+            }
+            return owner;
+        }
+        return null;
     }
-
-    // ==================== MÉTRICAS POR PERÍODO ====================
 
     @PreAuthorize("isAuthenticated()")
     public MetricsDTOs.PeriodMetrics getPeriodMetrics(User currentUser, String period,
@@ -172,10 +261,9 @@ public class MetricsService {
         long messagesSent, messagesReceived, newContacts;
 
         if (currentUser.getRole() != Role.ADMIN) {
-            // Vendedor solo ve sus datos
             messagesSent = messageRepository.countOutboundBySenderAndPeriod(currentUser, start, end);
             messagesReceived = messageRepository.countInboundByContactOwnerAndPeriod(currentUser, start, end);
-            newContacts = contactRepository.countNewContactsInPeriod(start, end); // Esto necesita filtro por owner
+            newContacts = contactRepository.countNewContactsInPeriod(start, end);
         } else {
             messagesSent = messageRepository.countOutboundMessagesInPeriod(start, end);
             messagesReceived = messageRepository.countInboundMessagesInPeriod(start, end);
@@ -185,22 +273,15 @@ public class MetricsService {
         return new MetricsDTOs.PeriodMetrics(period, startDate, endDate, messagesSent, messagesReceived, newContacts);
     }
 
-    // ==================== EXPORTACIÓN ====================
-
-    // ==================== EXPORTACIÓN MEJORADA ====================
-
     @PreAuthorize("isAuthenticated()")
     public MetricsDTOs.ExportMetrics exportMetrics(User currentUser, String salespersonEmail,
                                                    String startDate, String endDate, String format) {
-        log.info("📊 Exportando métricas en formato {} para usuario: {}", format, currentUser.getEmail());
-
         if (!format.equalsIgnoreCase("csv") && !format.equalsIgnoreCase("pdf")) {
             throw new BusinessRuleViolationException("Formato no soportado. Use 'csv' o 'pdf'");
         }
 
         var dashboard = getDashboardMetrics(currentUser, salespersonEmail, startDate, endDate);
         String filename = generateFilename(format);
-        String contentType = format.equalsIgnoreCase("csv") ? "text/csv; charset=UTF-8" : "application/pdf";
         String data;
 
         if (format.equalsIgnoreCase("csv")) {
@@ -209,16 +290,13 @@ public class MetricsService {
             data = generatePdfMetrics(dashboard, startDate, endDate, salespersonEmail);
         }
 
-        return new MetricsDTOs.ExportMetrics(data, filename, contentType);
+        return new MetricsDTOs.ExportMetrics(data, filename, "text/csv; charset=UTF-8");
     }
-
-    // ==================== GENERACIÓN CSV ====================
 
     private String generateCsvMetrics(MetricsDTOs.DashboardMetrics dashboard,
                                       String startDate, String endDate, String salespersonEmail) {
         StringBuilder csv = new StringBuilder();
 
-        // Encabezado del reporte
         csv.append("# REPORTE DE MÉTRICAS DEL CRM\n");
         csv.append("# Generado: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).append("\n");
         csv.append("# Período: ").append(formatPeriod(startDate, endDate)).append("\n");
@@ -231,58 +309,42 @@ public class MetricsService {
         csv.append("=== RESUMEN GENERAL ===\n");
         csv.append("Métrica,Valor\n");
         csv.append("Contactos activos,").append(dashboard.funnel().totalActive()).append("\n");
+        csv.append("En negociación,").append(dashboard.contactStatus().inNegotiation()).append("\n");
+        csv.append("Propuesta enviada,").append(dashboard.contactStatus().proposalSent()).append("\n");
+        csv.append("Cerrados ganados,").append(dashboard.contactStatus().closedWon()).append("\n");
+        csv.append("Cerrados perdidos,").append(dashboard.contactStatus().closedLost()).append("\n");
+        csv.append("Tasa de conversión (%),").append(dashboard.contactStatus().conversionRate()).append("\n");
         csv.append("Mensajes enviados,").append(dashboard.messages().sent()).append("\n");
         csv.append("Mensajes recibidos,").append(dashboard.messages().received()).append("\n");
         csv.append("Tasa de respuesta (%),").append(dashboard.messages().responseRate()).append("\n");
         csv.append("Tareas completadas,").append(dashboard.tasks().completed()).append("\n");
         csv.append("Tareas vencidas,").append(dashboard.tasks().overdue()).append("\n");
         csv.append("Tareas pendientes,").append(dashboard.tasks().pending()).append("\n");
+        csv.append("Tareas para hoy,").append(dashboard.tasks().dueToday()).append("\n");
+        csv.append("Total usuarios,").append(dashboard.users().total()).append("\n");
+        csv.append("Usuarios activos,").append(dashboard.users().active()).append("\n");
+        csv.append("Usuarios inactivos,").append(dashboard.users().inactive()).append("\n");
+        csv.append("Nuevos usuarios (30d),").append(dashboard.users().newUsers()).append("\n");
         csv.append("\n");
-
-        // 2. Contactos por estado del funnel
-        csv.append("=== CONTACTOS POR ESTADO DEL FUNNEL ===\n");
-        csv.append("Estado,Cantidad,Porcentaje\n");
-        long totalContacts = dashboard.funnel().byStatus().values().stream().mapToLong(Long::longValue).sum();
-        for (var entry : dashboard.funnel().byStatus().entrySet()) {
-            double percentage = totalContacts > 0 ? (entry.getValue() * 100.0 / totalContacts) : 0;
-            csv.append(entry.getKey()).append(",")
-                    .append(entry.getValue()).append(",")
-                    .append(String.format("%.1f", percentage)).append("%\n");
-        }
-        csv.append("\n");
-
-        // 3. Mensajes por canal
-        csv.append("=== MENSAJES POR CANAL ===\n");
-        csv.append("Canal,Cantidad,Porcentaje\n");
-        long totalMessages = dashboard.messages().byChannel().values().stream().mapToLong(Long::longValue).sum();
-        for (var entry : dashboard.messages().byChannel().entrySet()) {
-            double percentage = totalMessages > 0 ? (entry.getValue() * 100.0 / totalMessages) : 0;
-            csv.append(entry.getKey()).append(",")
-                    .append(entry.getValue()).append(",")
-                    .append(String.format("%.1f", percentage)).append("%\n");
-        }
 
         return csv.toString();
     }
 
-    // ==================== GENERACIÓN PDF ====================
-
     private String generatePdfMetrics(MetricsDTOs.DashboardMetrics dashboard,
                                       String startDate, String endDate, String salespersonEmail) {
+        // Implementación similar a la existente pero con los nuevos campos
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Document document = new Document(PageSize.A4);
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // Título principal
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
             Paragraph title = new Paragraph("Reporte de Métricas CRM", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             document.add(title);
             document.add(new Paragraph(" "));
 
-            // Información del reporte
             Font infoFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
             document.add(new Paragraph("Generado: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), infoFont));
             document.add(new Paragraph("Período: " + formatPeriod(startDate, endDate), infoFont));
@@ -291,63 +353,35 @@ public class MetricsService {
             }
             document.add(new Paragraph(" "));
 
-            // 1. Resumen General
+            // Tabla resumen
             addSectionHeader(document, "Resumen General");
             PdfPTable summaryTable = new PdfPTable(2);
             summaryTable.setWidthPercentage(100);
-            summaryTable.setWidths(new float[]{60f, 40f});
-
             addSummaryRow(summaryTable, "Contactos activos", String.valueOf(dashboard.funnel().totalActive()));
+            addSummaryRow(summaryTable, "En negociación", String.valueOf(dashboard.contactStatus().inNegotiation()));
+            addSummaryRow(summaryTable, "Propuesta enviada", String.valueOf(dashboard.contactStatus().proposalSent()));
+            addSummaryRow(summaryTable, "Cerrados ganados", String.valueOf(dashboard.contactStatus().closedWon()));
+            addSummaryRow(summaryTable, "Cerrados perdidos", String.valueOf(dashboard.contactStatus().closedLost()));
+            addSummaryRow(summaryTable, "Tasa de conversión", String.format("%.1f%%", dashboard.contactStatus().conversionRate()));
             addSummaryRow(summaryTable, "Mensajes enviados", String.valueOf(dashboard.messages().sent()));
             addSummaryRow(summaryTable, "Mensajes recibidos", String.valueOf(dashboard.messages().received()));
             addSummaryRow(summaryTable, "Tasa de respuesta", String.format("%.1f%%", dashboard.messages().responseRate()));
             addSummaryRow(summaryTable, "Tareas completadas", String.valueOf(dashboard.tasks().completed()));
             addSummaryRow(summaryTable, "Tareas vencidas", String.valueOf(dashboard.tasks().overdue()));
             addSummaryRow(summaryTable, "Tareas pendientes", String.valueOf(dashboard.tasks().pending()));
+            addSummaryRow(summaryTable, "Tareas para hoy", String.valueOf(dashboard.tasks().dueToday()));
+            addSummaryRow(summaryTable, "Total usuarios", String.valueOf(dashboard.users().total()));
+            addSummaryRow(summaryTable, "Usuarios activos", String.valueOf(dashboard.users().active()));
+            addSummaryRow(summaryTable, "Usuarios inactivos", String.valueOf(dashboard.users().inactive()));
+            addSummaryRow(summaryTable, "Nuevos usuarios (30d)", String.valueOf(dashboard.users().newUsers()));
 
             document.add(summaryTable);
-            document.add(new Paragraph(" "));
-
-            // 2. Contactos por estado del funnel
-            addSectionHeader(document, "Contactos por Estado del Funnel");
-            PdfPTable funnelTable = new PdfPTable(3);
-            funnelTable.setWidthPercentage(100);
-            funnelTable.setWidths(new float[]{50f, 25f, 25f});
-
-            addTableHeader(funnelTable, "Estado", "Cantidad", "Porcentaje");
-
-            long totalContacts = dashboard.funnel().byStatus().values().stream().mapToLong(Long::longValue).sum();
-            for (var entry : dashboard.funnel().byStatus().entrySet()) {
-                double percentage = totalContacts > 0 ? (entry.getValue() * 100.0 / totalContacts) : 0;
-                addTableCell(funnelTable, entry.getKey());
-                addTableCell(funnelTable, String.valueOf(entry.getValue()));
-                addTableCell(funnelTable, String.format("%.1f%%", percentage));
-            }
-            document.add(funnelTable);
-            document.add(new Paragraph(" "));
-
-            // 3. Mensajes por canal
-            addSectionHeader(document, "Mensajes por Canal");
-            PdfPTable channelTable = new PdfPTable(3);
-            channelTable.setWidthPercentage(100);
-            channelTable.setWidths(new float[]{50f, 25f, 25f});
-
-            addTableHeader(channelTable, "Canal", "Cantidad", "Porcentaje");
-
-            long totalMessages = dashboard.messages().byChannel().values().stream().mapToLong(Long::longValue).sum();
-            for (var entry : dashboard.messages().byChannel().entrySet()) {
-                double percentage = totalMessages > 0 ? (entry.getValue() * 100.0 / totalMessages) : 0;
-                addTableCell(channelTable, entry.getKey());
-                addTableCell(channelTable, String.valueOf(entry.getValue()));
-                addTableCell(channelTable, String.format("%.1f%%", percentage));
-            }
-            document.add(channelTable);
-
             document.close();
+
             return Base64.getEncoder().encodeToString(baos.toByteArray());
 
         } catch (Exception e) {
-            log.error("Error generando PDF de métricas: {}", e.getMessage(), e);
+            log.error("Error generando PDF: {}", e.getMessage(), e);
             throw new BusinessRuleViolationException("Error al generar el PDF: " + e.getMessage());
         }
     }
@@ -375,28 +409,9 @@ public class MetricsService {
         table.addCell(valueCell);
     }
 
-    private void addTableHeader(PdfPTable table, String... headers) {
-        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10);
-        for (String header : headers) {
-            PdfPCell cell = new PdfPCell(new Phrase(header, headerFont));
-            cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
-            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            table.addCell(cell);
-        }
-    }
-
-    private void addTableCell(PdfPTable table, String text) {
-        Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 9);
-        PdfPCell cell = new PdfPCell(new Phrase(text, normalFont));
-        cell.setHorizontalAlignment(Element.ALIGN_LEFT);
-        table.addCell(cell);
-    }
-
-    // ==================== MÉTODOS AUXILIARES ====================
-
     private String formatPeriod(String startDate, String endDate) {
         if (startDate == null && endDate == null) {
-            return "Últimos 30 días";
+            return "Últimos 365 días";
         }
         return (startDate != null ? startDate : "inicio") + " a " + (endDate != null ? endDate : "hoy");
     }
@@ -406,11 +421,9 @@ public class MetricsService {
         return String.format("metrics_report_%s.%s", date, format);
     }
 
-    // ==================== MÉTODOS AUXILIARES ====================
-
     private LocalDateTime parseStartDate(String dateStr) {
         if (dateStr == null || dateStr.isEmpty()) {
-            return LocalDate.now().minusDays(30).atStartOfDay();
+            return LocalDate.now().minusDays(365).atStartOfDay();
         }
         return LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
     }
@@ -421,5 +434,4 @@ public class MetricsService {
         }
         return LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).atTime(23, 59, 59);
     }
-
 }

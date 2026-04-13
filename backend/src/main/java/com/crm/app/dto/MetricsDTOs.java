@@ -15,6 +15,50 @@ public class MetricsDTOs {
             long totalActive
     ) {}
 
+    // ==================== MÉTRICAS DE CONTACTOS - ESTADOS ESPECÍFICOS ====================
+
+    @Schema(description = "Métricas de contactos por estados específicos (negociación y cerrados)")
+    public record ContactStatusMetrics(
+            @Schema(description = "Contactos en negociación", example = "23")
+            long inNegotiation,
+            @Schema(description = "Propuesta enviada", example = "18")
+            long proposalSent,
+            @Schema(description = "Cerrados ganados", example = "34")
+            long closedWon,
+            @Schema(description = "Cerrados perdidos", example = "12")
+            long closedLost,
+            @Schema(description = "Tasa de conversión (Won / Total cerrados)", example = "73.9")
+            double conversionRate
+    ) {}
+
+    // ==================== MÉTRICAS DE TAREAS ====================
+
+    @Schema(description = "Métricas de tareas")
+    public record TaskMetrics(
+            @Schema(description = "Tareas completadas", example = "45")
+            long completed,
+            @Schema(description = "Tareas vencidas", example = "12")
+            long overdue,
+            @Schema(description = "Tareas pendientes", example = "28")
+            long pending,
+            @Schema(description = "Tareas para hoy", example = "8")
+            long dueToday
+    ) {}
+
+    // ==================== MÉTRICAS DE USUARIOS ====================
+
+    @Schema(description = "Métricas de usuarios")
+    public record UserMetrics(
+            @Schema(description = "Total de usuarios", example = "15")
+            long total,
+            @Schema(description = "Usuarios activos", example = "12")
+            long active,
+            @Schema(description = "Usuarios inactivos", example = "3")
+            long inactive,
+            @Schema(description = "Nuevos usuarios (últimos 30 días)", example = "2")
+            long newUsers
+    ) {}
+
     // ==================== MÉTRICAS DE MENSAJES ====================
 
     @Schema(description = "Métricas de mensajes")
@@ -29,28 +73,20 @@ public class MetricsDTOs {
             Map<String, Long> byChannel
     ) {}
 
-    // ==================== MÉTRICAS DE TAREAS ====================
-
-    @Schema(description = "Métricas de tareas")
-    public record TaskMetrics(
-            @Schema(description = "Tareas completadas", example = "45")
-            long completed,
-            @Schema(description = "Tareas vencidas", example = "12")
-            long overdue,
-            @Schema(description = "Tareas pendientes", example = "28")
-            long pending
-    ) {}
-
     // ==================== DASHBOARD PRINCIPAL ====================
 
     @Schema(description = "Dashboard completo de métricas")
     public record DashboardMetrics(
-            @Schema(description = "Métricas de contactos")
+            @Schema(description = "Métricas de contactos por funnel")
             FunnelMetrics funnel,
+            @Schema(description = "Métricas de contactos específicos (negociación y cerrados)")
+            ContactStatusMetrics contactStatus,
             @Schema(description = "Métricas de mensajes")
             MessageMetrics messages,
             @Schema(description = "Métricas de tareas")
             TaskMetrics tasks,
+            @Schema(description = "Métricas de usuarios")
+            UserMetrics users,
             @Schema(description = "Período analizado", example = "2026-04-01 a 2026-04-07")
             String period,
             @Schema(description = "Vendedor (null = todos)", example = "alice@crm.com")
