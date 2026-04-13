@@ -1,3 +1,5 @@
+import type { ConversationResType } from "./conversation.types";
+
 export type FunnelStage =
   | "NEW_LEAD"
   | "CONTACTED"
@@ -7,6 +9,32 @@ export type FunnelStage =
   | "CLOSED_LOST";
 
 export type Channel = "WHATSAPP" | "EMAIL";
+
+export interface Metrics {
+  funnel: {
+    byStatus: {
+      NEW_LEAD: number;
+      CONTACTED: number;
+    };
+    totalActive: number;
+  };
+  messages: {
+    sent: number;
+    received: number;
+    responseRate: number;
+    byChannel: {
+      WHATSAPP: number;
+      EMAIL: number;
+    };
+  };
+  tasks: {
+    completed: number;
+    overdue: number;
+    pending: number;
+  };
+  period: string;
+  salespersonEmail: string;
+}
 
 export interface ContactResType {
   id: number;
@@ -20,8 +48,15 @@ export interface ContactResType {
   preferredChannel: Channel;
   owner: Owner;
   tags: Tag[];
-  createdAt: Date;
-  updatedAt: Date;
+  conversations?: ConversationResType[];
+  createdAt: string;
+  updatedAt?: string;
+  totalUnreadCount?: number;
+}
+
+export interface ContactsDashboardResType {
+  metrics: Metrics;
+  contacts: ContactResType[];
 }
 
 export interface ContactReqType {
@@ -35,7 +70,6 @@ export interface ContactReqType {
   preferredChannel: Channel;
   ownerId?: number;
 }
-
 
 export interface Owner {
   id: number;

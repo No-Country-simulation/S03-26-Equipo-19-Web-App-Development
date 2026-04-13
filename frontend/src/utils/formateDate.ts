@@ -22,3 +22,8 @@ export const formatDateTime = (dateStr: string | Date) => {
     timeZone: "UTC",
   });
 };
+
+export const formatTime = (iso: string) => {
+  const date = new Date(iso);
+  return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+};

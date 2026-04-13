@@ -1,51 +1,130 @@
-import type { Conversation } from '../../types/message.types';
+import type { ContactResType } from '../../types/contact.types';
+import AvatarContact from '../ui/AvatarContact';
+import TitleSection from '../ui/TitleSection';
+import { useState } from 'react';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { Badge } from '../ui/Badge';
+import { ScrollArea } from '../ui/scroll-area';
+import { Mail, MessageCircle } from "lucide-react";
+import type { ConversationResType } from '../../types/conversation.types';
+import { getStatusLabel } from '../../utils/formateStatusLabel';
 
 interface ConversationListProps {
-  conversations: Conversation[];
-  activeId: string | null;
-  onSelect: (contactId: string) => void;
+  contacts: ContactResType[];
+  activeChatId: number | null;
+  onSelect: (contact: ContactResType, conversations: ConversationResType[]) => void;
 }
 
-const formatTime = (iso: string) => {
-  const date = new Date(iso);
-  return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-};
+export const ConversationList = ({
+  contacts,
+  activeChatId,
+  onSelect
+}: ConversationListProps) => {
 
-export const ConversationList = ({ conversations, activeId, onSelect }: ConversationListProps) => {
+  const [activeStatus, setActiveStatus] = useState<'ALL' | 'UNREAD'>('ALL');
+
+
+  const total = contacts.length;
+  const unread = contacts.filter(c => (c.totalUnreadCount || 0) > 0).length;
+
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {conversations.map(conv => (
-        <button
-          key={conv.contactId}
-          onClick={() => onSelect(conv.contactId)}
-          className={`
-            flex items-start gap-3 px-4 py-4 text-left border-b border-gray-800
-            hover:bg-gray-800/60 transition-colors
-            ${activeId === conv.contactId ? 'bg-gray-800' : ''}
-          `}
-        >
-          {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center font-semibold text-sm shrink-0">
-            {conv.contactName.charAt(0)}
-          </div>
+    <div className="relative">
 
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-center mb-0.5">
-              <span className="text-white text-sm font-medium truncate">{conv.contactName}</span>
-              <span className="text-gray-500 text-xs shrink-0 ml-2">{formatTime(conv.lastMessageAt)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-xs truncate">{conv.lastMessage}</span>
-              {conv.unreadCount > 0 && (
-                <span className="bg-sky-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shrink-0 ml-2">
-                  {conv.unreadCount}
-                </span>
-              )}
-            </div>
-            <span className="text-xs text-gray-600 capitalize mt-0.5 block">{conv.channel}</span>
-          </div>
-        </button>
-      ))}
+      <div className='bg-white rounded-lg shadow-lg pt-8 pb-6 px-6 z-10 relative'>
+        <TitleSection text="Mis Conversaciones" className='hidden md:flex' />
+
+        <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as any)}>
+          <TabsList className="bg-neutro-2/30 rounded-2xl lg:mt-4">
+
+            <TabsTrigger value="ALL">
+              Total
+              <Badge variant="outline" className="ml-2">{total}</Badge>
+            </TabsTrigger>
+
+            <TabsTrigger value="UNREAD">
+              No leídos
+              <Badge variant="outline" className="ml-2">{unread}</Badge>
+            </TabsTrigger>
+
+          </TabsList>
+        </Tabs>
+      </div>
+
+  
+      <ScrollArea>
+        <div className="flex flex-col bg-white -mt-4 pt-5">
+
+          {contacts
+            .filter(c =>
+              activeStatus === 'UNREAD'
+                ? (c.totalUnreadCount || 0) > 0
+                : true
+            )
+            .map(contact => {
+
+              const openConversations = contact.conversations?.filter(
+                c => c.status === "OPEN"
+              ) || [];
+
+              const channels = [
+                ...new Set(openConversations.map(c => c.channel))
+              ];
+
+              return (
+                <button
+                  key={contact.id}
+                  onClick={() => onSelect(contact, openConversations)}
+                  className={`
+                    flex items-start gap-3 px-4 py-4 text-left border-b
+                    border-neutro-2
+                    hover:bg-accent/20
+                    ${activeChatId === contact.id ? 'bg-neutro-3' : ''}
+                  `}
+                >
+                  <AvatarContact name={contact.name} lastName={contact.lastName} />
+
+                  <div className="flex-1">
+
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">
+                        {contact.name} {contact.lastName}
+                      </span>
+                      <span className='text-xs text-neutro-2'>no leídos</span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-400">
+                        {getStatusLabel(contact.funnelStatus).toUpperCase()}
+                      </span>
+
+                        <span className="bg-neutro-3 border border-white text-primary text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {contact.totalUnreadCount}
+                        </span>
+                    
+                    </div>
+
+                    {/* CANALES */}
+                    <div className="flex justify-between mt-1">
+                      <span className="text-xs text-gray-500">
+                     
+                      </span>
+
+                      <div className="flex gap-1">
+                        {channels.includes('WHATSAPP') && (
+                          <MessageCircle className="w-4 h-4 text-green-500" />
+                        )}
+                        {channels.includes('EMAIL') && (
+                          <Mail className="w-4 h-4 text-blue-500" />
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                </button>
+              );
+            })}
+        </div>
+      </ScrollArea>
     </div>
   );
 };
