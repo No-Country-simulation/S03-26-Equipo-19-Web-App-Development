@@ -58,4 +58,12 @@ public class MessageDTOs {
             TemplateInfo template,
             LocalDateTime sentAt
     ) {}
+
+    @Schema(description = "Respuesta al marcar mensaje como leído")
+    public record MarkAsReadResponse(
+            Long id,
+            DeliveryStatus deliveryStatus,
+            @Schema(description = "Fecha y hora en que se marcó como leído")
+            LocalDateTime readAt
+    ) {}
 }

@@ -82,21 +82,29 @@ public class WebhookProcessingService {
     private void processStatuses(Map<String, Object> data) {
         List<Map<String, Object>> statuses = cast(data.get("statuses"));
 
+        if (statuses == null || statuses.isEmpty()) {
+            log.warn("📬 No hay statuses para procesar");
+            return;
+        }
+
+        log.info("📬 Procesando {} statuses de WhatsApp", statuses.size());
+
         for (Map<String, Object> status : statuses) {
             try {
                 String messageId = (String) status.get("id");
                 String type = (String) status.get("status");
                 Long timestamp = extractTimestamp(status);
 
-                log.info("📬 STATUS | id={} | status={}", messageId, type);
+                log.info("📬 STATUS RECIBIDO | providerId='{}' | status='{}' | timestamp={}",
+                        messageId, type, timestamp);
 
-                messageService.updateDeliveryStatus(
-                        messageId,
-                        mapStatus(type)
-                );
+                DeliveryStatus newStatus = mapStatus(type);
+                log.info("📬 Mapeando status '{}' a DeliveryStatus.{}", type, newStatus);
+
+                messageService.updateDeliveryStatus(messageId, newStatus);
 
             } catch (Exception e) {
-                log.error("Error procesando status", e);
+                log.error("❌ Error procesando status: {}", e.getMessage(), e);
             }
         }
     }
