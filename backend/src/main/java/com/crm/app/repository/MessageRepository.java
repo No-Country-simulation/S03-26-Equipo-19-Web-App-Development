@@ -100,4 +100,36 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     @Query("SELECT m FROM Message m WHERE m.conversation IN :conversations ORDER BY m.sentAt ASC")
     List<Message> findByConversationInOrderBySentAtAsc(@Param("conversations") List<Conversation> conversations);
+
+
+    /**
+     * Obtiene el último mensaje de cada conversación del usuario
+     * donde el contacto tiene funnelStatus = NEW_LEAD
+     * Ordenado por fecha descendente (más reciente primero)
+     */
+    @Query("SELECT m FROM Message m " +
+            "WHERE m.conversation.assignedTo = :user " +
+            "AND m.conversation.contact.funnelStatus = 'NEW_LEAD' " +
+            "AND m.id IN (" +
+            "    SELECT MAX(m2.id) FROM Message m2 " +
+            "    WHERE m2.conversation.assignedTo = :user " +
+            "    AND m2.conversation.contact.funnelStatus = 'NEW_LEAD' " +
+            "    GROUP BY m2.conversation.id" +
+            ") " +
+            "ORDER BY m.sentAt DESC")
+    List<Message> findLastMessagePerNewLeadConversationForUser(@Param("user") User user);
+
+    /**
+     * Para ADMIN - obtiene el último mensaje de TODAS las conversaciones
+     * donde el contacto tiene funnelStatus = NEW_LEAD
+     */
+    @Query("SELECT m FROM Message m " +
+            "WHERE m.conversation.contact.funnelStatus = 'NEW_LEAD' " +
+            "AND m.id IN (" +
+            "    SELECT MAX(m2.id) FROM Message m2 " +
+            "    WHERE m2.conversation.contact.funnelStatus = 'NEW_LEAD' " +
+            "    GROUP BY m2.conversation.id" +
+            ") " +
+            "ORDER BY m.sentAt DESC")
+    List<Message> findLastMessagePerAllNewLeadConversations();
 }

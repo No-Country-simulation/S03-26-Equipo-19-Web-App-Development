@@ -200,4 +200,38 @@ public class ConversationController {
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(conversationService.reopenConversation(id, currentUser));
     }
+
+    // ==================== BANDEJA DE ENTRADA ====================
+
+    @GetMapping("/inbox")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Bandeja de entrada unificada",
+            description = """
+                    Retorna el último mensaje de cada conversación del usuario autenticado,
+                    ordenado cronológicamente (más reciente primero).
+                    
+                    **Información incluida:**
+                    - Canal de la conversación (WHATSAPP/EMAIL)
+                    - Preview del último mensaje (truncado)
+                    - Identificador del contacto (email para EMAIL, teléfono para WHATSAPP)
+                    - Nombre del contacto
+                    - Fecha y hora del mensaje
+                    - IDs de contacto, conversación y mensaje
+                    
+                    **Permisos:**
+                    - **ADMIN**: Ve el último mensaje de TODAS las conversaciones del sistema
+                    - **VENDEDOR**: Solo ve el último mensaje de sus propias conversaciones
+                    
+                    **Ordenamiento:** Por fecha del mensaje descendente (más reciente primero)
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Bandeja de entrada obtenida exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<List<ConversationDTOs.InboxItemResponse>> getInbox(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(conversationService.getInbox(currentUser));
+    }
 }
