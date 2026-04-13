@@ -6,6 +6,7 @@ import com.crm.app.model.Message;
 import com.crm.app.model.enums.MessageDirection;
 import com.crm.app.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -132,4 +133,26 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             ") " +
             "ORDER BY m.sentAt DESC")
     List<Message> findLastMessagePerAllNewLeadConversations();
+
+    // En MessageRepository.java - Agrega estos métodos
+
+    // Marcar un mensaje específico como leído
+    @Modifying
+    @Query("UPDATE Message m SET m.deliveryStatus = 'READ' WHERE m.id = :messageId AND m.direction = 'INBOUND'")
+    int markAsRead(@Param("messageId") Long messageId);
+
+    // Marcar todos los mensajes INBOUND de una conversación como leídos
+    @Modifying
+    @Query("UPDATE Message m SET m.deliveryStatus = 'READ' " +
+            "WHERE m.conversation.id = :conversationId " +
+            "AND m.direction = 'INBOUND' " +
+            "AND m.deliveryStatus != 'READ'")
+    int updateInboundMessagesToRead(@Param("conversationId") Long conversationId);
+
+    // Contar mensajes no leídos de una conversación
+    @Query("SELECT COUNT(m) FROM Message m " +
+            "WHERE m.conversation.id = :conversationId " +
+            "AND m.direction = 'INBOUND' " +
+            "AND m.deliveryStatus != 'READ'")
+    long countUnreadByConversation(@Param("conversationId") Long conversationId);
 }

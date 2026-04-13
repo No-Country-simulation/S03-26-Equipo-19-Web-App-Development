@@ -44,6 +44,9 @@ public class WhatsAppService {
         }
 
         try {
+            log.info("📤 Enviando mensaje WhatsApp a: {}", number);
+            log.debug("📤 Mensaje: {}", msg);
+
             ResponseEntity<String> res = restTemplate.exchange(
                     apiUrl + "/" + phoneId + "/messages",
                     HttpMethod.POST,
@@ -51,12 +54,22 @@ public class WhatsAppService {
                     String.class
             );
 
-            return extractId(res.getBody());
+            log.debug("📤 Respuesta completa de Meta: {}", res.getBody());
+
+            String providerId = extractId(res.getBody());
+            log.info("✅ Mensaje enviado exitosamente. providerId={}", providerId);
+
+            return providerId;
 
         } catch (HttpClientErrorException.Unauthorized e) {
+            log.error("🔑 Token expirado o inválido para WhatsApp");
             throw new TokenExpiredException("WhatsApp");
 
         } catch (HttpClientErrorException e) {
+            log.error("❌ Error HTTP enviando mensaje WhatsApp: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new ExternalServiceException("WhatsApp", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("❌ Error inesperado enviando mensaje WhatsApp: {}", e.getMessage(), e);
             throw new ExternalServiceException("WhatsApp", e.getMessage(), e);
         }
     }
@@ -79,8 +92,12 @@ public class WhatsAppService {
     private String extractId(String body) {
         try {
             JsonNode root = mapper.readTree(body);
-            return root.get("messages").get(0).get("id").asText();
+            String id = root.get("messages").get(0).get("id").asText();
+            log.debug("📤 ID extraído del cuerpo: {}", id);
+            return id;
         } catch (Exception e) {
+            log.error("❌ Error extrayendo ID de respuesta: {}", e.getMessage());
+            log.error("❌ Cuerpo de respuesta: {}", body);
             return null;
         }
     }
