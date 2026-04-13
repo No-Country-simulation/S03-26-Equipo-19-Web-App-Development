@@ -3,6 +3,7 @@ package com.crm.app.controller;
 import com.crm.app.dto.ContactDTOs;
 import com.crm.app.model.Contact;
 import com.crm.app.model.User;
+import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.FunnelStatus;
 import com.crm.app.service.ContactService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -99,25 +100,43 @@ public class ContactController {
 
     @GetMapping
     @Operation(
-            summary = "Listar mis contactos",
+            summary = "Listar contactos",
             description = """
-                    Retorna la lista de contactos del usuario autenticado.
-                    
-                    **Permisos:**
-                    - **ADMIN**: Ve todos los contactos del sistema
-                    - **VENDEDOR**: Solo ve sus propios contactos
-                    
-                    **Incluye:** Información del vendedor asignado y etiquetas del contacto
-                    """
+                Retorna la lista de contactos del usuario autenticado.
+                
+                **Permisos:**
+                - **ADMIN**: Lista TODOS los contactos del sistema
+                - **VENDEDOR**: Lista SOLO sus propios contactos
+                
+                **Filtros opcionales:**
+                - `funnelStatus`: NEW_LEAD, CONTACTED, IN_NEGOTIATION, PROPOSAL_SENT, CLOSED_WON, CLOSED_LOST
+                - `ownerId`: ID del vendedor (solo ADMIN)
+                - `tagIds`: IDs de etiquetas separados por coma
+                - `preferredChannel`: WHATSAPP o EMAIL
+                
+                **Orden (opcional):**
+                - `sortBy`: name, createdAt, funnelStatus (default: createdAt)
+                - `sortOrder`: ASC o DESC (default: ASC)
+                
+                **Ejemplos:**
+                - `/api/v1/contacts?funnelStatus=NEW_LEAD`
+                - `/api/v1/contacts?sortBy=name&sortOrder=DESC`
+                """
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista obtenida exitosamente"),
-            @ApiResponse(responseCode = "401", description = "No autenticado")
-    })
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ContactDTOs.ContactDetailResponse>> getMyContacts(
-            @AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(contactService.getMyContactsDetailResponse(currentUser));
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam(required = false) FunnelStatus funnelStatus,
+            @RequestParam(required = false) Long ownerId,
+            @RequestParam(required = false) List<Long> tagIds,
+            @RequestParam(required = false) Channel preferredChannel,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+
+        return ResponseEntity.ok(contactService.getFilteredContacts(
+                currentUser, funnelStatus, ownerId, tagIds, preferredChannel,
+                sortBy != null ? sortBy : "createdAt",
+                sortOrder != null ? sortOrder : "ASC"));
     }
 
     @GetMapping("/dashboard")

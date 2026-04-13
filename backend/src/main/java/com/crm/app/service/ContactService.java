@@ -15,6 +15,8 @@ import com.crm.app.repository.UserRepository;
 import com.crm.app.util.PhoneNumberNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.crm.app.specification.ContactSpecifications.*;
 
 @Slf4j
 @Service
@@ -184,8 +188,25 @@ public class ContactService {
         return contactMapper.toDetailResponse(contact);
     }
 
-    public List<ContactDTOs.ContactDetailResponse> getMyContactsDetailResponse(User currentUser) {
-        List<Contact> contacts = getMyContacts(currentUser);
+    public List<ContactDTOs.ContactDetailResponse> getFilteredContacts(
+            User currentUser, FunnelStatus funnelStatus, Long ownerId,
+            List<Long> tagIds, Channel preferredChannel, String sortBy, String sortOrder) {
+
+        // 1. Construir specification
+        Specification<Contact> spec = Specification.where(byFunnelStatus(funnelStatus))
+                .and(byOwnerId(ownerId))
+                .and(byPreferredChannel(preferredChannel))
+                .and(byTagIds(tagIds));
+
+        // 2. Filtrar por owner según rol
+        List<Contact> contacts;
+        if (currentUser.getRole() == Role.ADMIN) {
+            contacts = contactRepository.findAll(spec, Sort.by(Sort.Direction.fromString(sortOrder), sortBy));
+        } else {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("owner").get("id"), currentUser.getId()));
+            contacts = contactRepository.findAll(spec, Sort.by(Sort.Direction.fromString(sortOrder), sortBy));
+        }
+
         return contactMapper.toDetailResponseList(contacts);
     }
 
