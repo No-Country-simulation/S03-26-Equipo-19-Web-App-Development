@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,12 +30,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByContactAndAssignedTo(Contact contact, User assignedTo);
 
     // Tareas vencidas que siguen en estado PENDING — para el job de actualización automática
-    @Query("SELECT t FROM Task t WHERE t.status = 'PENDING' AND t.dueDate < :now")
-    List<Task> findPendingOverdue(@Param("now") LocalDateTime now);
+    @Query("SELECT t FROM Task t WHERE t.status = :status AND t.dueDate < :now")
+    List<Task> findPendingOverdue(@Param("status") TaskStatus status,
+                             @Param("now") LocalDateTime now);
 
     // Tareas que vencen en las próximas N horas — para recordatorios automáticos
-    @Query("SELECT t FROM Task t WHERE t.status = 'PENDING' " +
-            "AND t.dueDate BETWEEN :now AND :deadline")
+    @Query("SELECT t FROM Task t WHERE t.status = :status " +
+       "AND t.dueDate BETWEEN :now AND :deadline")
     List<Task> findDueSoon(
             @Param("now") LocalDateTime now,
             @Param("deadline") LocalDateTime deadline
@@ -42,6 +44,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     // Marcar como OVERDUE todas las tareas vencidas — ejecutado por el scheduler
     @Modifying
+    @Transactional
     @Query("UPDATE Task t SET t.status = 'OVERDUE' " +
             "WHERE t.status = 'PENDING' AND t.dueDate < :now")
     int markOverdueTasks(@Param("now") LocalDateTime now);
@@ -60,6 +63,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     // Tareas por tipo para un vendedor — para filtros de la UI
     List<Task> findByAssignedToAndType(User assignedTo, TaskType type);
+
+    // Tareas de un vendedor en un rango de fechas — para filtros avanzados
+    List<Task> findByAssignedToAndDueDateBetweenOrderByDueDateAsc(
+        User assignedTo,
+        LocalDateTime start,
+        LocalDateTime end
+    );
 
     long countByStatus(TaskStatus status);
 
