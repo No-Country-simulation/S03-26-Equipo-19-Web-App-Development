@@ -104,6 +104,10 @@ public class ContactController {
             description = """
                 Retorna la lista de contactos del usuario autenticado.
                 
+                **Permisos:**
+                - **ADMIN**: Lista TODOS los contactos del sistema
+                - **VENDEDOR**: Lista SOLO sus propios contactos
+                
                 **Filtros opcionales:**
                 - `funnelStatus`: NEW_LEAD, CONTACTED, IN_NEGOTIATION, PROPOSAL_SENT, CLOSED_WON, CLOSED_LOST
                 - `ownerId`: ID del vendedor (solo ADMIN)
