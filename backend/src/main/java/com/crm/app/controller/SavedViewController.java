@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/saved-views")
 @RequiredArgsConstructor
-@Tag(name = "Saved Views", description = "Configuraciones de vistas guardadas por usuario")
+@Tag(name = "Vistas Guardadas", description = "Configuraciones de vistas guardadas por usuario")
 public class SavedViewController {
 
     private final SavedViewService savedViewService;
