@@ -17,7 +17,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/messages")
@@ -156,5 +158,76 @@ public class MessageController {
             @PathVariable Long contactId,
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(messageService.getContactConversationHistoryResponse(contactId, currentUser.getEmail()));
+    }
+
+    // En MessageController.java - Agrega estos endpoints
+
+    // ==================== MARCAR MENSAJES COMO LEÍDOS ====================
+
+    @PatchMapping("/{id}/read")
+    @Operation(
+            summary = "Marcar mensaje como leído",
+            description = """
+                    Marca un mensaje específico como leído por el vendedor.
+                    
+                    **Reglas:**
+                    - Solo aplica para mensajes INBOUND (recibidos del cliente)
+                    - El vendedor debe tener acceso a la conversación
+                    - Si ya estaba leído, retorna el estado actual sin cambios
+                    
+                    **Permisos:**
+                    - **ADMIN**: Puede marcar cualquier mensaje como leído
+                    - **VENDEDOR**: Solo puede marcar mensajes de sus conversaciones asignadas
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Mensaje marcado como leído exitosamente"),
+            @ApiResponse(responseCode = "400", description = "El mensaje es OUTBOUND (no aplica)"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "No autorizado - No tienes acceso a este mensaje"),
+            @ApiResponse(responseCode = "404", description = "Mensaje no encontrado")
+    })
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<MessageDTOs.MarkAsReadResponse> markAsRead(
+            @Parameter(description = "ID del mensaje", example = "42", required = true)
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(messageService.markAsRead(id, currentUser.getEmail()));
+    }
+
+    @PatchMapping("/conversations/{conversationId}/read-all")
+    @Operation(
+            summary = "Marcar todos los mensajes de una conversación como leídos",
+            description = """
+                    Marca TODOS los mensajes INBOUND no leídos de una conversación como leídos.
+                    
+                    **Uso típico:** Cuando un vendedor abre una conversación, se llama a este endpoint.
+                    
+                    **Permisos:**
+                    - **ADMIN**: Puede marcar cualquier conversación
+                    - **VENDEDOR**: Solo puede marcar conversaciones que tiene asignadas
+                    
+                    **Retorna:** Cantidad de mensajes que se marcaron como leídos
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Mensajes marcados como leídos exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "No autorizado"),
+            @ApiResponse(responseCode = "404", description = "Conversación no encontrada")
+    })
+    @PreAuthorize("hasRole('ADMIN') or @messageService.isConversationOwner(#conversationId, principal)")
+    public ResponseEntity<Map<String, Object>> markAllAsRead(
+            @Parameter(description = "ID de la conversación", example = "1", required = true)
+            @PathVariable Long conversationId,
+            @AuthenticationPrincipal User currentUser) {
+        int updatedCount = messageService.markAllAsRead(conversationId, currentUser.getEmail());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("conversationId", conversationId);
+        response.put("markedCount", updatedCount);
+        response.put("message", updatedCount + " mensajes marcados como leídos");
+
+        return ResponseEntity.ok(response);
     }
 }
