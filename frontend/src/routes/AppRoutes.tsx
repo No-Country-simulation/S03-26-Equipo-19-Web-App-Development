@@ -6,17 +6,18 @@ import { useAuthStore } from "../store/useAuthStore";
 // Layouts y Rutas Protegidas
 import PublicRoute from "../routes/PublicRoute";
 import ProtectedRoute from "./ProtectedRoute";
-import { DashboardLayout } from "../components/layout/DashboardLayout"; // ✅ Dirección corregida
+import { DashboardLayout } from "../components/layout/DashboardLayout";
 
 // Páginas Públicas
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 
 // Páginas de Vendedor / Generales
-import Home from "../components/dashboard/Home"; // ✅ Usamos el Home que pasaste
+import Home from "../components/dashboard/Home";
 import { ContactsPage } from "../pages/ContactsPage";
 import { MessagesPage } from "../pages/MessagesPage";
 import ContactDetailPage from "../pages/ContactDetailPage";
+import TasksPage from "../pages/TasksPage";
 
 // Páginas de Admin
 import { AdminPanel } from "../pages/admin/AdminPanel";
@@ -68,7 +69,7 @@ export const AppRoutes: React.FC = () => {
           <>
             <Route path={ROUTES.CONTACTS} element={<ContactsPage />} />
             <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
-            <Route path={ROUTES.TASKS} element={<TasksManagement />} />
+             <Route path={ROUTES.TASKS} element={<TasksPage />}/>
             <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
           </>
         )}
