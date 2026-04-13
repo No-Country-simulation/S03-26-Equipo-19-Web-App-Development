@@ -119,25 +119,37 @@ public class DataSeeder implements ApplicationRunner {
         });
     }
 
-    private List<Tag> seedTags() {
-        List<Tag> tags = Arrays.asList(
-                Tag.builder().name("Alta prioridad").color("#EF4444").description("Clientes con urgencia de compra").build(),
-                Tag.builder().name("Lead caliente").color("#F59E0B").description("Alto interés, cerca de cerrar").build(),
-                Tag.builder().name("Fintech").color("#10B981").description("Industria financiera/tecnológica").build(),
-                Tag.builder().name("E-commerce").color("#3B82F6").description("Tiendas online").build(),
-                Tag.builder().name("Lead frío").color("#6B7280").description("Poco interés, seguimiento largo").build(),
-                Tag.builder().name("Referido").color("#8B5CF6").description("Llegó por recomendación").build()
+   private List<Tag> seedTags() {
+        List<Tag> tags = List.of(
+                Tag.builder().name("alta prioridad").color("#EF4444").build(),
+                Tag.builder().name("lead caliente").color("#F59E0B").build(),
+                Tag.builder().name("fintech").color("#10B981").build(),
+                Tag.builder().name("e-commerce").color("#3B82F6").build(),
+                Tag.builder().name("lead frío").color("#6B7280").build(),
+                Tag.builder().name("referido").color("#8B5CF6").build()
         );
 
         List<Tag> savedTags = new ArrayList<>();
+
         for (Tag tag : tags) {
-            if (!tagRepository.existsByName(tag.getName())) {
+
+                String normalizedName = tag.getName().trim();
+
+                if (!tagRepository.existsByNameIgnoreCase(normalizedName)) {
+
                 savedTags.add(tagRepository.save(tag));
                 log.info("Tag seeded: {}", tag.getName());
-            } else {
-                savedTags.add(tagRepository.findByName(tag.getName()).orElseThrow());
-            }
+
+                } else {
+
+                Tag existing = tagRepository
+                        .findByNameIgnoreCase(normalizedName)
+                        .orElseThrow();
+
+                savedTags.add(existing);
+                }
         }
+
         return savedTags;
     }
 
