@@ -6,8 +6,9 @@ import com.crm.app.model.enums.TaskType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 public class TaskDTOs {
 
@@ -23,8 +24,15 @@ public class TaskDTOs {
             String description,
 
             TaskType type,
-
+         
+            @Schema(
+                description = "Fecha de vencimiento de la tarea",
+                example = "2026-04-10T14:30:00",
+                type = "string",
+                format = "date-time"
+                )
             @NotNull(message = "La fecha de vencimiento es obligatoria")
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime dueDate,
             
             @NotNull(message = "El contacto es obligatorio")
@@ -45,6 +53,13 @@ public class TaskDTOs {
 
                 TaskType type,
 
+                @Schema(
+                        description = "Nueva fecha de vencimiento (opcional)",
+                        example = "2026-04-10T14:30:00",
+                        type = "string",
+                        format = "date-time"
+                )
+                @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
                 LocalDateTime dueDate
         ) {}
 
@@ -57,10 +72,29 @@ public class TaskDTOs {
             String description,
             TaskType type,
             TaskStatus status,
+            
+            @Schema(
+                description = "Fecha de vencimiento",
+                example = "2026-04-10T14:30:00",
+                type = "string",
+                format = "date-time"
+            )
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime dueDate,
+
+            @Schema(
+                description = "Fecha de finalización (si está completada)",
+                example = "2026-04-10T18:00:00",
+                type = "string",
+                format = "date-time"
+            )
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime completedAt,
+
             Long contactId,
             Long assignedTo,
+
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime createdAt
     ) {}
 }

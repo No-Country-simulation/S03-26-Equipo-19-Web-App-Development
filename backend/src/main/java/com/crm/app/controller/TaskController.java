@@ -78,7 +78,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "Listar tareas con filtros y ordenamiento",
-description = """
+        description = """
                 Retorna la lista de tareas según filtros opcionales.
 
                 **Permisos:**
@@ -110,7 +110,7 @@ description = """
             @RequestParam(required = false) TaskStatus status,
             @RequestParam(required = false) TaskType type,
             @RequestParam(required = false) Long assignedTo,
-            
+
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate dueDateFrom,
