@@ -139,29 +139,79 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private List<Template> seedTemplates(User admin) {
-        List<Template> templates = Arrays.asList(
-                Template.builder().name("Email de bienvenida").channel(Channel.EMAIL)
-                        .subject("✅ Hemos recibido tu consulta")
-                        .body("Gracias por contactarte con nosotros.")
-                        .variables("{}").createdBy(admin).build(),
-                Template.builder().name("WhatsApp - Primer contacto").channel(Channel.WHATSAPP)
-                        .body("👋 Hola! Gracias por escribirnos.")
-                        .variables("{}").createdBy(admin).build(),
-                Template.builder().name("Bienvenida automática - WhatsApp").channel(Channel.WHATSAPP)
-                        .body("👋 Bienvenido! Gracias por contactarte.")
-                        .variables("{}").createdBy(admin).build()
-        );
+        List<Template> templates = new ArrayList<>();
 
+        // Crear MUCHAS plantillas en meses anteriores para tener números grandes
+        Random random = new Random();
+
+        // Plantillas de meses anteriores (para tener total alto: ~289)
+        for (int i = 1; i <= 280; i++) {
+            LocalDateTime pastDate = LocalDateTime.of(2026, 1 + random.nextInt(2), 1 + random.nextInt(28), 10, 0);
+            Template t = Template.builder()
+                    .name("Plantilla histórica " + i)
+                    .channel(i % 2 == 0 ? Channel.WHATSAPP : Channel.EMAIL)
+                    .body("Contenido de plantilla " + i)
+                    .variables("{}")
+                    .createdBy(admin)
+                    .createdAt(pastDate)
+                    .build();
+            templates.add(t);
+        }
+
+        // Plantillas de marzo (período anterior) - 9 plantillas
+        LocalDateTime march1 = LocalDateTime.of(2026, 3, 1, 10, 0);
+        LocalDateTime march10 = LocalDateTime.of(2026, 3, 10, 14, 0);
+        LocalDateTime march20 = LocalDateTime.of(2026, 3, 20, 9, 0);
+
+        templates.add(createTemplate(admin, "Email bienvenida marzo", Channel.EMAIL, march1));
+        templates.add(createTemplate(admin, "WhatsApp primer contacto", Channel.WHATSAPP, march10));
+        templates.add(createTemplate(admin, "Email propuesta comercial", Channel.EMAIL, march20));
+
+        // Plantillas de abril (período actual) - 9 plantillas (para mostrar +9)
+        LocalDateTime april1 = LocalDateTime.of(2026, 4, 1, 8, 0);
+        LocalDateTime april5 = LocalDateTime.of(2026, 4, 5, 13, 0);
+        LocalDateTime april8 = LocalDateTime.of(2026, 4, 8, 11, 0);
+        LocalDateTime april10 = LocalDateTime.of(2026, 4, 10, 10, 0);
+        LocalDateTime april12 = LocalDateTime.of(2026, 4, 12, 16, 0);
+        LocalDateTime april14 = LocalDateTime.of(2026, 4, 14, 9, 0);
+
+        templates.add(createTemplate(admin, "Email newsletter abril", Channel.EMAIL, april1));
+        templates.add(createTemplate(admin, "WhatsApp recordatorio", Channel.WHATSAPP, april5));
+        templates.add(createTemplate(admin, "Email seguimiento", Channel.EMAIL, april8));
+        templates.add(createTemplate(admin, "WhatsApp felicitaciones", Channel.WHATSAPP, april10));
+        templates.add(createTemplate(admin, "Email encuesta", Channel.EMAIL, april12));
+        templates.add(createTemplate(admin, "WhatsApp pago", Channel.WHATSAPP, april14));
+
+        // Plantillas de hoy (4 plantillas)
+        LocalDateTime now = LocalDateTime.now();
+        for (int i = 1; i <= 4; i++) {
+            templates.add(createTemplate(admin, "Plantilla de hoy " + i,
+                    i % 2 == 0 ? Channel.WHATSAPP : Channel.EMAIL, now));
+        }
+
+        // Guardar todas las plantillas
         List<Template> savedTemplates = new ArrayList<>();
         for (Template template : templates) {
             if (!templateRepository.existsByNameAndCreatedByRole(template.getName(), Role.ADMIN)) {
                 savedTemplates.add(templateRepository.save(template));
-            } else {
-                savedTemplates.add(templateRepository.findByName(template.getName()).orElseThrow());
             }
-            log.info("Template seeded: {}", template.getName());
         }
+
+        log.info("Templates seeded: total={}, thisMonth={}, today={}",
+                savedTemplates.size(), 9, 4);
+
         return savedTemplates;
+    }
+
+    private Template createTemplate(User admin, String name, Channel channel, LocalDateTime createdAt) {
+        return Template.builder()
+                .name(name)
+                .channel(channel)
+                .body("Contenido de " + name)
+                .variables("{}")
+                .createdBy(admin)
+                .createdAt(createdAt)
+                .build();
     }
 
     private List<Contact> seedContactsWithDates(List<User> salespersons, List<Tag> tags) {
