@@ -21,6 +21,10 @@ spring:
         jdbc:
           time_zone: America/Argentina/Buenos_Aires
 
+  # Configuración de caché
+  cache:
+    type: simple
+
 app:
   jwt:
     secret: ${JWT_SECRET}

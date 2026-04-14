@@ -97,4 +97,15 @@ public interface ContactRepository extends JpaRepository<Contact, Long>,
             "AND m.conversation.status = 'OPEN'")
     long countTotalUnreadMessages(@Param("user") User user);
 
+    // Una sola consulta que trae TODO agrupado por estado
+    @Query("SELECT c.funnelStatus, COUNT(c), " +
+            "SUM(CASE WHEN c.createdAt >= :start AND c.createdAt <= :end THEN 1 ELSE 0 END), " +
+            "SUM(CASE WHEN c.createdAt < :start THEN 1 ELSE 0 END) " +
+            "FROM Contact c " +
+            "WHERE (:owner IS NULL OR c.owner = :owner) " +
+            "GROUP BY c.funnelStatus")
+    List<Object[]> getFunnelStatsGrouped(@Param("owner") User owner,
+                                         @Param("start") LocalDateTime start,
+                                         @Param("end") LocalDateTime end);
+
 }
