@@ -87,7 +87,7 @@ public class TaskController {
 
                 **Filtros opcionales:**
                 - `status`: PENDING, COMPLETED, OVERDUE
-                - `type`: CALL, EMAIL, MEETING, OTHER
+                - `type`: CALL, EMAIL, MEETING, DEMO, OTHER
                 - `assignedTo`: ID del usuario (solo ADMIN)
                 - `dueDateFrom`: fecha desde (yyyy-MM-dd)
                 - `dueDateTo`: fecha hasta (yyyy-MM-dd)
