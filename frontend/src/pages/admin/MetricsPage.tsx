@@ -1,9 +1,10 @@
-import { Users, MessageSquare, CheckSquare, Star, TrendingUp, TrendingDown, Minus, Filter } from 'lucide-react';
+import { Users, MessageSquare, CheckSquare, TrendingUp, TrendingDown, Minus, Filter } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
-import { useGetGLobalMetrics, useGetMetricsByPeriod } from '../../services/use_queries/metrics-query';
+import { useGetGLobalMetrics, useGetMetricsByPeriod, useGetPanelAdminMetrics } from '../../services/use_queries/metrics-query';
 import { useGetSalespersons } from '../../services/use_queries/salespersons-query';
 import type { SalespersonResponse } from '../../types/admin.types';
 import { KpiCard } from '../../components/ui/KpiCard';
+import { KpiCardTopSaler } from '../../components/ui/KpiCardTopSaler';
 
 // --- SUBCOMPONENTES ---
 
@@ -24,7 +25,9 @@ const StatusDot = ({ status }: { status: string }) => (
 
 // --- PÁGINA PRINCIPAL ---
 export const MetricsPage = () => {
-  const { data: globalMetrics, isLoading: loadingMetrics } = useGetGLobalMetrics();
+  const { data: globalMetrics, } = useGetGLobalMetrics();
+  const { data: panelMetrics} = useGetPanelAdminMetrics();
+
   const { data: periodData = [] } = useGetMetricsByPeriod('2026-01-01', '2026-03-31');
   const { data: salespersons = [] } = useGetSalespersons(true);
 
@@ -70,11 +73,7 @@ export const MetricsPage = () => {
           color="secondary"
           icon={<CheckSquare size={28} />}
         />
-        <KpiCard
-          title="Mejor vendedor"
-          metric={globalMetrics?.topSalesperson ?? { value: 0, changePercent: 0, trend: 'stable' }}
-          color="secondary"
-          icon={<Star size={28} />}
+        <KpiCardTopSaler person={globalMetrics?.topSalesperson!}
         />
 
       </div>
@@ -109,11 +108,11 @@ export const MetricsPage = () => {
           </ResponsiveContainer>
           <div className="flex justify-between items-end mt-4">
             <div>
-              <p className="text-2xl font-bold text-[#13316b]">{dashboard?.totalContacts ?? '—'}</p>
+              <p className="text-2xl font-bold text-[#13316b]">{panelMetrics?.totalContacts.value ?? '—'}</p>
               <p className="text-xs text-slate-400">Total contactos</p>
             </div>
             <div className="text-right">
-              <p className="text-xl font-bold text-blue-500">{dashboard?.totalMessages ?? '—'}</p>
+              <p className="text-xl font-bold text-blue-500">{panelMetrics?.totalMessages.value ?? '—'}</p>
               <p className="text-xs text-slate-400">Total mensajes</p>
             </div>
           </div>

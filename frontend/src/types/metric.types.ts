@@ -86,15 +86,18 @@ export interface PanelResType {
   uncomingTasks: Metric;
 }
 
-export interface GlobalMetricsResType {
-  totalConversations: Metric;
-  responseRate: Metric;
-  completedTasks: Metric;
-  topSalesperson: {
+export type TopSalesPerson = {
     id: number;
     name: string;
     email: string;
     messagesSent: number;
-    performanceScore: number;
-  };
+    performanceScore: number; 
 }
+
+export interface GlobalMetricsResType {
+  totalConversations: Metric;
+  responseRate: Metric;
+  completedTasks: Metric;
+  topSalesperson: TopSalesPerson
+}
+

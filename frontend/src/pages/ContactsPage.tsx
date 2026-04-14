@@ -86,7 +86,7 @@ export const ContactsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard
           title="Total de contactos"
-          metric={metrics?.funnel.totalActive ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          metric={metrics?.funnel.total ?? { value: 0, changePercent: 0, trend: 'stable' }}
           color="primary"
           icon={<UsersRound size={28} />}
         />
