@@ -216,22 +216,6 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
-    // ==================== REOPEN ====================
-
-    @Transactional
-    public Task reopen(Long taskId, User currentUser) {
-        Task task = findTaskWithAccess(taskId, currentUser);
-
-        if (task.getStatus() != TaskStatus.COMPLETED) {
-            throw new BusinessRuleViolationException("Solo se pueden reabrir tareas completadas");
-        }
-
-        task.setStatus(TaskStatus.PENDING);
-        task.setCompletedAt(null);
-
-        return taskRepository.save(task);
-    }
-
     // ==================== REASSIGN ====================
     @Transactional
     public Task reassign(Long taskId, Long userId, User currentUser) {
