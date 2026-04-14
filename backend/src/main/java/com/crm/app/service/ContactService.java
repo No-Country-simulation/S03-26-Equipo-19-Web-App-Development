@@ -40,6 +40,11 @@ public class ContactService {
     private final ContactMapper contactMapper;
     private final ConversationRepository conversationRepository;
 
+
+    private static final List<String> ALLOWED_SORT_FIELDS =
+        List.of("name", "createdAt", "funnelStatus");
+
+
     // ==================== CREATE MANUAL ====================
 
     public ContactDTOs.ContactSummaryResponse createContact(ContactDTOs.CreateContactRequest request, User currentUser) {
@@ -191,6 +196,18 @@ public class ContactService {
     public List<ContactDTOs.ContactDetailResponse> getFilteredContacts(
             User currentUser, FunnelStatus funnelStatus, Long ownerId,
             List<Long> tagIds, Channel preferredChannel, String sortBy, String sortOrder) {
+        
+        if (sortBy == null || sortBy.isBlank()) {
+            sortBy = "createdAt";
+        }
+
+        if (sortOrder == null || sortOrder.isBlank()) {
+            sortOrder = "ASC";
+        }
+
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            throw new BusinessRuleViolationException("Parámetro de ordenamiento inválido: " + sortBy);
+        }
 
         // 1. Construir specification
         Specification<Contact> spec = Specification.where(byFunnelStatus(funnelStatus))

@@ -161,6 +161,8 @@ public class MetricsService {
         Map<String, MetricsDTOs.MetricValue> byStatus = new LinkedHashMap<>();
         long currentActive = 0;
         long previousActive = 0;
+        long currentTotal = 0;
+        long previousTotal = 0;
 
         for (FunnelStatus status : FunnelStatus.values()) {
             String statusName = status.name();
@@ -172,11 +174,14 @@ public class MetricsService {
                 currentActive += currentValue;
                 previousActive += previousValue;
             }
+            currentTotal += currentValue;
+            previousTotal += previousValue;
         }
 
         MetricsDTOs.MetricValue totalActive = calculateMetric(currentActive, previousActive);
+        MetricsDTOs.MetricValue total = calculateMetric(currentTotal, previousTotal);
 
-        return new MetricsDTOs.FunnelMetrics(byStatus, totalActive);
+        return new MetricsDTOs.FunnelMetrics(byStatus, totalActive, total);
     }
 
     private Map<String, Long> getFunnelStatsForPeriod(User owner, LocalDateTime endDate) {
@@ -211,13 +216,17 @@ public class MetricsService {
         long previousPending = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, previousEnd);
 
         long currentDueToday = getTaskDueTodayCount(owner);
-        long previousDueToday = 0; // No hay período anterior para "hoy"
+        long previousDueToday = 0;
+
+        long currentTotal = currentCompleted + currentOverdue + currentPending;
+        long previousTotal = previousCompleted + previousOverdue + previousPending;
 
         return new MetricsDTOs.TaskMetrics(
                 calculateMetric(currentCompleted, previousCompleted),
                 calculateMetric(currentOverdue, previousOverdue),
                 calculateMetric(currentPending, previousPending),
-                calculateMetric(currentDueToday, previousDueToday)
+                calculateMetric(currentDueToday, previousDueToday),
+                calculateMetric(currentTotal, previousTotal)
         );
     }
 
@@ -293,11 +302,15 @@ public class MetricsService {
 
         Map<String, MetricsDTOs.MetricValue> byChannel = getChannelMetrics(owner, currentStart, currentEnd, previousStart, previousEnd);
 
+        long currentTotal = currentSent + currentReceived;
+        long previousTotal = previousSent + previousReceived;
+
         return new MetricsDTOs.MessageMetrics(
                 calculateMetric(currentSent, previousSent),
                 calculateMetric(currentReceived, previousReceived),
                 calculateMetricDouble(currentResponseRate, previousResponseRate),
-                byChannel
+                byChannel,
+                calculateMetric(currentTotal, previousTotal)
         );
     }
 
