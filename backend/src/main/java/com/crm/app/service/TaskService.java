@@ -93,14 +93,13 @@ public class TaskService {
         }
 
         if (dueDateTo != null) {
-            to = dueDateTo.atTime(23, 59, 59, 999999999); // fin del día
+            to = dueDateTo.atTime(23, 59, 59);// fin del día
         }
         // ================= SEGURIDAD =================
-
+        // Solo ADMIN puede filtrar por assignedTo, 
+        // para los demás se ignora y se muestran solo sus tareas
         if (currentUser.getRole() != Role.ADMIN) {
             assignedTo = currentUser.getId();
-        } else if (assignedTo == null) {
-            assignedTo = currentUser.getId(); // 👈 esto agregás
         }
 
 
@@ -151,8 +150,10 @@ public class TaskService {
         if (dueDate == null) {
             throw new BusinessRuleViolationException("La fecha de vencimiento es obligatoria");
         }
+        // Eliminar los nanosegundos para evitar problemas de comparación con LocalDateTime.now()
+        LocalDateTime now = LocalDateTime.now().withNano(0);
 
-        if (dueDate.isBefore(LocalDateTime.now())) {
+        if (dueDate.isBefore(now)) {
             throw new BusinessRuleViolationException("La fecha de vencimiento no puede ser pasada");
         }
 
@@ -187,7 +188,10 @@ public class TaskService {
 
         Task task = findTaskWithAccess(id, currentUser);
 
-        if (title != null && !title.isBlank()) {
+        if (title != null) {
+            if (title.isBlank()) {
+                throw new BusinessRuleViolationException("El título no puede estar vacío");
+            }
             task.setTitle(title.trim());
         }
 
@@ -201,12 +205,14 @@ public class TaskService {
 
         
         if (dueDate != null) {
-
+ 
             if (task.getStatus() == TaskStatus.COMPLETED) {
                 throw new BusinessRuleViolationException("No se puede cambiar la fecha de una tarea completada");
             }
 
-            if (dueDate.isBefore(LocalDateTime.now())) {
+            LocalDateTime now = LocalDateTime.now().withNano(0);
+
+            if (dueDate.isBefore(now)) {
                 throw new BusinessRuleViolationException("La fecha no puede estar en el pasado");
             }
 
@@ -227,7 +233,9 @@ public class TaskService {
         }
 
         task.setStatus(TaskStatus.COMPLETED);
-        task.setCompletedAt(LocalDateTime.now());
+
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        task.setCompletedAt(now);
 
         return taskRepository.save(task);
     }
@@ -278,7 +286,8 @@ public class TaskService {
 
     @Transactional
     public int markOverdueTasks() {
-        return taskRepository.markOverdueTasks(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        return taskRepository.markOverdueTasks(now);
     }
 
     // ==================== PRIVATE ====================
