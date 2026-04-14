@@ -27,6 +27,9 @@ public class ContactSpecifications {
     public static Specification<Contact> byTagIds(List<Long> tagIds) {
         return (root, query, cb) -> {
             if (tagIds == null || tagIds.isEmpty()) return cb.conjunction();
+            // Evitar resultados duplicados por el join con tags
+            query.distinct(true);
+
             Join<Contact, Tag> tags = root.join("tags");
             return tags.get("id").in(tagIds);
         };
