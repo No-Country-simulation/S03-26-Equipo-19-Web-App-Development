@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,4 +62,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     List<Conversation> findOpenConversationsWithLastMessage(
             @Param("currentUser") User currentUser,
             @Param("isAdmin") boolean isAdmin);
+
+    long countByCreatedAtBefore(LocalDateTime endDate);
 }

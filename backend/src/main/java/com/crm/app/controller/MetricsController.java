@@ -258,4 +258,88 @@ public class MetricsController {
         metricsService.clearCache();
         return ResponseEntity.noContent().build();
     }
+
+    // En MetricsController.java - Agrega este endpoint
+
+    @GetMapping("/panel")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Panel resumido de métricas",
+            description = """
+                Retorna métricas resumidas para el panel principal del dashboard:
+                - Total de contactos (todos los estados)
+                - Total de mensajes (enviados + recibidos)
+                - Próximas tareas (pendientes + tareas para hoy)
+                
+                Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                El período de comparación es de 30 días.
+                
+                **Permisos:**
+                - **ADMIN**: ve métricas globales
+                - **VENDEDOR**: solo ve sus propias métricas
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas del panel obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.PanelMetrics> getPanelMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getPanelMetrics(currentUser));
+    }
+
+    // En MetricsController.java - Agrega este endpoint
+
+    @GetMapping("/global-metrics")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Métricas globales del dashboard",
+            description = """
+                Retorna métricas globales para el dashboard principal:
+                - Total de conversaciones
+                - Tasa de respuesta (%)
+                - Tareas completadas
+                - Mejor vendedor del período (últimos 30 días)
+                
+                Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                El período de comparación es de 30 días.
+                
+                **Permisos:**
+                - **ADMIN**: ve métricas globales y el mejor vendedor
+                - **VENDEDOR**: ve sus propias métricas (mejor vendedor = null)
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas globales obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.GlobalMetricsResponse> getGlobalMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getGlobalMetrics(currentUser));
+    }
+
+    @GetMapping("/templates")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Métricas de plantillas",
+            description = """
+                Retorna métricas de plantillas incluyendo:
+                - Total de plantillas con tendencia
+                - Plantillas creadas este mes con tendencia
+                - Plantillas creadas hoy
+                - Promedio diario de plantillas creadas (últimos 30 días)
+                
+                **Permisos:**
+                - **ADMIN**: ve todas las plantillas
+                - **VENDEDOR**: ve plantillas globales + sus propias plantillas
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.TemplatesMetricsResponse> getTemplatesMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getTemplatesMetrics(currentUser));
+    }
 }

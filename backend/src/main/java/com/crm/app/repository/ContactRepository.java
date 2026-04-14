@@ -123,5 +123,6 @@ public interface ContactRepository extends JpaRepository<Contact, Long>,
             "GROUP BY c.funnelStatus")
     List<Object[]> countByFunnelStatusWithDate(@Param("owner") User owner,
                                                @Param("endDate") LocalDateTime endDate);
-    
+
+    long countByOwnerAndFunnelStatus(User seller, FunnelStatus funnelStatus);
 }
