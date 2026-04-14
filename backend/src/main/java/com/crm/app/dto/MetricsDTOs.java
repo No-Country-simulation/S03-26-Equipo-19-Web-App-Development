@@ -34,7 +34,9 @@ public class MetricsDTOs {
             @Schema(description = "Contactos por estado con tendencia")
             Map<String, MetricValue> byStatus,
             @Schema(description = "Total de contactos activos con tendencia")
-            MetricValue totalActive
+            MetricValue totalActive,
+            @Schema(description = "Total de contactos (activos + inactivos) con tendencia")
+            MetricValue total
     ) {}
 
     // ==================== MÉTRICAS DE CONTACTOS - ESTADOS ESPECÍFICOS ====================
@@ -55,7 +57,9 @@ public class MetricsDTOs {
             MetricValue completed,
             MetricValue overdue,
             MetricValue pending,
-            MetricValue dueToday
+            MetricValue dueToday,
+            @Schema(description = "Total de tareas (completadas + pendientes + vencidas) con tendencia")
+            MetricValue total
     ) {}
 
     // ==================== MÉTRICAS DE USUARIOS ====================
@@ -76,7 +80,9 @@ public class MetricsDTOs {
             MetricValue received,
             MetricValueDouble responseRate,
             @Schema(description = "Por canal con tendencia")
-            Map<String, MetricValue> byChannel
+            Map<String, MetricValue> byChannel,
+            @Schema(description = "Total de mensajes (enviados + recibidos) con tendencia")
+            MetricValue total
     ) {}
 
     // ==================== DASHBOARD PRINCIPAL ====================
@@ -111,7 +117,7 @@ public class MetricsDTOs {
             String contentType
     ) {}
 
-    // En MetricsDTOs.java - Agrega estos records
+    // ==================== RESPUESTAS SEPARADAS ====================
 
     @Schema(description = "Respuesta solo de métricas de contactos")
     public record ContactsMetricsResponse(
