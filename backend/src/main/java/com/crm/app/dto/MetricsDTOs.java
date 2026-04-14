@@ -138,4 +138,80 @@ public class MetricsDTOs {
     public record UsersMetricsResponse(
             UserMetrics users
     ) {}
+
+
+    @Schema(description = "Métricas resumidas para el panel principal")
+    public record PanelMetrics(
+            @Schema(description = "Total de contactos con tendencia")
+            MetricValue totalContacts,
+
+            @Schema(description = "Total de mensajes con tendencia")
+            MetricValue totalMessages,
+
+            @Schema(description = "Próximas tareas (pendientes + para hoy) con tendencia")
+            MetricValue upcomingTasks
+    ) {}
+
+    // En MetricsDTOs.java - Agrega estos records
+
+    @Schema(description = "Información del mejor vendedor")
+    public record TopSalespersonInfo(
+            @Schema(description = "ID del vendedor", example = "2")
+            Long id,
+
+            @Schema(description = "Nombre del vendedor", example = "Alice")
+            String name,
+
+            @Schema(description = "Email del vendedor", example = "alice@crm.com")
+            String email,
+
+            @Schema(description = "Cantidad de mensajes enviados en el período", example = "45")
+            long messagesSent,
+
+            @Schema(description = "Score de desempeño (0-100)", example = "85.5")
+            double performanceScore
+    ) {}
+
+    @Schema(description = "Métricas globales para el dashboard principal")
+    public record GlobalMetricsResponse(
+            @Schema(description = "Total de conversaciones con tendencia")
+            MetricValue totalConversations,
+
+            @Schema(description = "Tasa de respuesta (%) con tendencia")
+            MetricValueDouble responseRate,
+
+            @Schema(description = "Tareas completadas con tendencia")
+            MetricValue completedTasks,
+
+            @Schema(description = "Mejor vendedor del período (últimos 30 días)")
+            TopSalespersonInfo topSalesperson
+    ) {}
+
+    // En MetricsDTOs.java - Agrega estos records
+
+    // En MetricsDTOs.java - Actualiza TemplateMetrics
+
+    @Schema(description = "Métricas de plantillas")
+    public record TemplateMetrics(
+            @Schema(description = "Total de plantillas con tendencia")
+            MetricValue total,
+
+            @Schema(description = "Plantillas creadas este mes con tendencia")
+            MetricValue createdThisMonth,
+
+            @Schema(description = "Plantillas creadas hoy con tendencia")
+            MetricValue createdToday,
+
+            @Schema(description = "Promedio diario de plantillas creadas")
+            double dailyAverage,
+
+            @Schema(description = "Tendencia del promedio diario")
+            MetricValue dailyAverageTrend
+    ) {}
+
+    @Schema(description = "Respuesta de métricas de plantillas")
+    public record TemplatesMetricsResponse(
+            @Schema(description = "Métricas de plantillas")
+            TemplateMetrics templates
+    ) {}
 }
