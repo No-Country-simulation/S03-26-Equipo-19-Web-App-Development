@@ -83,6 +83,7 @@ public class Task {
     @JoinColumn(name = "assigned_to", nullable = false)
     private User assignedTo;
 
+    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -90,10 +91,4 @@ public class Task {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-    }
 }

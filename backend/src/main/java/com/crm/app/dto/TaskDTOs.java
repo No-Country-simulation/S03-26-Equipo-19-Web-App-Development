@@ -6,7 +6,7 @@ import com.crm.app.model.enums.TaskType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 
 public class TaskDTOs {
@@ -25,6 +25,7 @@ public class TaskDTOs {
             TaskType type,
 
             @NotNull(message = "La fecha de vencimiento es obligatoria")
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime dueDate,
             
             @NotNull(message = "El contacto es obligatorio")
@@ -45,6 +46,7 @@ public class TaskDTOs {
 
                 TaskType type,
 
+                @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
                 LocalDateTime dueDate
         ) {}
 
@@ -57,10 +59,17 @@ public class TaskDTOs {
             String description,
             TaskType type,
             TaskStatus status,
+            
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime dueDate,
+
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime completedAt,
+
             Long contactId,
             Long assignedTo,
+
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime createdAt
     ) {}
 }

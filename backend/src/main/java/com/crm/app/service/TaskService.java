@@ -99,6 +99,8 @@ public class TaskService {
 
         if (currentUser.getRole() != Role.ADMIN) {
             assignedTo = currentUser.getId();
+        } else if (assignedTo == null) {
+            assignedTo = currentUser.getId(); // 👈 esto agregás
         }
 
 
@@ -150,6 +152,10 @@ public class TaskService {
             throw new BusinessRuleViolationException("La fecha de vencimiento es obligatoria");
         }
 
+        if (dueDate.isBefore(LocalDateTime.now())) {
+            throw new BusinessRuleViolationException("La fecha de vencimiento no puede ser pasada");
+        }
+
         Contact contact = findContactOrThrow(contactId);
 
         validateContactAccess(contact, currentUser);
@@ -193,7 +199,17 @@ public class TaskService {
             task.setType(type);
         }
 
+        
         if (dueDate != null) {
+
+            if (task.getStatus() == TaskStatus.COMPLETED) {
+                throw new BusinessRuleViolationException("No se puede cambiar la fecha de una tarea completada");
+            }
+
+            if (dueDate.isBefore(LocalDateTime.now())) {
+                throw new BusinessRuleViolationException("La fecha no puede estar en el pasado");
+            }
+
             task.setDueDate(dueDate);
         }
 
