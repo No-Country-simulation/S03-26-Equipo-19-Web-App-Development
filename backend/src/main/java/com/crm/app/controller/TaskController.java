@@ -78,7 +78,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     @Operation(
         summary = "Listar tareas con filtros y ordenamiento",
-        description = """
+description = """
                 Retorna la lista de tareas según filtros opcionales.
 
                 **Permisos:**
@@ -104,7 +104,7 @@ public class TaskController {
                 - `/api/v1/tasks?status=PENDING`
                 - `/api/v1/tasks?type=CALL&sortBy=createdAt&sortOrder=DESC`
                 - `/api/v1/tasks?dueDateFrom=2026-04-01&dueDateTo=2026-04-10`
-        """
+                """
         )
     public ResponseEntity<List<TaskDTOs.TaskResponse>> getTasks(
             @RequestParam(required = false) TaskStatus status,
