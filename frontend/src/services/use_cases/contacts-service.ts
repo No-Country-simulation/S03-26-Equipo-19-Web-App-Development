@@ -53,8 +53,6 @@ export const getContactsDashboard = async (token: string) => {
         Authorization: `Bearer ${token}`,
       },
     });
-console.log("Data dashboard", res);
-
     return res.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Error de conexión");

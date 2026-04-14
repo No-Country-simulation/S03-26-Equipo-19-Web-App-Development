@@ -1,31 +1,11 @@
 import { Users, MessageSquare, CheckSquare, Star, TrendingUp, TrendingDown, Minus, Filter } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
-import { useGetAdminDashboard, useGetMetricsByPeriod } from '../../services/use_queries/metrics-query';
+import { useGetGLobalMetrics, useGetMetricsByPeriod } from '../../services/use_queries/metrics-query';
 import { useGetSalespersons } from '../../services/use_queries/salespersons-query';
 import type { SalespersonResponse } from '../../types/admin.types';
+import { KpiCard } from '../../components/ui/KpiCard';
 
 // --- SUBCOMPONENTES ---
-const KpiCard = ({ icon, label, value, trend, isPositive, subtitle }: {
-  icon: React.ReactNode; label: string; value?: string;
-  trend?: string; isPositive?: boolean; subtitle?: string;
-}) => (
-  <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-start gap-4">
-    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">{icon}</div>
-    <div className="flex-1 min-w-0">
-      <p className="text-slate-500 text-xs font-medium mb-1">{label}</p>
-      {value ? (
-        <>
-          <p className="text-2xl font-bold text-[#13316b]">{value}</p>
-          {trend && (
-            <span className={`text-xs font-semibold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>{trend}</span>
-          )}
-        </>
-      ) : (
-        <p className="text-base font-bold text-[#13316b]">{subtitle ?? '—'}</p>
-      )}
-    </div>
-  </div>
-);
 
 const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'neutral' }) => {
   if (trend === 'up') return <TrendingUp size={16} className="text-green-500" />;
@@ -44,35 +24,10 @@ const StatusDot = ({ status }: { status: string }) => (
 
 // --- PÁGINA PRINCIPAL ---
 export const MetricsPage = () => {
-  const { data: dashboard, isLoading: loadingDashboard } = useGetAdminDashboard();
+  const { data: globalMetrics, isLoading: loadingMetrics } = useGetGLobalMetrics();
   const { data: periodData = [] } = useGetMetricsByPeriod('2026-01-01', '2026-03-31');
-  const { data: salespersons = [] } = useGetSalespersons();
+  const { data: salespersons = [] } = useGetSalespersons(true);
 
-  const kpiData = [
-    {
-      icon: <Users size={20} className="text-blue-600" />,
-      label: 'Tasa de conversión',
-      value: loadingDashboard ? '…' : String(dashboard?.conversionRate ?? '—'),
-      isPositive: true,
-    },
-    {
-      icon: <MessageSquare size={20} className="text-blue-600" />,
-      label: 'Tasa de respuesta',
-      value: loadingDashboard ? '…' : `${dashboard?.responseRate ?? '—'}%`,
-      isPositive: true,
-    },
-    {
-      icon: <CheckSquare size={20} className="text-blue-600" />,
-      label: 'Tareas completadas',
-      value: loadingDashboard ? '…' : `${dashboard?.completedTasks ?? '—'}`,
-      isPositive: true,
-    },
-    {
-      icon: <Star size={20} className="text-yellow-400" />,
-      label: 'Mejor vendedor',
-      subtitle: loadingDashboard ? '…' : (dashboard?.bestSalesperson ?? '—'),
-    },
-  ];
 
   // Adaptar period data al formato del gráfico
   const chartData = periodData.map((p) => ({
@@ -97,7 +52,31 @@ export const MetricsPage = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {kpiData.map((kpi, i) => <KpiCard key={i} {...kpi} />)}
+         <KpiCard
+          title="Tasa de conversión"
+          metric={globalMetrics?.totalConversations ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="primary"
+          icon={<Users size={28} />}
+        />
+        <KpiCard
+          title="Tasa de respuesta"
+          metric={globalMetrics?.responseRate ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="secondary"
+          icon={<MessageSquare size={28} />}
+        />
+        <KpiCard
+          title="Tareas completadas"
+          metric={globalMetrics?.completedTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="secondary"
+          icon={<CheckSquare size={28} />}
+        />
+        <KpiCard
+          title="Mejor vendedor"
+          metric={globalMetrics?.topSalesperson ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="secondary"
+          icon={<Star size={28} />}
+        />
+
       </div>
 
       {/* Gráficos */}

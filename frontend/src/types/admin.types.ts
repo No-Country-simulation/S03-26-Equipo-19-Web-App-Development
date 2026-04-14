@@ -35,15 +35,7 @@ export interface TagRequest {
 }
 
 // ---- METRICS ----
-export interface DashboardMetrics {
-  conversionRate: number;
-  responseRate: number;
-  completedTasks: number;
-  totalContacts: number;
-  totalMessages: number;
-  pendingTasks: number;
-  bestSalesperson?: string;
-}
+
 
 export interface PeriodMetrics {
   date: string;
@@ -61,7 +53,13 @@ export interface AgentMetrics {
 
 // ---- EXPORT ----
 export type ExportFormat = "CSV" | "PDF";
-export type ExportEntity = "contacts" | "users" | "tasks" | "funnel_stages" | "salespersons" | "conversations";
+export type ExportEntity =
+  | "CONTACTS"
+  | "USERS"
+  | "TASKS"
+  | "FUNNEL_STAGES"
+  | "SALESPERSONS"
+  | "CONVERSATIONS";
 
 export interface ExportRequest {
   format: ExportFormat;
@@ -69,11 +67,11 @@ export interface ExportRequest {
   filters?: Record<string, unknown>;
 }
 
-// ---- SAVED VIEWS ----
+/* // ---- SAVED VIEWS ----
 export interface SavedViewResponse {
   id: number;
   name: string;
-  entity: "contacts" | "tasks";
+  entity: "CONTACTS" | "TASKS";
   isDefault?: boolean;
   isGlobal?: boolean;
   filters: Record<string, unknown>;
@@ -82,12 +80,33 @@ export interface SavedViewResponse {
 
 export interface SavedViewRequest {
   name: string;
-  entity: "contacts" | "tasks";
+  entity: "CONTACTS" | "TASKS";
+  isDefault?: boolean;
+  global?: boolean;
+  filters: Record<string, unknown>;
+}
+ */
+export interface SavedViewResponse {
+  id: number;
+  name: string;
+  entity: "CONTACTS" | "TASKS";
   isDefault?: boolean;
   isGlobal?: boolean;
   filters: Record<string, unknown>;
+  sortBy?: string;
+  sortOrder?: "ASC" | "DESC";
+  creator: string;
 }
 
+export interface SavedViewRequest {
+  name: string;
+  entity: "CONTACTS" | "TASKS";
+  isDefault?: boolean;
+  global?: boolean;
+  filters: Record<string, unknown>;
+  sortBy?: string;
+  sortOrder?: "ASC" | "DESC";
+}
 // ---- FUNNEL ----
 export interface FunnelStageResponse {
   id: number;

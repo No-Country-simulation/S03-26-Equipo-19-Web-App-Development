@@ -11,29 +11,12 @@ export type FunnelStage =
 export type Channel = "WHATSAPP" | "EMAIL";
 
 export interface Metrics {
-  funnel: {
-    byStatus: {
-      NEW_LEAD: number;
-      CONTACTED: number;
-    };
-    totalActive: number;
+  totalContacts: number;
+  totalUnreadMessages: number;
+  unreadByChannel: {
+    whatsapp: number;
+    email: number;
   };
-  messages: {
-    sent: number;
-    received: number;
-    responseRate: number;
-    byChannel: {
-      WHATSAPP: number;
-      EMAIL: number;
-    };
-  };
-  tasks: {
-    completed: number;
-    overdue: number;
-    pending: number;
-  };
-  period: string;
-  salespersonEmail: string;
 }
 
 export interface ContactResType {
