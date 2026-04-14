@@ -13,13 +13,17 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     properties:
       hibernate:
         jdbc:
           time_zone: America/Argentina/Buenos_Aires
+
+  # Configuración de caché
+  cache:
+    type: simple
 
 app:
   jwt:
