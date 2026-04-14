@@ -12,9 +12,9 @@ import java.time.LocalDateTime;
 public class TaskDTOs {
 
     // =========================
-    // CREATE / UPDATE
+    // CREATE
     // =========================
-    public record TaskRequest(
+    public record TaskCreateRequest(
             @NotBlank(message = "El título es obligatorio")
             @Size(max = 150, message = "El título no puede superar los 150 caracteres")
             String title,
@@ -30,6 +30,23 @@ public class TaskDTOs {
             @NotNull(message = "El contacto es obligatorio")
             Long contactId
     ) {}
+
+
+    // =========================
+    // UPDATE
+    // =========================
+    public record TaskUpdateRequest(
+
+                @Size(max = 150)
+                String title,
+
+                @Size(max = 1000)
+                String description,
+
+                TaskType type,
+
+                LocalDateTime dueDate
+        ) {}
 
     // =========================
     // RESPONSE

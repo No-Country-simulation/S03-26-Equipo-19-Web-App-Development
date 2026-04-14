@@ -154,10 +154,12 @@ public class TaskService {
 
         validateContactAccess(contact, currentUser);
 
+        TaskType finalType = (type != null) ? type : TaskType.OTHER;
+
         Task task = Task.builder()
                 .title(title.trim())
                 .description(description)
-                .type(type != null ? type : TaskType.OTHER)
+                .type(finalType)
                 .status(TaskStatus.PENDING)
                 .dueDate(dueDate)
                 .contact(contact)

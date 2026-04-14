@@ -22,7 +22,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -39,9 +38,23 @@ public class TaskController {
     // =========================
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Crear tarea")
+    @Operation(
+    summary = "Crear tarea",
+        description = """
+                Crea una nueva tarea asociada a un contacto.
+
+                **Reglas:**
+                - `title` obligatorio
+                - `dueDate` obligatorio
+                - `type` opcional (default: OTHER)
+                - La tarea se asigna automáticamente al dueño del contacto
+
+                **Permisos:**
+                - Solo usuarios autenticados
+                """
+        )
     public ResponseEntity<TaskDTOs.TaskResponse> create(
-            @RequestBody @Valid TaskDTOs.TaskRequest request,
+            @RequestBody @Valid TaskDTOs.TaskCreateRequest request,
             @AuthenticationPrincipal User currentUser
     ) {
 
@@ -63,7 +76,36 @@ public class TaskController {
     // =========================
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Listar tareas con filtros y ordenamiento")
+    @Operation(
+        summary = "Listar tareas con filtros y ordenamiento",
+        description = """
+                Retorna la lista de tareas según filtros opcionales.
+
+                **Permisos:**
+                - **ADMIN**: Puede ver todas las tareas
+                - **USER**: Solo ve sus propias tareas (assignedTo automático)
+
+                **Filtros opcionales:**
+                - `status`: PENDING, COMPLETED, OVERDUE
+                - `type`: CALL, EMAIL, MEETING, OTHER
+                - `assignedTo`: ID del usuario (solo ADMIN)
+                - `dueDateFrom`: fecha desde (yyyy-MM-dd)
+                - `dueDateTo`: fecha hasta (yyyy-MM-dd)
+
+                **Reglas:**
+                - `dueDateFrom` ≤ `dueDateTo`
+                - Fechas en formato ISO: yyyy-MM-dd
+
+                **Orden:**
+                - `sortBy`: dueDate, status, createdAt (default: dueDate)
+                - `sortOrder`: ASC o DESC (default: ASC)
+
+                **Ejemplos:**
+                - `/api/v1/tasks?status=PENDING`
+                - `/api/v1/tasks?type=CALL&sortBy=createdAt&sortOrder=DESC`
+                - `/api/v1/tasks?dueDateFrom=2026-04-01&dueDateTo=2026-04-10`
+        """
+        )
     public ResponseEntity<List<TaskDTOs.TaskResponse>> getTasks(
             @RequestParam(required = false) TaskStatus status,
             @RequestParam(required = false) TaskType type,
@@ -117,10 +159,29 @@ public class TaskController {
     // =========================
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Actualizar tarea")
+    @Operation(
+        summary = "Actualizar tarea",
+        description = """
+                Actualiza parcialmente una tarea existente.
+
+                **Reglas:**
+                - Solo se actualizan los campos enviados
+                - Campos omitidos no se modifican
+
+                **Campos actualizables:**
+                - title
+                - description
+                - type
+                - dueDate
+
+                **Permisos:**
+                - ADMIN: puede actualizar cualquier tarea
+                - USER: solo sus tareas
+                """
+        )
     public ResponseEntity<TaskDTOs.TaskResponse> update(
             @PathVariable Long id,
-            @RequestBody @Valid TaskDTOs.TaskRequest request,
+            @RequestBody @Valid TaskDTOs.TaskUpdateRequest request,
             @AuthenticationPrincipal User currentUser
     ) {
 
@@ -141,7 +202,10 @@ public class TaskController {
     // =========================
     @PatchMapping("/{id}/complete")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Marcar tarea como completada")
+    @Operation(
+        summary = "Marcar tarea como completada",
+        description = "Cambia el estado de la tarea a COMPLETED. No permite completar una tarea ya completada."
+        )
     public ResponseEntity<TaskDTOs.TaskResponse> complete(
             @PathVariable Long id,
             @AuthenticationPrincipal User currentUser
@@ -157,7 +221,10 @@ public class TaskController {
     // =========================
     @PatchMapping("/{id}/reopen")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Reabrir tarea")
+    @Operation(
+        summary = "Reabrir tarea",
+        description = "Solo permite reabrir tareas que estén en estado COMPLETED."
+        )
     public ResponseEntity<TaskDTOs.TaskResponse> reopen(
             @PathVariable Long id,
             @AuthenticationPrincipal User currentUser

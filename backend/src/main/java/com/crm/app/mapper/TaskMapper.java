@@ -10,6 +10,9 @@ import java.util.List;
 public class TaskMapper {
 
     public TaskDTOs.TaskResponse toResponse(Task task) {
+        Long contactId = task.getContact() != null ? task.getContact().getId() : null;
+        Long assignedToId = task.getAssignedTo() != null ? task.getAssignedTo().getId() : null;
+
         return new TaskDTOs.TaskResponse(
                 task.getId(),
                 task.getTitle(),
@@ -18,8 +21,8 @@ public class TaskMapper {
                 task.getStatus(),
                 task.getDueDate(),
                 task.getCompletedAt(),
-                task.getContact().getId(),
-                task.getAssignedTo().getId(),
+                contactId,
+                assignedToId,
                 task.getCreatedAt()
         );
     }
