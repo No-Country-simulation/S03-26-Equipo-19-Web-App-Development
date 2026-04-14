@@ -8,7 +8,6 @@ import {
   UserRoundCog,
  
   ChartNoAxesCombined,
-  Funnel,
   Tag,
   Download,
   LogOut,
@@ -33,7 +32,6 @@ const sidebarItemsAdmin = [
   { icon: ListTodo, path: `/dashboard/admin/${ROUTES.TASKS}` },
   { icon: Bookmark, path: `/dashboard/admin/${ROUTES.SAVED_VIEWS}` },
   { icon: ChartNoAxesCombined, path: `/dashboard/admin/${ROUTES.METRICS}` },
-  { icon: Funnel, path: `/dashboard/admin/${ROUTES.FUNNEL}` },
   { icon: UserRoundCog, path: `/dashboard/admin/${ROUTES.SALESPERSONS}` },
   { icon: Tag, path: `/dashboard/admin/${ROUTES.TAGS}` },
   { icon: FileText, path: `/dashboard/admin/${ROUTES.TEMPLATES}` },
@@ -46,13 +44,10 @@ export const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [, , section] = location.pathname.split("/");
+  //const [, , section] = location.pathname.split("/");
 
   const isActive = (path: string) => {
-    if (path === ROUTES.DASHBOARD) {
-      return location.pathname === "/dashboard";
-    }
-    return path.includes(section);
+    return location.pathname === path;
   };
 
   const sidebarItems = user?.role === "ADMIN" ? sidebarItemsAdmin : sidebarItemsSales;
