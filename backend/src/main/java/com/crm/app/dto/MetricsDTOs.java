@@ -110,4 +110,26 @@ public class MetricsDTOs {
             String filename,
             String contentType
     ) {}
+
+    // En MetricsDTOs.java - Agrega estos records
+
+    @Schema(description = "Respuesta solo de métricas de contactos")
+    public record ContactsMetricsResponse(
+            FunnelMetrics funnel
+    ) {}
+
+    @Schema(description = "Respuesta solo de métricas de mensajes")
+    public record MessagesMetricsResponse(
+            MessageMetrics messages
+    ) {}
+
+    @Schema(description = "Respuesta solo de métricas de tareas")
+    public record TasksMetricsResponse(
+            TaskMetrics tasks
+    ) {}
+
+    @Schema(description = "Respuesta solo de métricas de usuarios")
+    public record UsersMetricsResponse(
+            UserMetrics users
+    ) {}
 }
