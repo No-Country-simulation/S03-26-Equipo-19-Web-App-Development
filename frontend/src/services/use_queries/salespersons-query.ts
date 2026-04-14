@@ -9,11 +9,13 @@ import {
 import type { CreateSalespersonRequest, UpdateSalespersonRequest } from "../../types/admin.types";
 
 // --- QUERIES ---
-export const useGetSalespersons = () =>
-  useQuery({
+export const useGetSalespersons = (enabled: boolean) => {
+  return useQuery({
     queryKey: ["salespersons"],
     queryFn: getSalespersons,
+    enabled,
   });
+};
 
 export const useGetSalespersonById = (id: number) =>
   useQuery({

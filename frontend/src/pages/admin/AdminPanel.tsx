@@ -1,25 +1,12 @@
 import { Download, Plus, Users, Mail, Calendar, Settings, UserPlus, Tag, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { useGetAdminDashboard } from '../../services/use_queries/metrics-query';
 import { useGetConversations } from '../../services/use_queries/conversations-query';
 import { useAuthStore } from '../../store/useAuthStore';
 import type { ConversationResType } from '../../types/conversation.types';
+import { useGetPanelAdminMetrics } from '../../services/use_queries/metrics-query';
+import { KpiCard } from '../../components/ui/KpiCard';
 
-// --- SUBCOMPONENTES ---
-const KpiCard = ({ icon, label, value, trend, isPositive }: {
-  icon: React.ReactNode; label: string; value: string; trend: string; isPositive: boolean;
-}) => (
-  <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-start gap-4">
-    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">{icon}</div>
-    <div className="flex-1 min-w-0">
-      <p className="text-slate-500 text-xs font-medium mb-1">{label}</p>
-      <p className="text-2xl font-bold text-[#13316b]">{value}</p>
-      {trend && (
-        <span className={`text-xs font-semibold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>{trend}</span>
-      )}
-    </div>
-  </div>
-);
+
 
 const InboxRow = ({ conv }: { conv: ConversationResType }) => {
   const contactName = conv.contact?.name ?? '?';
@@ -59,17 +46,10 @@ const recentActivity = [
 // --- PÁGINA PRINCIPAL ---
 export const AdminPanel = () => {
   const user = useAuthStore(s => s.user);
-  const { data: dashboard, isLoading } = useGetAdminDashboard();
+  const { data: metricsPanel } = useGetPanelAdminMetrics();
   const { data: conversations = [] } = useGetConversations();
 
-  const kpiData = [
-    { icon: <Users size={22} className="text-blue-600" />, label: 'Total de contactos', value: isLoading ? '…' : String(dashboard?.totalContacts ?? '—'), trend: '', isPositive: true },
-    { icon: <Mail size={22} className="text-blue-600" />, label: 'Total de mensajes', value: isLoading ? '…' : String(dashboard?.totalMessages ?? '—'), trend: '', isPositive: true },
-    { icon: <Calendar size={22} className="text-blue-600" />, label: 'Tareas pendientes', value: isLoading ? '…' : String(dashboard?.pendingTasks ?? '—'), trend: '', isPositive: false },
-    { icon: <Settings size={22} className="text-blue-600" />, label: 'Tasa de respuesta', value: isLoading ? '…' : `${dashboard?.responseRate ?? '—'}%`, trend: '', isPositive: true },
-  ];
-
-  const inboxPreview = (conversations as ConversationResType[]).slice(0, 5);
+   const inboxPreview = (conversations as ConversationResType[]).slice(0, 5);
 
   return (
     <div>
@@ -91,7 +71,30 @@ export const AdminPanel = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {kpiData.map((kpi, i) => <KpiCard key={i} {...kpi} />)}
+        <KpiCard
+          title="Total de contactos"
+          metric={metricsPanel?.totalContacts ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="primary"
+          icon={<Users size={28} />}
+        />
+        <KpiCard
+          title="Total de contactos"
+          metric={metricsPanel?.totalMessages ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="secondary"
+          icon={<Mail size={28} />}
+        />
+        <KpiCard
+          title="Tareas pendientes"
+          metric={metricsPanel?.uncomingTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="secondary"
+          icon={<Calendar size={28} />}
+        />
+        <KpiCard
+          title="Tasa de respuesta"
+          metric={metricsPanel?.uncomingTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="secondary"
+          icon={<Settings size={28} />}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

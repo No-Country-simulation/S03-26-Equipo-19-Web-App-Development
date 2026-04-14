@@ -1,18 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAdminDashboard, getContactsDashboard } from "../use_cases/dashboard-service";
-import { getMetricsByPeriod } from "../use_cases/metrics-service";
+import {
+  getContactsMetrics,
+  getGlobalMetrics,
+  getMetricsByPeriod,
+  getPanelMetrics,
+  getTasksMetrics,
+} from "../use_cases/metrics-service";
+import { useAuthStore } from "../../store/useAuthStore";
+import type { FunnelResType, GlobalMetricsResType, PanelResType, TasksResType } from "../../types/metric.types";
 
-export const useGetAdminDashboard = () =>
-  useQuery({
-    queryKey: ["admin-dashboard"],
-    queryFn: getAdminDashboard,
-  });
-
-export const useGetContactsDashboard = () =>
-  useQuery({
-    queryKey: ["contacts-dashboard"],
-    queryFn: getContactsDashboard,
-  });
 
 export const useGetMetricsByPeriod = (from: string, to: string) =>
   useQuery({
@@ -20,3 +16,45 @@ export const useGetMetricsByPeriod = (from: string, to: string) =>
     queryFn: () => getMetricsByPeriod(from, to),
     enabled: !!from && !!to,
   });
+
+export const useGetTasksMetrics = () => {
+  const token = useAuthStore((state) => state.token);
+
+  return useQuery<TasksResType>({
+    queryKey: ["metrics-tasks"],
+    queryFn: () => getTasksMetrics(token!),
+    enabled: !!token,
+  });
+};
+
+
+export const useGetContactsMetrics = () => {
+  const token = useAuthStore((state) => state.token);
+
+  return useQuery<FunnelResType>({
+    queryKey: ["metrics-contacts"],
+    queryFn: () => getContactsMetrics(token!),
+    enabled: !!token,
+  });
+};
+
+
+export const useGetPanelAdminMetrics = () => {
+  const token = useAuthStore((state) => state.token);
+
+  return useQuery<PanelResType>({
+    queryKey: ["metrics-panelAdmin"],
+    queryFn: () => getPanelMetrics(token!),
+    enabled: !!token,
+  });
+};
+
+export const useGetGLobalMetrics = () => {
+  const token = useAuthStore((state) => state.token);
+
+  return useQuery<GlobalMetricsResType>({
+    queryKey: ["metrics-global"],
+    queryFn: () => getGlobalMetrics(token!),
+    enabled: !!token,
+  });
+};

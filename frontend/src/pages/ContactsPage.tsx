@@ -5,17 +5,33 @@ import { KpiCard } from '../components/ui/KpiCard';
 import { FileUser, Speech, UsersRound, UserStar } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { ContactForm } from '../components/contacts/ContactForm';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ContactReqType } from '../types/contact.types';
 import { ContactsMutationsService } from '../services/use_mutations/contacts-mutation';
+import { useGetSavedViews } from '../services/use_queries/saved-views-query';
+import { useGetContacts } from '../services/use_queries/contacts-query';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "../components/ui/select";
+import { useGetContactsMetrics } from '../services/use_queries/metrics-query';
+
 
 
 
 export const ContactsPage = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedViewName, setSelectedViewName] = useState<string | null>(null);
 
   const { mutationPostContact } = ContactsMutationsService();
+
+  const { data: views = [], isLoading } = useGetSavedViews();
+  const { data: contacts = [] } = useGetContacts();
+  const { data: metrics } = useGetContactsMetrics()
 
   const addContact = (data: ContactReqType) => {
     mutationPostContact.mutate(data, {
@@ -25,6 +41,39 @@ export const ContactsPage = () => {
     });
   };
 
+  const contactViews = views.filter(view => view.entity === "CONTACTS");
+
+  const selectedView = contactViews.find(
+    (view) => view.name === selectedViewName
+  );
+
+  const filteredContacts = useMemo(() => {
+    if (!selectedView) return contacts;
+
+    const filters = selectedView.filters as {
+      funnelStatus?: string;
+      tagIds?: number[];
+    };
+
+    return contacts.filter((contact) => {
+      if (
+        filters.funnelStatus &&
+        contact.funnelStatus !== filters.funnelStatus
+      ) {
+        return false;
+      }
+
+      if (filters.tagIds) {
+        return filters.tagIds.some(tagId =>
+          contact.tags?.some(t => t.id === tagId)
+        );
+      }
+
+      return true;
+    });
+  }, [contacts, selectedView]);
+
+  const contactsToShow = selectedView ? filteredContacts : contacts;
 
   return (
     <>
@@ -35,22 +84,61 @@ export const ContactsPage = () => {
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard title="Total de contactos" value="15" trend="8.5%" color="primary" isPositive={true} icon={<UsersRound size={28} />} />
-        <KpiCard title="Contactos activos" value="09" trend="2.1%" color="secondary" isPositive={false} icon={<Speech size={28} />} />
-        <KpiCard title="Nuevos contactos" value="125" trend="4.3%" color="success" isPositive={true} icon={<UserStar size={28} />} />
-        <KpiCard title="Contactos perdidos" value="23" trend="4.3%" color="error" isPositive={true} icon={<FileUser size={28} />} />
+        <KpiCard
+          title="Total de contactos"
+          metric={metrics?.funnel.total ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="primary"
+          icon={<UsersRound size={28} />}
+        />
+        <KpiCard
+          title="Contactos activos"
+          metric={metrics?.funnel.totalActive ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="secondary"
+          icon={<Speech size={28} />}
+        />
+        <KpiCard
+          title="Nuevos contactos"
+          metric={metrics?.funnel.byStatus.NEW_LEAD ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="success"
+          icon={<UserStar size={28} />}
+        />
+        <KpiCard
+          title="Contactos perdidos"
+          metric={metrics?.funnel.byStatus.CLOSED_LOST ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          color="error"
+          icon={<FileUser size={28} />}
+          impact="negative"
+        />
       </div>
 
       <div className="flex justify-center md:justify-end mb-6">
-        <select className="w-1/2 md:w-1/4 lg:w-1/6 p-2 border border-neutro-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-accent">
-          <option value="">Vistas guardadas</option>
-          <option value="vista1">Vista 1</option>
-          <option value="vista2">Vista 2</option>
-          <option value="vista3">Vista 3</option>
-        </select>
+        <Select
+          value={selectedViewName ?? ""}
+          onValueChange={(value) =>
+            setSelectedViewName(value || null)
+          }
+        >
+          <SelectTrigger className="w-1/2 md:w-1/4 lg:w-1/6">
+            <SelectValue placeholder="Vistas guardadas" />
+          </SelectTrigger>
+
+          <SelectContent className={"bg-white"}>
+            <SelectItem value="">Sin selección</SelectItem>
+
+            {contactViews.map((view) => (
+              <SelectItem key={view.id} value={view.name}>
+                {view.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className=""><ContactsTable /></div>
+      <ContactsTable
+        contacts={contactsToShow}
+        isLoading={isLoading}
+      />
+
 
       {/* Modal para crear nuevo contacto */}
       <Modal
