@@ -217,25 +217,6 @@ public class TaskController {
     }
 
     // =========================
-    // REOPEN
-    // =========================
-    @PatchMapping("/{id}/reopen")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(
-        summary = "Reabrir tarea",
-        description = "Solo permite reabrir tareas que estén en estado COMPLETED."
-        )
-    public ResponseEntity<TaskDTOs.TaskResponse> reopen(
-            @PathVariable Long id,
-            @AuthenticationPrincipal User currentUser
-    ) {
-
-        Task task = taskService.reopen(id, currentUser);
-
-        return ResponseEntity.ok(taskMapper.toResponse(task));
-    }
-
-    // =========================
     // REASSIGN (ADMIN)
     // =========================
     @PatchMapping("/{id}/assign")
