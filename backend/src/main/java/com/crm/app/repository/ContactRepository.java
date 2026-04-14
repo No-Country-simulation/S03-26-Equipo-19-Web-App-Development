@@ -108,4 +108,20 @@ public interface ContactRepository extends JpaRepository<Contact, Long>,
                                          @Param("start") LocalDateTime start,
                                          @Param("end") LocalDateTime end);
 
+
+    // Para un vendedor específico (con filtro de fecha)
+    @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c " +
+            "WHERE c.owner = :owner " +
+            "AND c.createdAt <= :endDate " +
+            "GROUP BY c.funnelStatus")
+    List<Object[]> countByFunnelStatusAndOwnerWithDate(@Param("owner") User owner,
+                                                       @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT c.funnelStatus, COUNT(c) FROM Contact c " +
+            "WHERE (:owner IS NULL OR c.owner = :owner) " +
+            "AND c.createdAt <= :endDate " +
+            "GROUP BY c.funnelStatus")
+    List<Object[]> countByFunnelStatusWithDate(@Param("owner") User owner,
+                                               @Param("endDate") LocalDateTime endDate);
+    
 }

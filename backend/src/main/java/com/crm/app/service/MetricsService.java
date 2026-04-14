@@ -56,10 +56,21 @@ public class MetricsService {
         String trend = "stable";
 
         if (previousValue > 0) {
+            // Hay datos en ambos períodos - cálculo normal
             changePercent = ((currentValue - previousValue) * 100.0) / previousValue;
             changePercent = Math.round(changePercent * 10) / 10.0;
-        } else if (currentValue > 0) {
-            changePercent = 100;
+        } else if (currentValue > 0 && previousValue == 0) {
+            // No había datos antes, pero ahora sí
+            changePercent = 100;  // Crecimiento del 100%
+            trend = "up";
+        } else if (currentValue == 0 && previousValue > 0) {
+            // Había datos antes, pero ahora no
+            changePercent = -100;  // Caída del 100%
+            trend = "down";
+        } else {
+            // Ambos son 0
+            changePercent = 0;
+            trend = "stable";
         }
 
         if (changePercent > 0) trend = "up";
@@ -78,11 +89,11 @@ public class MetricsService {
             changePercent = Math.round(changePercent * 10) / 10.0;
         } else if (currentValue > 0) {
             changePercent = 100;
+            trend = "up";
         }
 
         if (changePercent > 0) trend = "up";
         else if (changePercent < 0) trend = "down";
-        else trend = "stable";
 
         return new MetricsDTOs.MetricValueDouble(currentValue, changePercent, trend);
     }
@@ -103,7 +114,7 @@ public class MetricsService {
     @PreAuthorize("isAuthenticated()")
     public MetricsDTOs.DashboardMetrics getDashboardMetrics(User currentUser, String salespersonEmail,
                                                             String startDate, String endDate) {
-        log.info("📊 Calculando métricas (CACHE MISS) para usuario: {} (rol={})", currentUser.getEmail(), currentUser.getRole());
+        log.info("📊 Calculando métricas para usuario: {} (rol={})", currentUser.getEmail(), currentUser.getRole());
 
         LocalDateTime currentStart = parseStartDate(startDate);
         LocalDateTime currentEnd = parseEndDate(endDate);
@@ -114,20 +125,17 @@ public class MetricsService {
 
         User owner = resolveOwner(currentUser, salespersonEmail);
 
-        // 1. Métricas de contactos por funnel
-        MetricsDTOs.FunnelMetrics funnelMetrics = getFunnelMetrics(owner, currentStart, currentEnd, previousStart, previousEnd);
+        // 1. Métricas de contactos por funnel (con filtro de fecha)
+        MetricsDTOs.FunnelMetrics funnelMetrics = getFunnelMetrics(owner, currentEnd, previousEnd);
 
-        // 2. Métricas de contactos específicos
-        MetricsDTOs.ContactStatusMetrics contactStatusMetrics = getContactStatusMetrics(owner, currentStart, currentEnd, previousStart, previousEnd);
+        // 2. Métricas de tareas (con filtro de fecha)
+        MetricsDTOs.TaskMetrics taskMetrics = getTaskMetrics(owner, currentEnd, previousEnd);
 
-        // 3. Métricas de mensajes
+        // 3. Métricas de usuarios (con filtro de fecha)
+        MetricsDTOs.UserMetrics userMetrics = getUserMetrics(currentUser, currentEnd, previousEnd, currentStart, previousStart);
+
+        // 4. Métricas de mensajes (ya funcionan correctamente)
         MetricsDTOs.MessageMetrics messageMetrics = getMessageMetrics(owner, currentStart, currentEnd, previousStart, previousEnd);
-
-        // 4. Métricas de tareas
-        MetricsDTOs.TaskMetrics taskMetrics = getTaskMetrics(owner, currentStart, currentEnd, previousStart, previousEnd);
-
-        // 5. Métricas de usuarios
-        MetricsDTOs.UserMetrics userMetrics = getUserMetrics(currentUser, currentStart, currentEnd, previousStart, previousEnd);
 
         String salespersonInfo = owner != null ? owner.getEmail() : null;
 
@@ -135,7 +143,7 @@ public class MetricsService {
 
         return new MetricsDTOs.DashboardMetrics(
                 funnelMetrics,
-                contactStatusMetrics,
+                null, // contactStatus removido para evitar duplicación
                 messageMetrics,
                 taskMetrics,
                 userMetrics,
@@ -144,17 +152,9 @@ public class MetricsService {
         );
     }
 
-    // ==================== LIMPIAR CACHÉ (opcional) ====================
-
-    @CacheEvict(value = "dashboardMetrics", allEntries = true)
-    public void clearCache() {
-        log.info("🗑️ Caché de métricas limpiado");
-    }
-
     // ==================== MÉTRICAS DE CONTACTOS POR FUNNEL ====================
 
-    private MetricsDTOs.FunnelMetrics getFunnelMetrics(User owner, LocalDateTime currentStart, LocalDateTime currentEnd,
-                                                       LocalDateTime previousStart, LocalDateTime previousEnd) {
+    private MetricsDTOs.FunnelMetrics getFunnelMetrics(User owner, LocalDateTime currentEnd, LocalDateTime previousEnd) {
         Map<String, Long> currentStats = getFunnelStatsForPeriod(owner, currentEnd);
         Map<String, Long> previousStats = getFunnelStatsForPeriod(owner, previousEnd);
 
@@ -182,17 +182,11 @@ public class MetricsService {
     private Map<String, Long> getFunnelStatsForPeriod(User owner, LocalDateTime endDate) {
         Map<String, Long> stats = new HashMap<>();
 
-        // Inicializar todos los estados con 0
         for (FunnelStatus status : FunnelStatus.values()) {
             stats.put(status.name(), 0L);
         }
 
-        List<Object[]> results;
-        if (owner != null) {
-            results = contactRepository.countByFunnelStatusAndOwner(owner);
-        } else {
-            results = contactRepository.countByFunnelStatus();
-        }
+        List<Object[]> results = contactRepository.countByFunnelStatusWithDate(owner, endDate);
 
         for (Object[] stat : results) {
             String status = ((FunnelStatus) stat[0]).name();
@@ -200,70 +194,88 @@ public class MetricsService {
             stats.put(status, count);
         }
 
+        log.debug("📊 Contact stats until {}: {}", endDate, stats);
         return stats;
     }
 
-    // ==================== MÉTRICAS DE CONTACTOS ESPECÍFICOS ====================
+    // ==================== MÉTRICAS DE TAREAS ====================
 
-    private MetricsDTOs.ContactStatusMetrics getContactStatusMetrics(User owner, LocalDateTime currentStart, LocalDateTime currentEnd,
-                                                                     LocalDateTime previousStart, LocalDateTime previousEnd) {
-        Map<String, Long> currentStats = getContactStatusStats(owner, currentEnd);
-        Map<String, Long> previousStats = getContactStatusStats(owner, previousEnd);
+    private MetricsDTOs.TaskMetrics getTaskMetrics(User owner, LocalDateTime currentEnd, LocalDateTime previousEnd) {
+        long currentCompleted = getTaskCountByStatusWithDate(owner, TaskStatus.COMPLETED, currentEnd);
+        long previousCompleted = getTaskCountByStatusWithDate(owner, TaskStatus.COMPLETED, previousEnd);
 
-        long currentInNegotiation = currentStats.getOrDefault("IN_NEGOTIATION", 0L);
-        long previousInNegotiation = previousStats.getOrDefault("IN_NEGOTIATION", 0L);
+        long currentOverdue = getTaskOverdueCountWithDate(owner, currentEnd);
+        long previousOverdue = getTaskOverdueCountWithDate(owner, previousEnd);
 
-        long currentProposalSent = currentStats.getOrDefault("PROPOSAL_SENT", 0L);
-        long previousProposalSent = previousStats.getOrDefault("PROPOSAL_SENT", 0L);
+        long currentPending = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, currentEnd);
+        long previousPending = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, previousEnd);
 
-        long currentClosedWon = currentStats.getOrDefault("CLOSED_WON", 0L);
-        long previousClosedWon = previousStats.getOrDefault("CLOSED_WON", 0L);
+        long currentDueToday = getTaskDueTodayCount(owner);
+        long previousDueToday = 0; // No hay período anterior para "hoy"
 
-        long currentClosedLost = currentStats.getOrDefault("CLOSED_LOST", 0L);
-        long previousClosedLost = previousStats.getOrDefault("CLOSED_LOST", 0L);
-
-        long currentTotalClosed = currentClosedWon + currentClosedLost;
-        long previousTotalClosed = previousClosedWon + previousClosedLost;
-
-        double currentConversionRate = currentTotalClosed > 0 ? (currentClosedWon * 100.0 / currentTotalClosed) : 0;
-        double previousConversionRate = previousTotalClosed > 0 ? (previousClosedWon * 100.0 / previousTotalClosed) : 0;
-
-        return new MetricsDTOs.ContactStatusMetrics(
-                calculateMetric(currentInNegotiation, previousInNegotiation),
-                calculateMetric(currentProposalSent, previousProposalSent),
-                calculateMetric(currentClosedWon, previousClosedWon),
-                calculateMetric(currentClosedLost, previousClosedLost),
-                calculateMetricDouble(currentConversionRate, previousConversionRate)
+        return new MetricsDTOs.TaskMetrics(
+                calculateMetric(currentCompleted, previousCompleted),
+                calculateMetric(currentOverdue, previousOverdue),
+                calculateMetric(currentPending, previousPending),
+                calculateMetric(currentDueToday, previousDueToday)
         );
     }
 
-    private Map<String, Long> getContactStatusStats(User owner, LocalDateTime endDate) {
-        Map<String, Long> stats = new HashMap<>();
-        stats.put("IN_NEGOTIATION", 0L);
-        stats.put("PROPOSAL_SENT", 0L);
-        stats.put("CLOSED_WON", 0L);
-        stats.put("CLOSED_LOST", 0L);
-
-        List<Object[]> results;
+    private long getTaskCountByStatusWithDate(User owner, TaskStatus status, LocalDateTime endDate) {
         if (owner != null) {
-            results = contactRepository.countByFunnelStatusAndOwner(owner);
-        } else {
-            results = contactRepository.countByFunnelStatus();
+            return taskRepository.countByAssignedToAndStatusWithDate(owner, status, endDate);
+        }
+        return taskRepository.countByStatusWithDate(status, endDate);
+    }
+
+    private long getTaskOverdueCountWithDate(User owner, LocalDateTime endDate) {
+        if (owner != null) {
+            return taskRepository.countOverdueByUserWithDate(owner, endDate);
+        }
+        return taskRepository.countOverdueWithDate(endDate);
+    }
+
+    private long getTaskDueTodayCount(User owner) {
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime todayEnd = LocalDate.now().atTime(23, 59, 59);
+
+        if (owner != null) {
+            return taskRepository.countByAssignedToAndDueDateBetween(owner, todayStart, todayEnd);
+        }
+        return taskRepository.countByDueDateBetween(todayStart, todayEnd);
+    }
+
+    // ==================== MÉTRICAS DE USUARIOS ====================
+
+    private MetricsDTOs.UserMetrics getUserMetrics(User currentUser, LocalDateTime currentEnd, LocalDateTime previousEnd,
+                                                   LocalDateTime currentStart, LocalDateTime previousStart) {
+        if (currentUser.getRole() != Role.ADMIN) {
+            return new MetricsDTOs.UserMetrics(
+                    calculateMetric(0, 0),
+                    calculateMetric(0, 0),
+                    calculateMetric(0, 0),
+                    calculateMetric(0, 0)
+            );
         }
 
-        for (Object[] stat : results) {
-            FunnelStatus status = (FunnelStatus) stat[0];
-            Long count = (Long) stat[1];
-            switch (status) {
-                case IN_NEGOTIATION -> stats.put("IN_NEGOTIATION", count);
-                case PROPOSAL_SENT -> stats.put("PROPOSAL_SENT", count);
-                case CLOSED_WON -> stats.put("CLOSED_WON", count);
-                case CLOSED_LOST -> stats.put("CLOSED_LOST", count);
-                default -> {}
-            }
-        }
+        long currentTotal = userRepository.countTotalWithDate(currentEnd);
+        long previousTotal = userRepository.countTotalWithDate(previousEnd);
 
-        return stats;
+        long currentActive = userRepository.countActiveWithDate(currentEnd);
+        long previousActive = userRepository.countActiveWithDate(previousEnd);
+
+        long currentInactive = currentTotal - currentActive;
+        long previousInactive = previousTotal - previousActive;
+
+        long currentNewUsers = userRepository.countByCreatedAtAfter(currentStart);
+        long previousNewUsers = userRepository.countByCreatedAtAfter(previousStart);
+
+        return new MetricsDTOs.UserMetrics(
+                calculateMetric(currentTotal, previousTotal),
+                calculateMetric(currentActive, previousActive),
+                calculateMetric(currentInactive, previousInactive),
+                calculateMetric(currentNewUsers, previousNewUsers)
+        );
     }
 
     // ==================== MÉTRICAS DE MENSAJES ====================
@@ -347,80 +359,6 @@ public class MetricsService {
         return result;
     }
 
-    // ==================== MÉTRICAS DE TAREAS ====================
-
-    private MetricsDTOs.TaskMetrics getTaskMetrics(User owner, LocalDateTime currentStart, LocalDateTime currentEnd,
-                                                   LocalDateTime previousStart, LocalDateTime previousEnd) {
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime todayEnd = LocalDate.now().atTime(23, 59, 59);
-
-        long currentCompleted = getTaskCountByStatus(owner, TaskStatus.COMPLETED, currentStart, currentEnd);
-        long previousCompleted = getTaskCountByStatus(owner, TaskStatus.COMPLETED, previousStart, previousEnd);
-
-        long currentOverdue = getTaskCountByStatus(owner, TaskStatus.OVERDUE, currentStart, currentEnd);
-        long previousOverdue = getTaskCountByStatus(owner, TaskStatus.OVERDUE, previousStart, previousEnd);
-
-        long currentPending = getTaskCountByStatus(owner, TaskStatus.PENDING, currentStart, currentEnd);
-        long previousPending = getTaskCountByStatus(owner, TaskStatus.PENDING, previousStart, previousEnd);
-
-        long currentDueToday = getTaskDueTodayCount(owner, todayStart, todayEnd);
-        long previousDueToday = getTaskDueTodayCount(owner, previousStart, previousEnd);
-
-        return new MetricsDTOs.TaskMetrics(
-                calculateMetric(currentCompleted, previousCompleted),
-                calculateMetric(currentOverdue, previousOverdue),
-                calculateMetric(currentPending, previousPending),
-                calculateMetric(currentDueToday, previousDueToday)
-        );
-    }
-
-    private long getTaskCountByStatus(User owner, TaskStatus status, LocalDateTime start, LocalDateTime end) {
-        if (owner != null) {
-            return taskRepository.countByAssignedToAndStatus(owner, status);
-        }
-        return taskRepository.countByStatus(status);
-    }
-
-    private long getTaskDueTodayCount(User owner, LocalDateTime start, LocalDateTime end) {
-        if (owner != null) {
-            return taskRepository.countByAssignedToAndDueDateBetween(owner, start, end);
-        }
-        return taskRepository.countByDueDateBetween(start, end);
-    }
-
-    // ==================== MÉTRICAS DE USUARIOS ====================
-
-    private MetricsDTOs.UserMetrics getUserMetrics(User currentUser, LocalDateTime currentStart, LocalDateTime currentEnd,
-                                                   LocalDateTime previousStart, LocalDateTime previousEnd) {
-        if (currentUser.getRole() != Role.ADMIN) {
-            return new MetricsDTOs.UserMetrics(
-                    calculateMetric(0, 0),
-                    calculateMetric(0, 0),
-                    calculateMetric(0, 0),
-                    calculateMetric(0, 0)
-            );
-        }
-
-        long currentTotal = userRepository.count();
-        long previousTotal = userRepository.count(); // Simplificado
-
-        long currentActive = userRepository.countByActiveTrue();
-        long previousActive = userRepository.countByActiveTrue(); // Simplificado
-
-        long currentInactive = currentTotal - currentActive;
-        long previousInactive = previousTotal - previousActive;
-
-        long currentNewUsers = userRepository.countByCreatedAtAfter(currentStart);
-        long previousNewUsers = userRepository.countByCreatedAtAfter(previousStart);
-
-        return new MetricsDTOs.UserMetrics(
-                calculateMetric(currentTotal, previousTotal),
-                calculateMetric(currentActive, previousActive),
-                calculateMetric(currentInactive, previousInactive),
-                calculateMetric(currentNewUsers, previousNewUsers)
-        );
-    }
-
     // ==================== MÉTODOS AUXILIARES ====================
 
     private User resolveOwner(User currentUser, String salespersonEmail) {
@@ -437,6 +375,11 @@ public class MetricsService {
             return owner;
         }
         return null;
+    }
+
+    @CacheEvict(value = "dashboardMetrics", allEntries = true)
+    public void clearCache() {
+        log.info("🗑️ Caché de métricas limpiado");
     }
 
     @PreAuthorize("isAuthenticated()")

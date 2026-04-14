@@ -80,4 +80,31 @@ public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificat
 
     long countByDueDateBetween(LocalDateTime start, LocalDateTime end);
 
+    @Query("SELECT COUNT(t) FROM Task t " +
+            "WHERE t.assignedTo = :user " +
+            "AND t.status = :status " +
+            "AND t.createdAt <= :endDate")
+    long countByAssignedToAndStatusWithDate(@Param("user") User user,
+                                            @Param("status") TaskStatus status,
+                                            @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COUNT(t) FROM Task t " +
+            "WHERE t.status = :status " +
+            "AND t.createdAt <= :endDate")
+    long countByStatusWithDate(@Param("status") TaskStatus status,
+                               @Param("endDate") LocalDateTime endDate);
+
+    // Contar tareas vencidas con filtro de fecha
+    @Query("SELECT COUNT(t) FROM Task t " +
+            "WHERE t.assignedTo = :user " +
+            "AND t.status = 'OVERDUE' " +
+            "AND t.dueDate <= :endDate")
+    long countOverdueByUserWithDate(@Param("user") User user,
+                                    @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT COUNT(t) FROM Task t " +
+            "WHERE t.status = 'OVERDUE' " +
+            "AND t.dueDate <= :endDate")
+    long countOverdueWithDate(@Param("endDate") LocalDateTime endDate);
+
 }
