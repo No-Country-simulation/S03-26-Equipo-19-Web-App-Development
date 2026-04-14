@@ -183,7 +183,7 @@ public class DataSeeder implements ApplicationRunner {
         templates.add(createTemplate(admin, "WhatsApp pago", Channel.WHATSAPP, april14));
 
         // Plantillas de hoy (4 plantillas)
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.of(2026, 4, 14, 10, 0);
         for (int i = 1; i <= 4; i++) {
             templates.add(createTemplate(admin, "Plantilla de hoy " + i,
                     i % 2 == 0 ? Channel.WHATSAPP : Channel.EMAIL, now));
@@ -551,7 +551,8 @@ public class DataSeeder implements ApplicationRunner {
             taskRepository.save(task);
             totalTasks++;
         }
-
+        
+        LocalDateTime base = LocalDateTime.of(2026, 4, 14, 10, 0);
         // Tareas para hoy (8 tareas)
         for (int i = 0; i < 8; i++) {
             Contact contact = contacts.get(random.nextInt(contacts.size()));
@@ -561,10 +562,10 @@ public class DataSeeder implements ApplicationRunner {
                     .description("Contactar urgentemente a " + contact.getName() + " para cerrar acuerdo")
                     .type(TaskType.CALL)
                     .status(TaskStatus.PENDING)
-                    .dueDate(LocalDateTime.now().plusHours(random.nextInt(12)))
+                    .dueDate(base.plusHours(random.nextInt(12)))
                     .contact(contact)
                     .assignedTo(assignedTo)
-                    .createdAt(LocalDateTime.now().minusDays(1))
+                    .createdAt(base.minusDays(1))
                     .build();
             taskRepository.save(task);
             totalTasks++;
