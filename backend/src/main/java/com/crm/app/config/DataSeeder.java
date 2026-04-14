@@ -96,8 +96,9 @@ public class DataSeeder implements ApplicationRunner {
                 new Seed("Emma Wilson", "emma@crm.com", "Sales005!", true, LocalDateTime.of(2026, 3, 10, 9, 45)),
                 new Seed("Frank Miller", "frank@crm.com", "Sales006!", false, LocalDateTime.of(2026, 2, 20, 8, 0)),
                 new Seed("Grace Lee", "grace@crm.com", "Sales007!", true, LocalDateTime.of(2026, 3, 25, 13, 30)),
-                new Seed("Ivy Adams", "ivy@crm.com", "Sales008!", true, LocalDateTime.of(2026, 4, 1, 10, 0)),
-                new Seed("Jack Turner", "jack@crm.com", "Sales009!", true, LocalDateTime.of(2026, 4, 5, 11, 30))
+                new Seed("Henry Clark", "henry@crm.com", "Sales008!", false, LocalDateTime.of(2026, 1, 5, 16, 0)),
+                new Seed("Ivy Adams", "ivy@crm.com", "Sales009!", true, LocalDateTime.of(2026, 4, 1, 10, 0)),
+                new Seed("Jack Turner", "jack@crm.com", "Sales010!", true, LocalDateTime.of(2026, 4, 5, 11, 30))
         );
 
         salespersons.forEach(s -> {
@@ -166,92 +167,100 @@ public class DataSeeder implements ApplicationRunner {
     private List<Contact> seedContactsWithDates(List<User> salespersons, List<Tag> tags) {
         List<Contact> contacts = new ArrayList<>();
 
-        // PERÍODO ANTERIOR (Marzo - para base de comparación)
-        LocalDateTime march1 = LocalDateTime.of(2026, 3, 1, 10, 0);
-        LocalDateTime march5 = LocalDateTime.of(2026, 3, 5, 10, 0);
-        LocalDateTime march10 = LocalDateTime.of(2026, 3, 10, 14, 0);
-        LocalDateTime march15 = LocalDateTime.of(2026, 3, 15, 10, 0);
-        LocalDateTime march18 = LocalDateTime.of(2026, 3, 18, 11, 0);
-        LocalDateTime march20 = LocalDateTime.of(2026, 3, 20, 9, 0);
-        LocalDateTime march22 = LocalDateTime.of(2026, 3, 22, 15, 0);
-        LocalDateTime march25 = LocalDateTime.of(2026, 3, 25, 16, 0);
-        LocalDateTime march28 = LocalDateTime.of(2026, 3, 28, 11, 0);
-        LocalDateTime march30 = LocalDateTime.of(2026, 3, 30, 13, 0);
+        // FECHAS REALISTAS - Período base (Enero-Febrero)
+        LocalDateTime jan1 = LocalDateTime.of(2026, 1, 5, 10, 0);
+        LocalDateTime jan15 = LocalDateTime.of(2026, 1, 15, 14, 0);
+        LocalDateTime feb1 = LocalDateTime.of(2026, 2, 1, 9, 0);
+        LocalDateTime feb15 = LocalDateTime.of(2026, 2, 15, 11, 0);
+        LocalDateTime feb28 = LocalDateTime.of(2026, 2, 28, 16, 0);
 
-// PERÍODO ACTUAL (Abril - para mostrar cambios)
-        LocalDateTime april1 = LocalDateTime.of(2026, 4, 1, 8, 0);
-        LocalDateTime april2 = LocalDateTime.of(2026, 4, 2, 10, 0);
-        LocalDateTime april3 = LocalDateTime.of(2026, 4, 3, 10, 0);
-        LocalDateTime april4 = LocalDateTime.of(2026, 4, 4, 9, 0);
-        LocalDateTime april5 = LocalDateTime.of(2026, 4, 5, 14, 0);
-        LocalDateTime april6 = LocalDateTime.of(2026, 4, 6, 11, 0);
-        LocalDateTime april7 = LocalDateTime.of(2026, 4, 7, 9, 30);
-        LocalDateTime april8 = LocalDateTime.of(2026, 4, 8, 13, 0);
-        LocalDateTime april9 = LocalDateTime.of(2026, 4, 9, 11, 0);
-        LocalDateTime april10 = LocalDateTime.of(2026, 4, 10, 15, 0);
-        LocalDateTime april11 = LocalDateTime.of(2026, 4, 11, 15, 0);
-        LocalDateTime april12 = LocalDateTime.of(2026, 4, 12, 10, 0);
-        LocalDateTime april13 = LocalDateTime.of(2026, 4, 13, 10, 0);
+// FECHAS REALISTAS - Período anterior (Marzo)
+        LocalDateTime mar5 = LocalDateTime.of(2026, 3, 5, 10, 0);
+        LocalDateTime mar12 = LocalDateTime.of(2026, 3, 12, 14, 0);
+        LocalDateTime mar18 = LocalDateTime.of(2026, 3, 18, 9, 30);
+        LocalDateTime mar22 = LocalDateTime.of(2026, 3, 22, 11, 0);
+        LocalDateTime mar28 = LocalDateTime.of(2026, 3, 28, 15, 0);
+
+// FECHAS REALISTAS - Período actual (Abril)
+        LocalDateTime apr3 = LocalDateTime.of(2026, 4, 3, 10, 0);
+        LocalDateTime apr5 = LocalDateTime.of(2026, 4, 5, 14, 0);
+        LocalDateTime apr6 = LocalDateTime.of(2026, 4, 6, 11, 0);
+        LocalDateTime apr7 = LocalDateTime.of(2026, 4, 7, 14, 0);
+        LocalDateTime apr8 = LocalDateTime.of(2026, 4, 8, 9, 0);
+        LocalDateTime apr9 = LocalDateTime.of(2026, 4, 9, 16, 0);
+        LocalDateTime apr10 = LocalDateTime.of(2026, 4, 10, 9, 0);
+        LocalDateTime apr11 = LocalDateTime.of(2026, 4, 11, 15, 0);
+        LocalDateTime apr12 = LocalDateTime.of(2026, 4, 12, 11, 0);
+        LocalDateTime apr14 = LocalDateTime.of(2026, 4, 14, 13, 0);
 
         Object[][] contactData = {
-                // ========== CONTACTOS MARZO (período anterior) ==========
-                // NEW_LEAD en marzo: 4 contactos
-                {"Carlos", "Rodríguez", "carlos@techcorp.com", "541123456701", "TechCorp", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, march1},
-                {"Ana", "Martínez", "ana@ecomstore.com", "541123456702", "EcomStore", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{1}, march10},
-                {"Martín", "González", "martin@fintech.io", "541123456703", "Fintech IO", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 2, new int[]{2}, march20},
-                {"Laura", "Fernández", "laura@startup.com", "541123456704", "StartupX", FunnelStatus.NEW_LEAD, Channel.EMAIL, 3, new int[]{3}, march28},
+                // ========== CONTACTOS ENERO-FEBRERO (base) ==========
+                {"Carlos", "Rodríguez", "carlos@techcorp.com", "541123456701", "TechCorp", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 0, new int[]{0}, jan1},
+                {"Ana", "Martínez", "ana@ecomstore.com", "541123456702", "EcomStore", FunnelStatus.CLOSED_WON, Channel.EMAIL, 1, new int[]{1}, jan15},
+                {"Martín", "González", "martin@fintech.io", "541123456703", "Fintech IO", FunnelStatus.CLOSED_LOST, Channel.WHATSAPP, 2, new int[]{2}, feb1},
+                {"Laura", "Fernández", "laura@startup.com", "541123456704", "StartupX", FunnelStatus.CLOSED_LOST, Channel.EMAIL, 3, new int[]{3}, feb15},
+                {"Javier", "López", "javier@saas.com", "541123456705", "SaaS Solutions", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 4, new int[]{4}, feb28},
 
-                // CONTACTED en marzo: 3 contactos
-                {"Javier", "López", "javier@saas.com", "541123456705", "SaaS Solutions", FunnelStatus.CONTACTED, Channel.WHATSAPP, 4, new int[]{4}, march1},
-                {"Sofía", "Díaz", "sofia@retail.com", "541123456706", "Retail Plus", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{0}, march20},
-                {"Diego", "Sánchez", "diego@logistica.com", "541123456707", "Logística Express", FunnelStatus.CONTACTED, Channel.WHATSAPP, 1, new int[]{1}, march25},
+                // ========== CONTACTOS MARZO (período anterior - 15 contactos) ==========
+                // NEW_LEAD: 4
+                {"Pedro", "Ramírez", "pedro@cloud.com", "541123456711", "Cloud Solutions", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, mar5},
+                {"Lucía", "Castillo", "lucia@dev.com", "541123456712", "Dev House", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{1}, mar12},
+                {"Mateo", "Ortiz", "mateo@ai.com", "541123456713", "AI Labs", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 2, new int[]{2}, mar18},
+                {"Renata", "Silva", "renata@data.com", "541123456714", "Data Corp", FunnelStatus.NEW_LEAD, Channel.EMAIL, 3, new int[]{3}, mar28},
 
-                // IN_NEGOTIATION en marzo: 3 contactos
-                {"Valentina", "Pérez", "valentina@health.com", "541123456708", "Health Tech", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 2, new int[]{2}, march10},
-                {"Nicolás", "Romero", "nico@marketing.com", "541123456709", "Marketing Pro", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 3, new int[]{3}, march20},
-                {"Camila", "Morales", "camila@consulting.com", "541123456710", "Consulting Group", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 4, new int[]{4}, march30},
+                // CONTACTED: 3
+                {"Diego", "Sánchez", "diego@logistica.com", "541123456707", "Logística Express", FunnelStatus.CONTACTED, Channel.WHATSAPP, 1, new int[]{1}, mar5},
+                {"Valentina", "Pérez", "valentina@health.com", "541123456708", "Health Tech", FunnelStatus.CONTACTED, Channel.EMAIL, 2, new int[]{2}, mar18},
+                {"Nicolás", "Romero", "nico@marketing.com", "541123456709", "Marketing Pro", FunnelStatus.CONTACTED, Channel.WHATSAPP, 3, new int[]{3}, mar28},
 
-                // PROPOSAL_SENT en marzo: 2 contactos
-                {"Pedro", "Ramírez", "pedro@cloud.com", "541123456711", "Cloud Solutions", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 0, new int[]{0}, march15},
-                {"Lucía", "Castillo", "lucia@dev.com", "541123456712", "Dev House", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 1, new int[]{1}, march25},
+                // IN_NEGOTIATION: 3
+                {"Sofía", "Díaz", "sofia@retail.com", "541123456706", "Retail Plus", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 0, new int[]{0}, mar12},
+                {"Camila", "Morales", "camila@consulting.com", "541123456710", "Consulting Group", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 4, new int[]{4}, mar22},
+                {"Bruno", "Rojas", "bruno@logistics.com", "541123456725", "Logistics Pro", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 4, new int[]{4}, mar28},
 
-                // CLOSED_WON en marzo: 2 contactos
-                {"Mateo", "Ortiz", "mateo@ai.com", "541123456713", "AI Labs", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 2, new int[]{2}, march5},
-                {"Renata", "Silva", "renata@data.com", "541123456714", "Data Corp", FunnelStatus.CLOSED_WON, Channel.EMAIL, 3, new int[]{3}, march18},
+                // PROPOSAL_SENT: 3
+                {"Elena", "Suárez", "elena@cyber.com", "541123456728", "Cyber Security", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 2, new int[]{2}, mar5},
+                {"Fabián", "Luna", "fabian@robotics.com", "541123456729", "Robotics", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 3, new int[]{3}, mar18},
+                {"Gloria", "Paz", "gloria@space.com", "541123456730", "Space Tech", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{4}, mar28},
 
-                // CLOSED_LOST en marzo: 1 contacto
-                {"Facundo", "Núñez", "facundo@blockchain.com", "541123456715", "Blockchain Tech", FunnelStatus.CLOSED_LOST, Channel.WHATSAPP, 4, new int[]{4}, march22},
+                // CLOSED_WON: 1
+                {"Irene", "Castro", "irene@nanotech.com", "541123456732", "NanoTech", FunnelStatus.CLOSED_WON, Channel.EMAIL, 1, new int[]{1}, mar22},
 
-                // ========== CONTACTOS ABRIL (período actual - para mostrar cambios) ==========
-                // NEW_LEAD aumentó: 7 contactos (↑75% desde 4)
-                {"Agustina", "Paz", "agustina@biotech.com", "541123456716", "BioTech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 0, new int[]{0}, april1},
-                {"Tomás", "Ríos", "tomas@green.com", "541123456717", "Green Energy", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 1, new int[]{1}, april3},
-                {"Florencia", "Molina", "flor@media.com", "541123456718", "Media Group", FunnelStatus.NEW_LEAD, Channel.EMAIL, 2, new int[]{2}, april5},
-                {"Santiago", "Vega", "santiago@games.com", "541123456719", "Game Studio", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 3, new int[]{3}, april7},
-                {"Victoria", "Luna", "victoria@travel.com", "541123456720", "Travel Tech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 4, new int[]{4}, april9},
-                {"Gabriel", "Flores", "gabriel@realestate.com", "541123456721", "Real Estate", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, april11},
-                {"Julieta", "Aguirre", "julieta@legal.com", "541123456722", "Legal Tech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{1}, april13},
+                // CLOSED_LOST: 1
+                {"Facundo", "Núñez", "facundo@blockchain.com", "541123456715", "Blockchain Tech", FunnelStatus.CLOSED_LOST, Channel.WHATSAPP, 4, new int[]{4}, mar12},
 
-                // CONTACTED disminuyó: 2 contactos (↓33% desde 3)
-                {"Emiliano", "Correa", "emiliano@construction.com", "541123456723", "Construcción", FunnelStatus.CONTACTED, Channel.WHATSAPP, 2, new int[]{2}, april5},
-                {"Mora", "Giménez", "mora@fashion.com", "541123456724", "Fashion Tech", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{3}, april10},
+                // ========== CONTACTOS ABRIL (período actual - 20 contactos) ==========
+                // NEW_LEAD: 8 (↑100% desde 4)
+                {"Agustina", "Paz", "agustina@biotech.com", "541123456716", "BioTech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 0, new int[]{0}, apr3},
+                {"Tomás", "Ríos", "tomas@green.com", "541123456717", "Green Energy", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 1, new int[]{1}, apr3},
+                {"Florencia", "Molina", "flor@media.com", "541123456718", "Media Group", FunnelStatus.NEW_LEAD, Channel.EMAIL, 2, new int[]{2}, apr7},
+                {"Santiago", "Vega", "santiago@games.com", "541123456719", "Game Studio", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 3, new int[]{3}, apr7},
+                {"Victoria", "Luna", "victoria@travel.com", "541123456720", "Travel Tech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 4, new int[]{4}, apr10},
+                {"Gabriel", "Flores", "gabriel@realestate.com", "541123456721", "Real Estate", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, apr10},
+                {"Julieta", "Aguirre", "julieta@legal.com", "541123456722", "Legal Tech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{1}, apr12},
+                {"Hugo", "Mora", "hugo@quantum.com", "541123456731", "Quantum Computing", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, apr14},
 
-                // IN_NEGOTIATION estable: 3 contactos (0% cambio)
-                {"Bruno", "Rojas", "bruno@logistics.com", "541123456725", "Logistics Pro", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 4, new int[]{4}, april2},
-                {"Clara", "Vidal", "clara@edtech.com", "541123456726", "EdTech", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 0, new int[]{0}, april8},
-                {"Daniel", "Ponce", "daniel@agrotech.com", "541123456727", "AgroTech", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 1, new int[]{1}, april12},
+                // CONTACTED: 4 (↑33% desde 3)
+                {"Emiliano", "Correa", "emiliano@construction.com", "541123456723", "Construcción", FunnelStatus.CONTACTED, Channel.WHATSAPP, 2, new int[]{2}, apr3},
+                {"Mora", "Giménez", "mora@fashion.com", "541123456724", "Fashion Tech", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{3}, apr7},
+                {"Clara", "Vidal", "clara@edtech.com", "541123456726", "EdTech", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{0}, apr10},
+                {"Daniel", "Ponce", "daniel@agrotech.com", "541123456727", "AgroTech", FunnelStatus.CONTACTED, Channel.WHATSAPP, 1, new int[]{1}, apr14},
 
-                // PROPOSAL_SENT aumentó: 4 contactos (↑100% desde 2)
-                {"Elena", "Suárez", "elena@cyber.com", "541123456728", "Cyber Security", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 2, new int[]{2}, april4},
-                {"Fabián", "Luna", "fabian@robotics.com", "541123456729", "Robotics", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 3, new int[]{3}, april6},
-                {"Gloria", "Paz", "gloria@space.com", "541123456730", "Space Tech", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{4}, april9},
-                {"Hugo", "Mora", "hugo@quantum.com", "541123456731", "Quantum Computing", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 0, new int[]{0}, april11},
+                // IN_NEGOTIATION: 4 (↑33% desde 3)
+                {"Lucas", "Miranda", "lucas@cleantech.com", "541123456733", "CleanTech", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 2, new int[]{2}, apr5},
+                {"Paula", "Ramos", "paula@insurtech.com", "541123456734", "InsurTech", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 3, new int[]{3}, apr8},
+                {"Ricardo", "Vega", "ricardo@proptech.com", "541123456735", "PropTech", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 4, new int[]{4}, apr11},
+                {"Silvia", "Méndez", "silvia@foodtech.com", "541123456736", "FoodTech", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 0, new int[]{0}, apr14},
 
-                // CLOSED_WON estable: 2 contactos (0% cambio)
-                {"Irene", "Castro", "irene@nanotech.com", "541123456732", "NanoTech", FunnelStatus.CLOSED_WON, Channel.EMAIL, 1, new int[]{1}, april7},
+                // PROPOSAL_SENT: 4 (↑33% desde 3)
+                {"Oscar", "Ponce", "oscar@adtech.com", "541123456737", "AdTech", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 1, new int[]{1}, apr6},
+                {"Nora", "Luna", "nora@martech.com", "541123456738", "MarTech", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 2, new int[]{2}, apr9},
 
-                // CLOSED_LOST disminuyó: 0 contactos (↓100% desde 1)
-                // (sin contactos CLOSED_LOST en abril - mejora!)
+                // CLOSED_WON: 2 (↑100% desde 1)
+                {"Mario", "Gil", "mario@legaltech.com", "541123456739", "LegalTech", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 3, new int[]{3}, apr12},
+                {"Olga", "Paz", "olga@edtech.com", "541123456740", "EduTech", FunnelStatus.CLOSED_WON, Channel.EMAIL, 4, new int[]{4}, apr14},
+
+                // CLOSED_LOST: 0 (↓100% desde 1 - mejora)
         };
 
         for (Object[] data : contactData) {
@@ -278,19 +287,45 @@ public class DataSeeder implements ApplicationRunner {
             contact.setTags(contactTags);
 
             contacts.add(contactRepository.save(contact));
-            log.info("Contact seeded: {} - {} - creado: {}", contact.getName(), contact.getFunnelStatus(), contact.getCreatedAt());
         }
 
+        log.info("Contacts seeded: {} total", contacts.size());
         return contacts;
     }
 
     private void seedConversationsAndMessages(List<Contact> contacts, List<User> salespersons, List<Template> templates) {
         Random random = new Random();
 
-        String[] inboundMessages = {"Perfecto, gracias!", "¿Me podés contar más?", "¿Cuánto cuesta?", "Me interesa avanzar."};
-        String[] outboundMessages = {"Genial, te cuento.", "Te paso más detalles.", "Podemos coordinar una demo.", "Te envío info ahora."};
+        String[] inboundMessages = {
+                "Perfecto, gracias por la info!",
+                "¿Me podés contar más sobre los precios?",
+                "¿Cuánto cuesta la implementación?",
+                "Me interesa avanzar con la propuesta",
+                "¿Tienen disponible una demo esta semana?",
+                "Lo reviso con mi equipo y te confirmo",
+                "Buenísimo! Me parece excelente",
+                "¿Cómo seguimos con el contrato?",
+                "¿Hay algún descuento por pago anual?",
+                "Gracias por toda la información"
+        };
+
+        String[] outboundMessages = {
+                "Genial, te cuento los detalles del plan",
+                "Te paso la propuesta comercial completa",
+                "Podemos coordinar una demo para mañana",
+                "Te envío el contrato para revisar",
+                "Trabajamos con empresas similares a la tuya",
+                "Quedo atento a tu respuesta",
+                "Te explico cómo funciona la integración",
+                "Avancemos con la firma del contrato",
+                "Te paso el link de pago",
+                "Gracias por tu interés en nuestros servicios"
+        };
+
+        int totalMessages = 0;
 
         for (Contact contact : contacts) {
+            // WhatsApp conversation
             Conversation whatsappConv = Conversation.builder()
                     .contact(contact)
                     .channel(Channel.WHATSAPP)
@@ -301,6 +336,7 @@ public class DataSeeder implements ApplicationRunner {
                     .build();
             conversationRepository.save(whatsappConv);
 
+            // Email conversation
             Conversation emailConv = Conversation.builder()
                     .contact(contact)
                     .channel(Channel.EMAIL)
@@ -311,12 +347,16 @@ public class DataSeeder implements ApplicationRunner {
                     .build();
             conversationRepository.save(emailConv);
 
-            Template whatsappTemplate = templates.stream().filter(t -> t.getChannel() == Channel.WHATSAPP).findFirst().orElse(null);
+            Template whatsappTemplate = templates.stream()
+                    .filter(t -> t.getChannel() == Channel.WHATSAPP)
+                    .findFirst()
+                    .orElse(null);
 
+            // First outbound message
             Message outbound = Message.builder()
                     .conversation(whatsappConv)
                     .direction(MessageDirection.OUTBOUND)
-                    .body("Hola " + contact.getName() + "! Soy " + contact.getOwner().getName() + " de CRM.")
+                    .body("Hola " + contact.getName() + "! Soy " + contact.getOwner().getName() + " de CRM Cross-Industry. ¿Cómo estás? Me contacto para conocer más sobre " + contact.getCompany() + ".")
                     .deliveryStatus(DeliveryStatus.DELIVERED)
                     .template(whatsappTemplate)
                     .sender(contact.getOwner())
@@ -324,23 +364,30 @@ public class DataSeeder implements ApplicationRunner {
                     .sentAt(contact.getCreatedAt().plusHours(2))
                     .build();
             messageRepository.save(outbound);
+            totalMessages++;
 
+            // First inbound message
             Message inbound = Message.builder()
                     .conversation(whatsappConv)
                     .direction(MessageDirection.INBOUND)
-                    .body("Hola! Gracias por contactarme.")
+                    .body("Hola! Gracias por contactarte. Me interesa saber más sobre sus servicios para " + contact.getCompany() + ".")
                     .deliveryStatus(DeliveryStatus.READ)
                     .providerId(generateWhatsAppProviderId())
                     .sentAt(contact.getCreatedAt().plusDays(1))
                     .build();
             messageRepository.save(inbound);
+            totalMessages++;
 
-            for (int i = 0; i < 5; i++) {
+            // Additional messages (3-8 por contacto)
+            int additionalCount = 3 + random.nextInt(6);
+            for (int i = 0; i < additionalCount; i++) {
                 boolean isOutbound = i % 2 == 0;
                 Message extraMessage = Message.builder()
                         .conversation(whatsappConv)
                         .direction(isOutbound ? MessageDirection.OUTBOUND : MessageDirection.INBOUND)
-                        .body(isOutbound ? outboundMessages[random.nextInt(outboundMessages.length)] : inboundMessages[random.nextInt(inboundMessages.length)])
+                        .body(isOutbound
+                                ? outboundMessages[random.nextInt(outboundMessages.length)]
+                                : inboundMessages[random.nextInt(inboundMessages.length)])
                         .deliveryStatus(isOutbound ? DeliveryStatus.DELIVERED : DeliveryStatus.READ)
                         .template(isOutbound ? whatsappTemplate : null)
                         .sender(isOutbound ? contact.getOwner() : null)
@@ -348,27 +395,48 @@ public class DataSeeder implements ApplicationRunner {
                         .sentAt(contact.getCreatedAt().plusDays(1).plusHours(i * 3))
                         .build();
                 messageRepository.save(extraMessage);
+                totalMessages++;
             }
 
-            log.info("Messages seeded for contact: {}", contact.getName());
+            // Email message (1 por contacto)
+            Template emailTemplate = templates.stream()
+                    .filter(t -> t.getChannel() == Channel.EMAIL)
+                    .findFirst()
+                    .orElse(null);
+
+            Message emailOutbound = Message.builder()
+                    .conversation(emailConv)
+                    .direction(MessageDirection.OUTBOUND)
+                    .body("Hola " + contact.getName() + ",\n\nTe escribo para presentarte nuestras soluciones para " + contact.getCompany() + ". Quedo atento a tu respuesta.\n\nSaludos,\n" + contact.getOwner().getName())
+                    .deliveryStatus(DeliveryStatus.DELIVERED)
+                    .template(emailTemplate)
+                    .sender(contact.getOwner())
+                    .providerId(generateEmailProviderId())
+                    .sentAt(contact.getCreatedAt().plusDays(2))
+                    .build();
+            messageRepository.save(emailOutbound);
+            totalMessages++;
         }
+
+        log.info("Messages seeded: {} total messages", totalMessages);
     }
 
     private void seedTasksWithDates(List<Contact> contacts, List<User> salespersons) {
         Random random = new Random();
 
-        // PERÍODO ANTERIOR (Marzo) - 25 tareas
-        for (int i = 0; i < 25; i++) {
+        int totalTasks = 0;
+
+        // Tareas completadas en Enero-Febrero (base)
+        for (int i = 0; i < 15; i++) {
             Contact contact = contacts.get(random.nextInt(contacts.size()));
             User assignedTo = contact.getOwner();
-            LocalDateTime dueDate = LocalDateTime.of(2026, 3, 5 + random.nextInt(25), 10, 0);
-            TaskStatus status = TaskStatus.COMPLETED;
+            LocalDateTime dueDate = LocalDateTime.of(2026, 1 + random.nextInt(2), 5 + random.nextInt(20), 10, 0);
 
             Task task = Task.builder()
-                    .title("Tarea de marzo")
-                    .description("Seguimiento con " + contact.getName())
+                    .title("Seguimiento inicial")
+                    .description("Contactar a " + contact.getName() + " de " + contact.getCompany())
                     .type(TaskType.CALL)
-                    .status(status)
+                    .status(TaskStatus.COMPLETED)
                     .dueDate(dueDate)
                     .contact(contact)
                     .assignedTo(assignedTo)
@@ -376,29 +444,62 @@ public class DataSeeder implements ApplicationRunner {
                     .completedAt(dueDate.plusHours(2))
                     .build();
             taskRepository.save(task);
+            totalTasks++;
         }
 
-        // PERÍODO ACTUAL (Abril) - 35 tareas (↑40% aumento)
-        for (int i = 0; i < 35; i++) {
+        // Tareas en Marzo (período anterior)
+        for (int i = 0; i < 25; i++) {
             Contact contact = contacts.get(random.nextInt(contacts.size()));
             User assignedTo = contact.getOwner();
-            LocalDateTime dueDate = LocalDateTime.of(2026, 4, 1 + random.nextInt(13), 10, 0);
-            TaskStatus status = i < 10 ? TaskStatus.COMPLETED : (i < 25 ? TaskStatus.PENDING : TaskStatus.OVERDUE);
+            LocalDateTime dueDate = LocalDateTime.of(2026, 3, 5 + random.nextInt(25), 10, 0);
+            TaskStatus status = i < 15 ? TaskStatus.COMPLETED : (i < 20 ? TaskStatus.PENDING : TaskStatus.OVERDUE);
 
             Task task = Task.builder()
-                    .title("Tarea de abril")
+                    .title(i < 15 ? "Reunión de seguimiento" : (i < 20 ? "Enviar propuesta" : "Contacto pendiente"))
                     .description("Seguimiento con " + contact.getName())
-                    .type(TaskType.EMAIL)
+                    .type(i % 2 == 0 ? TaskType.CALL : TaskType.EMAIL)
                     .status(status)
                     .dueDate(dueDate)
                     .contact(contact)
                     .assignedTo(assignedTo)
-                    .createdAt(dueDate.minusDays(1))
+                    .createdAt(dueDate.minusDays(random.nextInt(5)))
                     .build();
             if (status == TaskStatus.COMPLETED) {
-                task.setCompletedAt(dueDate.plusHours(1));
+                task.setCompletedAt(dueDate.plusHours(random.nextInt(24)));
             }
             taskRepository.save(task);
+            totalTasks++;
+        }
+
+        // Tareas en Abril (período actual - mayor actividad)
+        for (int i = 0; i < 40; i++) {
+            Contact contact = contacts.get(random.nextInt(contacts.size()));
+            User assignedTo = contact.getOwner();
+            LocalDateTime dueDate = LocalDateTime.of(2026, 4, 1 + random.nextInt(14), 10, 0);
+            TaskStatus status;
+            if (i < 18) {
+                status = TaskStatus.COMPLETED;
+            } else if (i < 30) {
+                status = TaskStatus.PENDING;
+            } else {
+                status = TaskStatus.OVERDUE;
+            }
+
+            Task task = Task.builder()
+                    .title(i < 18 ? "Cierre de venta" : (i < 30 ? "Demo programada" : "Llamada de seguimiento"))
+                    .description("Gestión con " + contact.getName() + " - " + contact.getCompany())
+                    .type(i % 2 == 0 ? TaskType.MEETING : TaskType.CALL)
+                    .status(status)
+                    .dueDate(dueDate)
+                    .contact(contact)
+                    .assignedTo(assignedTo)
+                    .createdAt(dueDate.minusDays(random.nextInt(3)))
+                    .build();
+            if (status == TaskStatus.COMPLETED) {
+                task.setCompletedAt(dueDate.plusHours(random.nextInt(12)));
+            }
+            taskRepository.save(task);
+            totalTasks++;
         }
 
         // Tareas para hoy (8 tareas)
@@ -406,8 +507,8 @@ public class DataSeeder implements ApplicationRunner {
             Contact contact = contacts.get(random.nextInt(contacts.size()));
             User assignedTo = contact.getOwner();
             Task task = Task.builder()
-                    .title("Tarea urgente para hoy")
-                    .description("Contactar a " + contact.getName())
+                    .title("Tarea prioritaria del día")
+                    .description("Contactar urgentemente a " + contact.getName() + " para cerrar acuerdo")
                     .type(TaskType.CALL)
                     .status(TaskStatus.PENDING)
                     .dueDate(LocalDateTime.now().plusHours(random.nextInt(12)))
@@ -416,9 +517,10 @@ public class DataSeeder implements ApplicationRunner {
                     .createdAt(LocalDateTime.now().minusDays(1))
                     .build();
             taskRepository.save(task);
+            totalTasks++;
         }
 
-        log.info("Tasks seeded: 25 in March, 35 in April, 8 for today");
+        log.info("Tasks seeded: {} total tasks", totalTasks);
     }
 
     private String generateWhatsAppProviderId() {
@@ -442,7 +544,7 @@ public class DataSeeder implements ApplicationRunner {
         savedViewRepository.save(adminView);
 
         SavedView tasksView = SavedView.builder()
-                .name("Tareas vencidas")
+                .name("Tareas pendientes")
                 .filters(json("{\"status\":\"PENDING\"}"))
                 .entity(EntityType.TASKS)
                 .sortBy("dueDate")

@@ -474,7 +474,7 @@ public class MetricsService {
             }
             document.add(new Paragraph(" "));
 
-            addSectionHeader(document, "Resumen General");
+            addSectionHeader(document);
             PdfPTable summaryTable = new PdfPTable(3);
             summaryTable.setWidthPercentage(100);
             addMetricRow(summaryTable, "Contactos activos", dashboard.funnel().totalActive());
@@ -500,9 +500,9 @@ public class MetricsService {
         table.addCell(new PdfPCell(new Phrase(trendSymbol + " " + metric.changePercent() + "%", normalFont)));
     }
 
-    private void addSectionHeader(Document document, String title) throws DocumentException {
+    private void addSectionHeader(Document document) throws DocumentException {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
-        Paragraph header = new Paragraph(title, headerFont);
+        Paragraph header = new Paragraph("Resumen General", headerFont);
         header.setSpacingBefore(15);
         header.setSpacingAfter(5);
         document.add(header);
@@ -532,5 +532,91 @@ public class MetricsService {
             return LocalDateTime.now();
         }
         return LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).atTime(23, 59, 59);
+    }
+
+    // En MetricsService.java - Reemplaza los métodos
+
+// ==================== MÉTRICAS SEPARADAS (SIN FILTROS) ====================
+
+    public MetricsDTOs.ContactsMetricsResponse getContactsMetrics(User currentUser) {
+        LocalDateTime currentEnd = LocalDateTime.now();
+        LocalDateTime previousEnd = currentEnd.minusDays(30);
+
+        String periodDesc = "Últimos 30 días";
+        User owner = resolveOwner(currentUser, null);
+
+        MetricsDTOs.FunnelMetrics funnelMetrics = getFunnelMetrics(owner, currentEnd, previousEnd);
+        String salespersonInfo = owner != null ? owner.getEmail() : null;
+
+        return new MetricsDTOs.ContactsMetricsResponse(funnelMetrics);
+    }
+
+    public MetricsDTOs.MessagesMetricsResponse getMessagesMetrics(User currentUser) {
+        LocalDateTime currentStart = LocalDateTime.now().minusDays(30);
+        LocalDateTime currentEnd = LocalDateTime.now();
+        LocalDateTime previousStart = currentStart.minusDays(30);
+        LocalDateTime previousEnd = currentStart.minusSeconds(1);
+
+        String periodDesc = "Últimos 30 días";
+        User owner = resolveOwner(currentUser, null);
+
+        MetricsDTOs.MessageMetrics messageMetrics = getMessageMetrics(owner, currentStart, currentEnd, previousStart, previousEnd);
+        String salespersonInfo = owner != null ? owner.getEmail() : null;
+
+        return new MetricsDTOs.MessagesMetricsResponse(messageMetrics);
+    }
+
+    public MetricsDTOs.TasksMetricsResponse getTasksMetrics(User currentUser) {
+        LocalDateTime currentEnd = LocalDateTime.now();
+        LocalDateTime previousEnd = currentEnd.minusDays(30);
+
+        String periodDesc = "Últimos 30 días";
+        User owner = resolveOwner(currentUser, null);
+
+        MetricsDTOs.TaskMetrics taskMetrics = getTaskMetrics(owner, currentEnd, previousEnd);
+        String salespersonInfo = owner != null ? owner.getEmail() : null;
+
+        return new MetricsDTOs.TasksMetricsResponse(taskMetrics);
+    }
+
+    public MetricsDTOs.UsersMetricsResponse getUsersMetrics(User currentUser) {
+        if (currentUser.getRole() != Role.ADMIN) {
+            return new MetricsDTOs.UsersMetricsResponse(
+                    new MetricsDTOs.UserMetrics(
+                            calculateMetric(0, 0),
+                            calculateMetric(0, 0),
+                            calculateMetric(0, 0),
+                            calculateMetric(0, 0)
+                    )
+            );
+        }
+
+        LocalDateTime currentEnd = LocalDateTime.now();
+        LocalDateTime previousEnd = currentEnd.minusDays(30);
+        LocalDateTime currentStart = currentEnd.minusDays(30);
+        LocalDateTime previousStart = currentStart.minusDays(30);
+
+        String periodDesc = "Últimos 30 días";
+
+        long currentTotal = userRepository.countTotalWithDate(currentEnd);
+        long previousTotal = userRepository.countTotalWithDate(previousEnd);
+
+        long currentActive = userRepository.countActiveWithDate(currentEnd);
+        long previousActive = userRepository.countActiveWithDate(previousEnd);
+
+        long currentInactive = currentTotal - currentActive;
+        long previousInactive = previousTotal - previousActive;
+
+        long currentNewUsers = userRepository.countByCreatedAtAfter(currentStart);
+        long previousNewUsers = userRepository.countByCreatedAtAfter(previousStart);
+
+        MetricsDTOs.UserMetrics userMetrics = new MetricsDTOs.UserMetrics(
+                calculateMetric(currentTotal, previousTotal),
+                calculateMetric(currentActive, previousActive),
+                calculateMetric(currentInactive, previousInactive),
+                calculateMetric(currentNewUsers, previousNewUsers)
+        );
+
+        return new MetricsDTOs.UsersMetricsResponse(userMetrics);
     }
 }

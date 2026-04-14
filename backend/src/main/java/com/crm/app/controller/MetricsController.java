@@ -110,4 +110,38 @@ public class MetricsController {
                 .contentType(mediaType)
                 .body(content);
     }
+
+    // En MetricsController.java - Reemplaza los endpoints
+
+    @GetMapping("/contacts")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Métricas de contactos", description = "Retorna solo métricas de contactos (funnel)")
+    public ResponseEntity<MetricsDTOs.ContactsMetricsResponse> getContactsMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getContactsMetrics(currentUser));
+    }
+
+    @GetMapping("/messages")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Métricas de mensajes", description = "Retorna solo métricas de mensajes")
+    public ResponseEntity<MetricsDTOs.MessagesMetricsResponse> getMessagesMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getMessagesMetrics(currentUser));
+    }
+
+    @GetMapping("/tasks")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Métricas de tareas", description = "Retorna solo métricas de tareas")
+    public ResponseEntity<MetricsDTOs.TasksMetricsResponse> getTasksMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getTasksMetrics(currentUser));
+    }
+
+    @GetMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Métricas de usuarios", description = "Retorna solo métricas de usuarios (solo ADMIN)")
+    public ResponseEntity<MetricsDTOs.UsersMetricsResponse> getUsersMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getUsersMetrics(currentUser));
+    }
 }
