@@ -32,6 +32,9 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
+
+    private static final List<String> ALLOWED_SORT_FIELDS =
+    List.of("dueDate", "status", "createdAt");
     // ==================== SEARCH ====================
 
     public List<Task> search(
@@ -47,16 +50,35 @@ public class TaskService {
 
         // ================= VALIDACIONES =================
 
+        
         if (sortBy == null || sortBy.isBlank()) {
             sortBy = "dueDate";
         }
 
-        if (!List.of("dueDate", "status", "createdAt").contains(sortBy)) {
-            throw new BusinessRuleViolationException("sortBy inválido");
+        if (sortOrder == null || sortOrder.isBlank()) {
+            sortOrder = "ASC";
         }
 
-        Sort.Direction direction =
-                "DESC".equalsIgnoreCase(sortOrder) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            throw new BusinessRuleViolationException("Parámetro de ordenamiento inválido: " + sortBy);
+        }
+
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortOrder);
+        } catch (Exception e) {
+            throw new BusinessRuleViolationException(
+                "Orden inválido",
+                "sortOrder debe ser ASC o DESC"
+            );
+        }
+
+        if (dueDateFrom != null && dueDateTo != null && dueDateFrom.isAfter(dueDateTo)) {
+            throw new BusinessRuleViolationException(
+                "Filtro inválido",
+                "dueDateFrom no puede ser mayor a dueDateTo"
+            );
+        }
 
         Sort sort = Sort.by(direction, sortBy);
 
