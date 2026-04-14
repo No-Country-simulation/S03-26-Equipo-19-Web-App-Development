@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -41,8 +42,8 @@ public class TaskService {
             TaskStatus status,
             TaskType type,
             Long assignedTo,
-            LocalDateTime dueDateFrom,
-            LocalDateTime dueDateTo,
+            LocalDate dueDateFrom,
+            LocalDate dueDateTo,
             String sortBy,
             String sortOrder,
             User currentUser
@@ -58,6 +59,8 @@ public class TaskService {
         if (sortOrder == null || sortOrder.isBlank()) {
             sortOrder = "ASC";
         }
+
+        sortOrder = sortOrder.toUpperCase();
 
         if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
             throw new BusinessRuleViolationException("Parámetro de ordenamiento inválido: " + sortBy);
@@ -82,21 +85,32 @@ public class TaskService {
 
         Sort sort = Sort.by(direction, sortBy);
 
+        LocalDateTime from = null;
+        LocalDateTime to = null;
+
+        if (dueDateFrom != null) {
+            from = dueDateFrom.atStartOfDay(); // 00:00
+        }
+
+        if (dueDateTo != null) {
+            to = dueDateTo.atTime(23, 59, 59, 999999999); // fin del día
+        }
+        // ================= SEGURIDAD =================
+
+        if (currentUser.getRole() != Role.ADMIN) {
+            assignedTo = currentUser.getId();
+        }
+
+
         // ================= SPEC =================
 
         Specification<Task> spec = Specification
                 .where(TaskSpecification.hasStatus(status))
                 .and(TaskSpecification.hasType(type))
                 .and(TaskSpecification.hasAssignedTo(assignedTo))
-                .and(TaskSpecification.dueDateBetween(dueDateFrom, dueDateTo));
+                .and(TaskSpecification.dueDateBetween(from, to));
 
-        // ================= SEGURIDAD =================
-
-        if (currentUser.getRole() != Role.ADMIN) {
-            spec = spec.and((root, query, cb) ->
-                    cb.equal(root.get("assignedTo").get("id"), currentUser.getId()));
-        }
-
+        
         return taskRepository.findAll(spec, sort);
     }
 
