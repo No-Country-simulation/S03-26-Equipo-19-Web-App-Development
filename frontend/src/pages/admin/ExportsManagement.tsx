@@ -47,7 +47,7 @@ export const ExportsManagement = () => {
   const [nextId, setNextId] = useState(1);
   const [form, setForm] = useState<{ format: ExportFormat; entity: ExportEntity }>({
     format: 'CSV',
-    entity: 'contacts',
+    entity: 'CONTACTS',
   });
 
   const mutation = useMutation({

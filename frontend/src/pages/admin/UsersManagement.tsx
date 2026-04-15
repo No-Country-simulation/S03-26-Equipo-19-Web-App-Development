@@ -43,7 +43,7 @@ export const UsersManagement = () => {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: users = [], isLoading, isError } = useGetSalespersons();
+  const { data: users = [], isLoading, isError } = useGetSalespersons(true);
   const { remove } = useSalespersonsMutations();
 
   const filtered = users.filter((u: SalespersonResponse) =>

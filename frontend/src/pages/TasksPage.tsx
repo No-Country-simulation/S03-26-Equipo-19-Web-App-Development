@@ -12,6 +12,7 @@ import { useTasksMutationsService } from "../services/use_mutations/tasks-mutati
 import TaskItem, { type Color } from "../components/tasks/TaskItem";
 import { useGetTasks } from "../services/use_queries/tasks-query";
 import { useGetContacts } from "../services/use_queries/contacts-query";
+import type { TaskReqType } from "../types/task.types";
 
 const TASK_GROUPS_CONFIG: {
   key: string
@@ -34,7 +35,7 @@ const colorMap: Record<Color, string> = {
 const TasksPage = () => {
 
     const { data: tasksMetrics } = useGetTasksMetrics()
-    const { data: views = [], isLoading } = useGetSavedViews();
+    const { data: views = [] } = useGetSavedViews();
     const { data: tasks, isLoading: isLoadingTasks } = useGetTasks()
     const { data: contacts } = useGetContacts()
 
@@ -43,8 +44,8 @@ const TasksPage = () => {
     const { mutationPostTask } = useTasksMutationsService()
 
 
-    const handleCreateTask = (data: any) => {
-        mutationPostTask.mutate(data, {
+    const handleCreateTask = (data: Record<string, unknown>) => {
+        mutationPostTask.mutate(data as unknown as TaskReqType, {
             onSuccess: () => {
                 setModalOpen(false);
             },
@@ -65,7 +66,7 @@ const TasksPage = () => {
         return map
     }, [contacts])
 
-    const getTaskGroup = (task: any) => {
+    const getTaskGroup = (task: TaskReqType & { status?: string; dueDate?: string }) => {
         const status = task.status
 
         if (status === "COMPLETED") return "COMPLETED"
@@ -73,7 +74,7 @@ const TasksPage = () => {
 
         if (status === "PENDING") {
             const TODAY = new Date()
-            const dueDate = new Date(task.dueDate)
+            const dueDate = new Date(task.dueDate || "")
 
             // normalizar
             TODAY.setHours(0, 0, 0, 0)
@@ -178,7 +179,7 @@ const TasksPage = () => {
         </h3>
 
         <div className="flex flex-col gap-2 lg:px-10">
-          {tasksInGroup.map((task) => {
+          {tasksInGroup.map((task: TaskReqType & { status?: string; dueDate?: string; id?: string; contactId?: number }) => {
             const contact = contactsMap.get(task.contactId)
 
             return (

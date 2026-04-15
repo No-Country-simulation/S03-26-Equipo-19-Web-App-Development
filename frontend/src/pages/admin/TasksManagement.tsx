@@ -39,7 +39,7 @@ const StatusBadge = ({ type }: { type: string }) => {
 };
 
 const isTaskOverdue = (task: Task): boolean => {
-  if (!task.dueDate || task.status === 'done') return false;
+  if (!task.dueDate || task.status === 'COMPLETED') return false;
   return new Date(task.dueDate) < new Date();
 };
 
@@ -54,8 +54,8 @@ export const TasksManagement = () => {
     },
   });
 
-  const pending  = tasks.filter((t) => t.status === 'pending');
-  const done     = tasks.filter((t) => t.status === 'done');
+  const pending  = tasks.filter((t) => t.status === 'PENDING');
+  const done     = tasks.filter((t) => t.status === 'COMPLETED');
   const overdue  = tasks.filter((t) => isTaskOverdue(t));
   const compliance = tasks.length > 0 ? Math.round((done.length / tasks.length) * 100) : 0;
 

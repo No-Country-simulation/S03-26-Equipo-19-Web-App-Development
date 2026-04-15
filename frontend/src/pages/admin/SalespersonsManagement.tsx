@@ -45,7 +45,7 @@ export const SalespersonsManagement = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'INACTIVE'>('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: salespersons = [], isLoading, isError } = useGetSalespersons();
+  const { data: salespersons = [], isLoading, isError } = useGetSalespersons(true);
   const { remove } = useSalespersonsMutations();
 
   const filtered = salespersons.filter((s: SalespersonResponse) => {

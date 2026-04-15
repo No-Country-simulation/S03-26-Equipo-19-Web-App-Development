@@ -103,7 +103,7 @@ export const SavedViewsPage = () => {
           }
           onSubmit={(data) => {
             const cleanFilters = Object.fromEntries(
-              Object.entries(data.filters).filter(([_, v]) => {
+              Object.entries(data.filters).filter(([, v]) => {
                 if (Array.isArray(v)) return v.length > 0;
                 return v !== "" && v !== null && v !== undefined;
               })

@@ -73,8 +73,7 @@ export const MetricsPage = () => {
           color="secondary"
           icon={<CheckSquare size={28} />}
         />
-        <KpiCardTopSaler person={globalMetrics?.topSalesperson!}
-        />
+        {globalMetrics?.topSalesperson && <KpiCardTopSaler person={globalMetrics.topSalesperson} />}
 
       </div>
 
