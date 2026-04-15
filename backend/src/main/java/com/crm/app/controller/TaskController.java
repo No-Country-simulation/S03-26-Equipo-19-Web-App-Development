@@ -87,7 +87,7 @@ public class TaskController {
 
                 **Filtros opcionales:**
                 - `status`: PENDING, COMPLETED, OVERDUE
-                - `type`: CALL, EMAIL, MEETING, OTHER
+                - `type`: CALL, EMAIL, MEETING, DEMO,OTHER
                 - `assignedTo`: ID del usuario (solo ADMIN)
                 - `dueDateFrom`: fecha desde (yyyy-MM-dd)
                 - `dueDateTo`: fecha hasta (yyyy-MM-dd)
@@ -248,4 +248,23 @@ public class TaskController {
 
         return ResponseEntity.noContent().build();
     }
+
+        // =========================
+        // GET BY CONTACT
+        // =========================
+        @GetMapping("/contact/{contactId}")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(
+        summary = "Obtener tareas por contacto",
+        description = "Retorna todas las tareas asociadas a un contacto"
+        )
+        public ResponseEntity<List<TaskDTOs.TaskResponse>> getByContact(
+                @PathVariable Long contactId,
+                @AuthenticationPrincipal User currentUser
+        ) {
+
+        List<Task> tasks = taskService.getByContact(contactId, currentUser);
+
+        return ResponseEntity.ok(taskMapper.toResponseList(tasks));
+        }
 }
