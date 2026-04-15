@@ -468,7 +468,7 @@ public class MessageService {
     private void sendEmailWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
         try {
             Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
-                    "Email de bienvenida", Channel.EMAIL);
+                    "Email de bienvenida - Lead", Channel.EMAIL);
 
             if (welcomeTemplateOpt.isEmpty()) {
                 log.warn("⚠️ No se encontró plantilla de bienvenida para Email.");

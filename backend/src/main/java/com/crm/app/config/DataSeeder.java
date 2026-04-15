@@ -306,6 +306,39 @@ public class DataSeeder implements ApplicationRunner {
                 """,
                 "{\"name\":\"string\"}"));
 
+        // WhatsApp - Bienvenida y propósito
+        templates.add(createTemplate(admin, "WhatsApp - Bienvenida y propósito", Channel.WHATSAPP,
+                null,
+                """
+                🎉 Hola {{name}}! Bienvenido a CRM Cross-Industry.
+                
+                Soy {{salesperson}}, tu asesor comercial.
+                
+                ¿Podemos coordinar una breve charla?
+                
+                ¡Quedo atento!
+                """,
+                "{\"name\":\"string\",\"salesperson\":\"string\"}"));
+
+// Email - Bienvenida y propósito
+        templates.add(createTemplate(admin, "Email - Bienvenida y propósito", Channel.EMAIL,
+                "🎯 Te contactamos para ayudarte a crecer",
+                """
+                Hola {{name}},
+                
+                Nos comunicamos porque creemos que podemos ayudarte a potenciar tus resultados.
+                
+                Soy {{salesperson}}, tu asesor comercial.
+                
+                ¿Podemos coordinar una breve reunión?
+                
+                ¡Esperamos tu respuesta!
+                
+                Saludos,
+                {{salesperson}}
+                """,
+                "{\"name\":\"string\",\"salesperson\":\"string\"}"));
+
         // ==================== PLANTILLAS DE VENDEDORES (PERSONALES) ====================
 
         // Vendedor 1 (Alice) - 3 plantillas personales
