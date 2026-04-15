@@ -10,7 +10,6 @@ export const ROUTES = {
   TASKS: "tasks",
   SAVED_VIEWS: "saved-views",
   METRICS: "metrics",
-  FUNNEL: "funnel",
   SALESPERSONS: "salespersons",
   REPORTS: "reports",
   TEMPLATES: "templates",

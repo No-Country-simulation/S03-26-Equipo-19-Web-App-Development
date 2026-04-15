@@ -22,7 +22,6 @@ import TasksPage from "../pages/TasksPage";
 // Páginas de Admin
 import { AdminPanel } from "../pages/admin/AdminPanel";
 import { UsersManagement } from "../pages/admin/UsersManagement";
-import { Funnels } from "../pages/admin/Funnels";
 import { TagsManagement } from "../pages/admin/TagsManagement";
 import { EmailTemplates } from "../pages/admin/EmailTemplates";
 import { ExportsManagement } from "../pages/admin/ExportsManagement";
@@ -83,7 +82,6 @@ export const AppRoutes: React.FC = () => {
             <Route path={ROUTES.TASKS} element={<TasksManagement />} />
             <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
             <Route path={ROUTES.METRICS} element={<MetricsPage />} />
-            <Route path={ROUTES.FUNNEL} element={<Funnels />} />
             <Route path={ROUTES.SALESPERSONS} element={<SalespersonsManagement />} />
             <Route path={ROUTES.TAGS} element={<TagsManagement />} />
             <Route path={ROUTES.TEMPLATES} element={<EmailTemplates />} />
