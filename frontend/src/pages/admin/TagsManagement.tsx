@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Tag } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import {TagsForm} from '../../components/tags/TagsForm';
 import { useGetTags } from '../../services/use_queries/tags-query';
 import type { TagResponse } from '../../types/admin.types';
 import { useTagsMutations } from '../../services/use_mutations/tags-mutation';
@@ -27,8 +29,10 @@ const KpiCard = ({ icon, label, value, trend, isPositive, subtitle }: {
 
 export const TagsManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<TagResponse | null>(null);
   const { data: tags = [], isLoading, isError } = useGetTags();
-  const { remove } = useTagsMutations();
+  const { remove: removeTag, create, update} = useTagsMutations();
 
   const unusedEstimate = tags.length > 0 ? Math.floor(tags.length * 0.06) : 0;
   const mostUsed = tags[0]?.name ?? '—';
@@ -49,7 +53,10 @@ export const TagsManagement = () => {
             Clasifique y segmenta contactos con etiquetas dinámicas para una gestión clara y eficiente.
           </p>
         </div>
-        <Button variant="primary" size="md" className="flex items-center gap-2 whitespace-nowrap">
+        <Button variant="primary" size="md" className="flex items-center gap-2 whitespace-nowrap" onClick={() => {
+          setSelectedTag(null);
+          setModalOpen(true);
+        }}>
           <Plus size={16} /> Crear Etiqueta
         </Button>
       </div>
@@ -89,10 +96,10 @@ export const TagsManagement = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <button className="text-blue-500 hover:text-blue-700 transition-colors"><Pencil size={16} /></button>
+                        <button onClick={() => { setSelectedTag(tag); setModalOpen(true); }} className="text-blue-500 hover:text-blue-700 transition-colors"><Pencil size={16} /></button>
                         <button
                           className="text-slate-400 hover:text-red-500 transition-colors"
-                          onClick={() => remove.mutate(tag.id)}
+                          onClick={() => removeTag.mutate(tag.id)}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -124,6 +131,45 @@ export const TagsManagement = () => {
           <button className="hover:text-slate-600 transition-colors">Preguntas Frecuentes</button>
         </div>
       </div>
+
+<Modal
+  isOpen={modalOpen}
+  onClose={() => {
+    setModalOpen(false);
+    setSelectedTag(null);
+  }}
+  title={selectedTag ? "Editar Etiqueta" : "Nueva Etiqueta"}
+>
+  {selectedTag ? (
+    <TagsForm
+      initialValues={selectedTag}
+      onSubmit={(data) => {
+        update.mutate(
+          { id: selectedTag.id, data },
+          {
+            onSuccess: () => {
+              setModalOpen(false);
+              setSelectedTag(null);
+            },
+          }
+        );
+      }}
+      onCancel={() => {
+        setModalOpen(false);
+        setSelectedTag(null);
+      }}
+    />
+  ) : (
+    <TagsForm
+      onSubmit={(data) => {
+        create.mutate(data, {
+          onSuccess: () => setModalOpen(false),
+        });
+      }}
+      onCancel={() => setModalOpen(false)}
+    />
+  )}
+</Modal>
     </div>
   );
 };
