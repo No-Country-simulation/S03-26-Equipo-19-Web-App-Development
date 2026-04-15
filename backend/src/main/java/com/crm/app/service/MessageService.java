@@ -440,7 +440,7 @@ public class MessageService {
 
             Template welcomeTemplate = welcomeTemplateOpt.get();
             String contactName = (contact.getName() != null && !contact.getName().isBlank())
-                    ? contact.getName() : "cliente";
+                    ? contact.getName() : "";
 
             String welcomeMessage = templateService.renderTemplate(welcomeTemplate, Map.of("name", contactName));
             String providerId = whatsAppService.sendMessage(contact.getPhone(), welcomeMessage);
