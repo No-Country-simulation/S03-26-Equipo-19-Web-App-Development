@@ -1,20 +1,18 @@
 type TaskType = "CALL" | "EMAIL" | "MEETING" | "DEMO" | "OTHER";
 type TaskStatus = "PENDING" | "OVERDUE" | "COMPLETED";
 
-
-export interface TaskResponse {
+export interface TaskResType {
   id: number;
   title: string;
   description: string;
   type: TaskType;
   status: TaskStatus;
   dueDate: string;
-  completedAt: string;
+  completeAt: string;
   contactId: number;
   assignedTo: number;
   createdAt: string;
 }
-
 
 export interface TaskReqType {
   title: string;

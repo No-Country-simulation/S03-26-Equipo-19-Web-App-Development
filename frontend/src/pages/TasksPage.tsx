@@ -12,6 +12,7 @@ import { useTasksMutationsService } from "../services/use_mutations/tasks-mutati
 import TaskItem, { type Color } from "../components/tasks/TaskItem";
 import { useGetTasks } from "../services/use_queries/tasks-query";
 import { useGetContacts } from "../services/use_queries/contacts-query";
+import type { TaskReqType, TaskResType } from "../types/task.types";
 
 const TASK_GROUPS_CONFIG: {
     key: string

@@ -51,7 +51,7 @@ export const ConversationList = ({
       </div>
 
   
-      <ScrollArea className="h-[300px]">
+      <ScrollArea className="h-[520px]">
         <div className="flex flex-col bg-white -mt-4 pt-5">
 
           {contacts
