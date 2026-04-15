@@ -51,8 +51,8 @@ public class DataSeeder implements ApplicationRunner {
 
         User admin = userRepository.findByEmail("admin@crm.com").orElseThrow();
         List<User> salespersons = userRepository.findByRole(Role.SALESPERSON);
-
-        List<Template> templates = seedTemplates(admin);
+        
+        List<Template> templates = seedTemplates(admin, salespersons);
 
         List<Contact> contacts = seedContactsWithDates(salespersons, tags);
 
@@ -138,69 +138,229 @@ public class DataSeeder implements ApplicationRunner {
         return savedTags;
     }
 
-    private List<Template> seedTemplates(User admin) {
+    private List<Template> seedTemplates(User admin, List<User> salespersons) {
         List<Template> templates = new ArrayList<>();
 
-        // Crear MUCHAS plantillas en meses anteriores para tener números grandes
-        Random random = new Random();
+        // ==================== PLANTILLAS ADMIN (GLOBALES) ====================
 
-        // Plantillas de meses anteriores (para tener total alto: ~289)
-        for (int i = 1; i <= 280; i++) {
-            LocalDateTime pastDate = LocalDateTime.of(2026, 1 + random.nextInt(2), 1 + random.nextInt(28), 10, 0);
-            Template t = Template.builder()
-                    .name("Plantilla histórica " + i)
-                    .channel(i % 2 == 0 ? Channel.WHATSAPP : Channel.EMAIL)
-                    .body("Contenido de plantilla " + i)
-                    .variables("{}")
-                    .createdBy(admin)
-                    .createdAt(pastDate)
-                    .build();
-            templates.add(t);
+        // 1. Email - Bienvenida para nuevos leads
+        templates.add(createTemplate(admin, "Email de bienvenida - Lead", Channel.EMAIL,
+                "✅ Bienvenido a nuestro ecosistema",
+                """
+                Hola {{name}},
+                
+                Gracias por contactarte con nosotros. Hemos recibido tu consulta y será derivada a nuestro equipo de ventas.
+                
+                En las próximas horas, un asesor se comunicará contigo.
+                
+                Mientras tanto, puedes responder este correo si tenés alguna pregunta.
+                
+                Saludos cordiales,
+                Equipo de Ventas
+                """,
+                "{\"name\":\"string\"}"));
+
+        // 2. WhatsApp - Primer contacto con lead activo
+        templates.add(createTemplate(admin, "WhatsApp - Primer contacto", Channel.WHATSAPP,
+                null,
+                """
+                👋 Hola {{name}}! Soy {{salesperson}}, asesor de la empresa.
+                
+                Recibimos tu consulta y queremos ayudarte.
+                
+                ¿Podrías contarnos un poco más sobre lo que necesitas?
+                
+                ¡Quedo atento a tu respuesta!
+                """,
+                "{\"name\":\"string\",\"salesperson\":\"string\"}"));
+
+        // 3. Email - Seguimiento post-reunión
+        templates.add(createTemplate(admin, "Email - Seguimiento post-reunión", Channel.EMAIL,
+                "📌 Seguimiento de nuestra reunión",
+                """
+                Hola {{name}},
+                
+                Fue un placer reunirnos. Como quedamos, te envío la propuesta en archivo adjunto.
+                
+                Quedo atento a tus comentarios para avanzar con los siguientes pasos.
+                
+                Saludos,
+                {{salesperson}}
+                """,
+                "{\"name\":\"string\",\"salesperson\":\"string\"}"));
+
+        // 4. WhatsApp - Recordatorio de seguimiento
+        templates.add(createTemplate(admin, "WhatsApp - Recordatorio de seguimiento", Channel.WHATSAPP,
+                null,
+                """
+                📅 Hola {{name}}! Te recuerdo que tenemos pendiente el seguimiento de tu caso.
+                
+                ¿Cómo vamos con lo que hablamos? ¿Necesitas algo más?
+                
+                ¡Quedo atento!
+                """,
+                "{\"name\":\"string\"}"));
+
+        // 5. Email - Propuesta comercial
+        templates.add(createTemplate(admin, "Email - Propuesta comercial", Channel.EMAIL,
+                "📊 Propuesta comercial para {{company}}",
+                """
+                Hola {{name}},
+                
+                Adjunto encontrarás la propuesta comercial para {{company}}.
+                
+                Quedo atento a tu confirmación para coordinar los próximos pasos.
+                
+                Saludos,
+                {{salesperson}}
+                """,
+                "{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}"));
+
+        // 6. WhatsApp - Cliente en seguimiento (post-venta)
+        templates.add(createTemplate(admin, "WhatsApp - Cliente en seguimiento", Channel.WHATSAPP,
+                null,
+                """
+                🎯 Hola {{name}}! Pasamos para saber cómo vas con nuestra solución.
+                
+                ¿Has tenido alguna dificultad? ¿Necesitas asistencia?
+                
+                Estamos aquí para ayudarte.
+                """,
+                "{\"name\":\"string\"}"));
+
+        // 7. Email - Newsletter mensual
+        templates.add(createTemplate(admin, "Email - Newsletter mensual", Channel.EMAIL,
+                "📰 Novedades del mes - {{month}}",
+                """
+                Hola {{name}},
+                
+                Este mes te traemos:
+                • Nueva integración con WhatsApp
+                • Reportes avanzados
+                • Plantillas dinámicas
+                
+                ¿Querés conocer más? Agendá una demo con nosotros.
+                
+                Saludos,
+                Equipo CRM
+                """,
+                "{\"name\":\"string\",\"month\":\"string\"}"));
+
+        // 8. WhatsApp - Cierre positivo de venta
+        templates.add(createTemplate(admin, "WhatsApp - Felicitaciones cierre", Channel.WHATSAPP,
+                null,
+                """
+                🎉 Excelente {{name}}! 🎉
+                
+                ¡Bienvenido oficialmente a la familia!
+                
+                En las próximas horas recibirás tus credenciales de acceso y la guía de primeros pasos.
+                
+                ¡Éxitos en esta nueva etapa!
+                """,
+                "{\"name\":\"string\"}"));
+
+        // 9. Email - Encuesta de satisfacción
+        templates.add(createTemplate(admin, "Email - Encuesta de satisfacción", Channel.EMAIL,
+                "⭐ ¿Cómo calificas tu experiencia?",
+                """
+                Hola {{name}},
+                
+                Valoramos mucho tu opinión. ¿Podrías tomarte 2 minutos para responder nuestra encuesta?
+                
+                🔗 {{survey_link}}
+                
+                ¡Gracias por ayudarnos a mejorar!
+                
+                Saludos,
+                Equipo CRM
+                """,
+                "{\"name\":\"string\",\"survey_link\":\"string\"}"));
+
+        // 10. WhatsApp - Lead frío (reactivación)
+        templates.add(createTemplate(admin, "WhatsApp - Reactivación de lead", Channel.WHATSAPP,
+                null,
+                """
+                🔄 Hola {{name}}! Hace tiempo que no hablamos.
+                
+                Queremos saber si aún te interesa nuestra solución o si necesitas algo de nosotros.
+                
+                ¡Estamos a tu disposición!
+                """,
+                "{\"name\":\"string\"}"));
+
+        // ==================== PLANTILLAS DE VENDEDORES (PERSONALES) ====================
+
+        // Vendedor 1 (Alice) - 3 plantillas personales
+        User alice = salespersons.stream().filter(u -> u.getEmail().equals("alice@crm.com")).findFirst().orElse(null);
+        if (alice != null) {
+            templates.add(createTemplate(alice, "Alice - Demo agendada", Channel.EMAIL,
+                    "Demo CRM - {{date}}",
+                    "Hola {{name}}, agendamos la demo para el {{date}} a las {{time}}. Te espero.",
+                    "{\"name\":\"string\",\"date\":\"string\",\"time\":\"string\"}"));
+            templates.add(createTemplate(alice, "Alice - Propuesta personalizada", Channel.WHATSAPP, null,
+                    "Hola {{name}}, te envié la propuesta personalizada a tu correo. ¿La recibiste?",
+                    "{\"name\":\"string\"}"));
+            templates.add(createTemplate(alice, "Alice - Recordatorio de cierre", Channel.EMAIL,
+                    "Recordatorio - Oferta vigente",
+                    "Hola {{name}}, la oferta que te comenté vence en {{days}} días. ¿Avanzamos?",
+                    "{\"name\":\"string\",\"days\":\"string\"}"));
         }
 
-        // Plantillas de marzo (período anterior) - 9 plantillas
-        LocalDateTime march1 = LocalDateTime.of(2026, 3, 1, 10, 0);
-        LocalDateTime march10 = LocalDateTime.of(2026, 3, 10, 14, 0);
-        LocalDateTime march20 = LocalDateTime.of(2026, 3, 20, 9, 0);
+        // Vendedor 2 (Bob) - 3 plantillas personales
+        User bob = salespersons.stream().filter(u -> u.getEmail().equals("bob@crm.com")).findFirst().orElse(null);
+        if (bob != null) {
+            templates.add(createTemplate(bob, "Bob - Contacto inicial rápido", Channel.WHATSAPP, null,
+                    "👋 Hola {{name}}, soy Bob de Ventas. ¿Conectamos para una breve charla?",
+                    "{\"name\":\"string\"}"));
+            templates.add(createTemplate(bob, "Bob - Envío de materiales", Channel.EMAIL,
+                    "Materiales solicitados",
+                    "Hola {{name}}, adjunto los materiales que solicitaste. Quedo atento a tus comentarios.",
+                    "{\"name\":\"string\"}"));
+            templates.add(createTemplate(bob, "Bob - Llamada pendiente", Channel.WHATSAPP, null,
+                    "📞 Hola {{name}}, te llamo para coordinar la llamada pendiente. ¿Cuándo te queda bien?",
+                    "{\"name\":\"string\"}"));
+        }
 
-        templates.add(createTemplate(admin, "Email bienvenida marzo", Channel.EMAIL, march1));
-        templates.add(createTemplate(admin, "WhatsApp primer contacto", Channel.WHATSAPP, march10));
-        templates.add(createTemplate(admin, "Email propuesta comercial", Channel.EMAIL, march20));
-
-        // Plantillas de abril (período actual) - 9 plantillas (para mostrar +9)
-        LocalDateTime april1 = LocalDateTime.of(2026, 4, 1, 8, 0);
-        LocalDateTime april5 = LocalDateTime.of(2026, 4, 5, 13, 0);
-        LocalDateTime april8 = LocalDateTime.of(2026, 4, 8, 11, 0);
-        LocalDateTime april10 = LocalDateTime.of(2026, 4, 10, 10, 0);
-        LocalDateTime april12 = LocalDateTime.of(2026, 4, 12, 16, 0);
-        LocalDateTime april14 = LocalDateTime.of(2026, 4, 14, 9, 0);
-
-        templates.add(createTemplate(admin, "Email newsletter abril", Channel.EMAIL, april1));
-        templates.add(createTemplate(admin, "WhatsApp recordatorio", Channel.WHATSAPP, april5));
-        templates.add(createTemplate(admin, "Email seguimiento", Channel.EMAIL, april8));
-        templates.add(createTemplate(admin, "WhatsApp felicitaciones", Channel.WHATSAPP, april10));
-        templates.add(createTemplate(admin, "Email encuesta", Channel.EMAIL, april12));
-        templates.add(createTemplate(admin, "WhatsApp pago", Channel.WHATSAPP, april14));
-
-        // Plantillas de hoy (4 plantillas)
-        LocalDateTime now = LocalDateTime.of(2026, 4, 14, 10, 0);
-        for (int i = 1; i <= 4; i++) {
-            templates.add(createTemplate(admin, "Plantilla de hoy " + i,
-                    i % 2 == 0 ? Channel.WHATSAPP : Channel.EMAIL, now));
+        // Vendedor 3 (Carol) - 3 plantillas personales
+        User carol = salespersons.stream().filter(u -> u.getEmail().equals("carol@crm.com")).findFirst().orElse(null);
+        if (carol != null) {
+            templates.add(createTemplate(carol, "Carol - Newsletter personal", Channel.EMAIL,
+                    "Info para {{company}}",
+                    "Hola {{name}}, encontré información que puede interesarle a {{company}}. ¿Te la comparto?",
+                    "{\"name\":\"string\",\"company\":\"string\"}"));
+            templates.add(createTemplate(carol, "Carol - Consulta rápida", Channel.WHATSAPP, null,
+                    "Hola {{name}}, ¿recibiste mi mail? Quedo atento a tu respuesta.",
+                    "{\"name\":\"string\"}"));
+            templates.add(createTemplate(carol, "Carol - Seguimiento de propuesta", Channel.EMAIL,
+                    "Seguimiento de propuesta",
+                    "Hola {{name}}, paso a consultar si tuviste tiempo de revisar la propuesta que te envié.",
+                    "{\"name\":\"string\"}"));
         }
 
         // Guardar todas las plantillas
         List<Template> savedTemplates = new ArrayList<>();
         for (Template template : templates) {
-            if (!templateRepository.existsByNameAndCreatedByRole(template.getName(), Role.ADMIN)) {
+            if (!templateRepository.existsByNameAndCreatedByRole(template.getName(), template.getCreatedBy().getRole())) {
                 savedTemplates.add(templateRepository.save(template));
+                log.info("Template seeded: '{}' by {}", template.getName(), template.getCreatedBy().getEmail());
             }
         }
 
-        log.info("Templates seeded: total={}, thisMonth={}, today={}",
-                savedTemplates.size(), 9, 4);
-
+        log.info("Templates seeded: {} total (10 admin + 9 salespersons)", savedTemplates.size());
         return savedTemplates;
+    }
+
+    private Template createTemplate(User createdBy, String name, Channel channel, String subject, String body, String variables) {
+        return Template.builder()
+                .name(name)
+                .channel(channel)
+                .subject(subject)
+                .body(body)
+                .variables(variables)
+                .createdBy(createdBy)
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 
     private Template createTemplate(User admin, String name, Channel channel, LocalDateTime createdAt) {
@@ -442,7 +602,7 @@ public class DataSeeder implements ApplicationRunner {
                         .template(isOutbound ? whatsappTemplate : null)
                         .sender(isOutbound ? contact.getOwner() : null)
                         .providerId(generateWhatsAppProviderId())
-                        .sentAt(contact.getCreatedAt().plusDays(1).plusHours(i * 3))
+                        .sentAt(contact.getCreatedAt().plusDays(1).plusHours(i * 3L))
                         .build();
                 messageRepository.save(extraMessage);
                 totalMessages++;

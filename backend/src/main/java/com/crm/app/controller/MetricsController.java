@@ -5,9 +5,6 @@ import com.crm.app.model.User;
 import com.crm.app.service.MetricsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -243,7 +240,7 @@ public class MetricsController {
                 .body(content);
     }
 
-    @DeleteMapping("/cache")
+ /*   @DeleteMapping("/cache")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Limpiar caché de métricas",
@@ -257,7 +254,7 @@ public class MetricsController {
     public ResponseEntity<Void> clearCache() {
         metricsService.clearCache();
         return ResponseEntity.noContent().build();
-    }
+    }*/
 
     // En MetricsController.java - Agrega este endpoint
 

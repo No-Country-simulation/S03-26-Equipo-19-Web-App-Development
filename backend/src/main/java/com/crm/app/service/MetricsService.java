@@ -3,7 +3,6 @@ package com.crm.app.service;
 import com.crm.app.dto.MetricsDTOs;
 import com.crm.app.exception.BusinessRuleViolationException;
 import com.crm.app.exception.ResourceNotFoundException;
-import com.crm.app.model.Conversation;
 import com.crm.app.model.User;
 import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.FunnelStatus;
@@ -16,8 +15,6 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +25,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -45,105 +41,69 @@ public class MetricsService {
     private final ConversationRepository conversationRepository;
     private final TemplateRepository templateRepository;
 
-    private static final List<FunnelStatus> ACTIVE_STATUSES = Arrays.asList(
+    private static final List<FunnelStatus> ACTIVE_STATUSES = List.of(
             FunnelStatus.NEW_LEAD,
             FunnelStatus.CONTACTED,
             FunnelStatus.IN_NEGOTIATION,
             FunnelStatus.PROPOSAL_SENT
     );
 
-    // Cache para almacenar resultados de períodos
-    private final Map<String, Map<String, Long>> funnelStatsCache = new ConcurrentHashMap<>();
-    private final Map<String, Long> taskCountCache = new ConcurrentHashMap<>();
-    private final Map<String, Long> messageCountCache = new ConcurrentHashMap<>();
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final int DEFAULT_DAYS = 30;
 
     // ==================== MÉTODOS DE CÁLCULO DE TENDENCIA ====================
 
     private MetricsDTOs.MetricValue calculateMetric(long currentValue, long previousValue) {
-        double changePercent = 0;
-        String trend = "stable";
-
-        if (previousValue > 0) {
-            changePercent = ((currentValue - previousValue) * 100.0) / previousValue;
-            changePercent = Math.round(changePercent * 10) / 10.0;
-        } else if (currentValue > 0 && previousValue == 0) {
-            changePercent = 100;
-            trend = "up";
-        } else if (currentValue == 0 && previousValue > 0) {
-            changePercent = -100;
-            trend = "down";
+        if (currentValue == previousValue) {
+            return new MetricsDTOs.MetricValue(currentValue, 0, "stable");
         }
 
-        if (changePercent > 0) trend = "up";
-        else if (changePercent < 0) trend = "down";
-        else trend = "stable";
+        if (previousValue == 0) {
+            return new MetricsDTOs.MetricValue(currentValue, 100, currentValue > 0 ? "up" : "stable");
+        }
+
+        if (currentValue == 0) {
+            return new MetricsDTOs.MetricValue(0, -100, "down");
+        }
+
+        double changePercent = ((currentValue - previousValue) * 100.0) / previousValue;
+        changePercent = Math.round(changePercent * 10) / 10.0;
+        String trend = changePercent > 0 ? "up" : "down";
 
         return new MetricsDTOs.MetricValue(currentValue, changePercent, trend);
     }
 
     private MetricsDTOs.MetricValueDouble calculateMetricDouble(double currentValue, double previousValue) {
-        double changePercent = 0;
-        String trend = "stable";
-
-        if (previousValue > 0) {
-            changePercent = ((currentValue - previousValue) * 100.0) / previousValue;
-            changePercent = Math.round(changePercent * 10) / 10.0;
-        } else if (currentValue > 0) {
-            changePercent = 100;
-            trend = "up";
+        if (currentValue == previousValue) {
+            return new MetricsDTOs.MetricValueDouble(currentValue, 0, "stable");
         }
 
-        if (changePercent > 0) trend = "up";
-        else if (changePercent < 0) trend = "down";
+        if (previousValue == 0) {
+            return new MetricsDTOs.MetricValueDouble(currentValue, 100, currentValue > 0 ? "up" : "stable");
+        }
+
+        if (currentValue == 0) {
+            return new MetricsDTOs.MetricValueDouble(0, -100, "down");
+        }
+
+        double changePercent = ((currentValue - previousValue) * 100.0) / previousValue;
+        changePercent = Math.round(changePercent * 10) / 10.0;
+        String trend = changePercent > 0 ? "up" : "down";
 
         return new MetricsDTOs.MetricValueDouble(currentValue, changePercent, trend);
     }
 
     private LocalDateTime getPreviousPeriodStart(LocalDateTime currentStart, LocalDateTime currentEnd) {
         long durationDays = java.time.Duration.between(currentStart, currentEnd).toDays();
-        if (durationDays <= 0) durationDays = 30;
-        return currentStart.minusDays(durationDays);
+        return currentStart.minusDays(durationDays <= 0 ? DEFAULT_DAYS : durationDays);
     }
 
     private LocalDateTime getPreviousPeriodEnd(LocalDateTime currentStart) {
         return currentStart.minusSeconds(1);
     }
 
-    // ==================== MÉTODOS OPTIMIZADOS CON CACHÉ INTERNO ====================
-
-    private String getCacheKey(User owner, LocalDateTime endDate) {
-        Long ownerId = owner != null ? owner.getId() : 0;
-        return ownerId + "_" + endDate.toLocalDate().toString();
-    }
-
-    private Map<String, Long> getFunnelStatsForPeriodCached(User owner, LocalDateTime endDate) {
-        String key = getCacheKey(owner, endDate);
-        return funnelStatsCache.computeIfAbsent(key, k -> {
-            Map<String, Long> stats = new HashMap<>();
-            for (FunnelStatus status : FunnelStatus.values()) {
-                stats.put(status.name(), 0L);
-            }
-            List<Object[]> results = contactRepository.countByFunnelStatusWithDate(owner, endDate);
-            for (Object[] stat : results) {
-                stats.put(((FunnelStatus) stat[0]).name(), (Long) stat[1]);
-            }
-            return stats;
-        });
-    }
-
-    private long getTaskCountCached(User owner, TaskStatus status, LocalDateTime endDate, String type) {
-        String key = getCacheKey(owner, endDate) + "_" + status + "_" + type;
-        return taskCountCache.computeIfAbsent(key, k -> {
-            if ("overdue".equals(type)) {
-                return getTaskOverdueCountWithDate(owner, endDate);
-            }
-            return getTaskCountByStatusWithDate(owner, status, endDate);
-        });
-    }
-
     // ==================== DASHBOARD PRINCIPAL ====================
 
-    @Cacheable(value = "dashboardMetrics", key = "#currentUser.id + '-' + #salespersonEmail + '-' + (#startDate != null ? #startDate : 'null') + '-' + (#endDate != null ? #endDate : 'null')")
     @PreAuthorize("isAuthenticated()")
     public MetricsDTOs.DashboardMetrics getDashboardMetrics(User currentUser, String salespersonEmail,
                                                             String startDate, String endDate) {
@@ -154,27 +114,24 @@ public class MetricsService {
         LocalDateTime previousStart = getPreviousPeriodStart(currentStart, currentEnd);
         LocalDateTime previousEnd = getPreviousPeriodEnd(currentStart);
 
-        String periodDesc = formatPeriod(startDate, endDate);
         User owner = resolveOwner(currentUser, salespersonEmail);
 
-        // Obtener todas las métricas en paralelo usando caché
-        MetricsDTOs.FunnelMetrics funnelMetrics = getFunnelMetrics(owner, currentEnd, previousEnd);
-        MetricsDTOs.TaskMetrics taskMetrics = getTaskMetrics(owner, currentEnd, previousEnd);
-        MetricsDTOs.UserMetrics userMetrics = getUserMetrics(currentUser, currentEnd, previousEnd, currentStart, previousStart);
-        MetricsDTOs.MessageMetrics messageMetrics = getMessageMetrics(owner, currentStart, currentEnd, previousStart, previousEnd);
-
-        String salespersonInfo = owner != null ? owner.getEmail() : null;
-
         return new MetricsDTOs.DashboardMetrics(
-                funnelMetrics, null, messageMetrics, taskMetrics, userMetrics, periodDesc, salespersonInfo
+                getFunnelMetrics(owner, currentEnd, previousEnd),
+                null,
+                getMessageMetrics(owner, currentStart, currentEnd, previousStart, previousEnd),
+                getTaskMetrics(owner, currentEnd, previousEnd),
+                getUserMetrics(currentUser, currentEnd, previousEnd, currentStart, previousStart),
+                formatPeriod(startDate, endDate),
+                owner != null ? owner.getEmail() : null
         );
     }
 
     // ==================== MÉTRICAS DE CONTACTOS ====================
 
     private MetricsDTOs.FunnelMetrics getFunnelMetrics(User owner, LocalDateTime currentEnd, LocalDateTime previousEnd) {
-        Map<String, Long> currentStats = getFunnelStatsForPeriodCached(owner, currentEnd);
-        Map<String, Long> previousStats = getFunnelStatsForPeriodCached(owner, previousEnd);
+        Map<String, Long> currentStats = getFunnelStatsForPeriod(owner, currentEnd);
+        Map<String, Long> previousStats = getFunnelStatsForPeriod(owner, previousEnd);
 
         Map<String, MetricsDTOs.MetricValue> byStatus = new LinkedHashMap<>();
         long currentActive = 0, previousActive = 0, currentTotal = 0, previousTotal = 0;
@@ -198,19 +155,30 @@ public class MetricsService {
                 calculateMetric(currentTotal, previousTotal));
     }
 
+    private Map<String, Long> getFunnelStatsForPeriod(User owner, LocalDateTime endDate) {
+        Map<String, Long> stats = new HashMap<>();
+        for (FunnelStatus status : FunnelStatus.values()) {
+            stats.put(status.name(), 0L);
+        }
+
+        List<Object[]> results = contactRepository.countByFunnelStatusWithDate(owner, endDate);
+        for (Object[] stat : results) {
+            stats.put(((FunnelStatus) stat[0]).name(), (Long) stat[1]);
+        }
+        return stats;
+    }
+
     // ==================== MÉTRICAS DE TAREAS ====================
 
     private MetricsDTOs.TaskMetrics getTaskMetrics(User owner, LocalDateTime currentEnd, LocalDateTime previousEnd) {
-        long currentCompleted = getTaskCountCached(owner, TaskStatus.COMPLETED, currentEnd, "completed");
-        long previousCompleted = getTaskCountCached(owner, TaskStatus.COMPLETED, previousEnd, "completed");
-
-        long currentOverdue = getTaskCountCached(owner, TaskStatus.OVERDUE, currentEnd, "overdue");
-        long previousOverdue = getTaskCountCached(owner, TaskStatus.OVERDUE, previousEnd, "overdue");
-
-        long currentPending = getTaskCountCached(owner, TaskStatus.PENDING, currentEnd, "pending");
-        long previousPending = getTaskCountCached(owner, TaskStatus.PENDING, previousEnd, "pending");
-
+        long currentCompleted = getTaskCountByStatusWithDate(owner, TaskStatus.COMPLETED, currentEnd);
+        long previousCompleted = getTaskCountByStatusWithDate(owner, TaskStatus.COMPLETED, previousEnd);
+        long currentOverdue = getTaskOverdueCountWithDate(owner, currentEnd);
+        long previousOverdue = getTaskOverdueCountWithDate(owner, previousEnd);
+        long currentPending = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, currentEnd);
+        long previousPending = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, previousEnd);
         long currentDueToday = getTaskDueTodayCount(owner);
+
         long currentTotal = currentCompleted + currentOverdue + currentPending;
         long previousTotal = previousCompleted + previousOverdue + previousPending;
 
@@ -223,26 +191,23 @@ public class MetricsService {
     }
 
     private long getTaskCountByStatusWithDate(User owner, TaskStatus status, LocalDateTime endDate) {
-        if (owner != null) {
-            return taskRepository.countByAssignedToAndStatusWithDate(owner, status, endDate);
-        }
-        return taskRepository.countByStatusWithDate(status, endDate);
+        return owner != null
+                ? taskRepository.countByAssignedToAndStatusWithDate(owner, status, endDate)
+                : taskRepository.countByStatusWithDate(status, endDate);
     }
 
     private long getTaskOverdueCountWithDate(User owner, LocalDateTime endDate) {
-        if (owner != null) {
-            return taskRepository.countOverdueByUserWithDate(owner, endDate);
-        }
-        return taskRepository.countOverdueWithDate(endDate);
+        return owner != null
+                ? taskRepository.countOverdueByUserWithDate(owner, endDate)
+                : taskRepository.countOverdueWithDate(endDate);
     }
 
     private long getTaskDueTodayCount(User owner) {
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDateTime todayEnd = LocalDate.now().atTime(23, 59, 59);
-        if (owner != null) {
-            return taskRepository.countByAssignedToAndDueDateBetween(owner, todayStart, todayEnd);
-        }
-        return taskRepository.countByDueDateBetween(todayStart, todayEnd);
+        return owner != null
+                ? taskRepository.countByAssignedToAndDueDateBetween(owner, todayStart, todayEnd)
+                : taskRepository.countByDueDateBetween(todayStart, todayEnd);
     }
 
     // ==================== MÉTRICAS DE USUARIOS ====================
@@ -291,10 +256,12 @@ public class MetricsService {
 
     private long getMessageCount(User owner, LocalDateTime start, LocalDateTime end, boolean isOutbound) {
         if (owner != null) {
-            return isOutbound ? messageRepository.countOutboundBySenderAndPeriod(owner, start, end)
+            return isOutbound
+                    ? messageRepository.countOutboundBySenderAndPeriod(owner, start, end)
                     : messageRepository.countInboundByContactOwnerAndPeriod(owner, start, end);
         }
-        return isOutbound ? messageRepository.countOutboundMessagesInPeriod(start, end)
+        return isOutbound
+                ? messageRepository.countOutboundMessagesInPeriod(start, end)
                 : messageRepository.countInboundMessagesInPeriod(start, end);
     }
 
@@ -307,13 +274,13 @@ public class MetricsService {
         previousChannel.put("WHATSAPP", 0L);
         previousChannel.put("EMAIL", 0L);
 
-        Function<User, List<Object[]>> currentFetcher = u -> u != null ?
-                messageRepository.countOutboundByChannelAndSender(u, currentStart, currentEnd) :
-                messageRepository.countOutboundByChannelInPeriod(currentStart, currentEnd);
+        Function<User, List<Object[]>> currentFetcher = u -> u != null
+                ? messageRepository.countOutboundByChannelAndSender(u, currentStart, currentEnd)
+                : messageRepository.countOutboundByChannelInPeriod(currentStart, currentEnd);
 
-        Function<User, List<Object[]>> previousFetcher = u -> u != null ?
-                messageRepository.countOutboundByChannelAndSender(u, previousStart, previousEnd) :
-                messageRepository.countOutboundByChannelInPeriod(previousStart, previousEnd);
+        Function<User, List<Object[]>> previousFetcher = u -> u != null
+                ? messageRepository.countOutboundByChannelAndSender(u, previousStart, previousEnd)
+                : messageRepository.countOutboundByChannelInPeriod(previousStart, previousEnd);
 
         for (Object[] stat : currentFetcher.apply(owner)) {
             currentChannel.put(((Channel) stat[0]).name(), (Long) stat[1]);
@@ -334,21 +301,21 @@ public class MetricsService {
     public MetricsDTOs.ContactsMetricsResponse getContactsMetrics(User currentUser) {
         LocalDateTime currentEnd = LocalDateTime.now();
         return new MetricsDTOs.ContactsMetricsResponse(
-                getFunnelMetrics(resolveOwner(currentUser, null), currentEnd, currentEnd.minusDays(30)));
+                getFunnelMetrics(resolveOwner(currentUser, null), currentEnd, currentEnd.minusDays(DEFAULT_DAYS)));
     }
 
     public MetricsDTOs.MessagesMetricsResponse getMessagesMetrics(User currentUser) {
-        LocalDateTime currentStart = LocalDateTime.now().minusDays(30);
+        LocalDateTime currentStart = LocalDateTime.now().minusDays(DEFAULT_DAYS);
         LocalDateTime currentEnd = LocalDateTime.now();
         return new MetricsDTOs.MessagesMetricsResponse(
                 getMessageMetrics(resolveOwner(currentUser, null), currentStart, currentEnd,
-                        currentStart.minusDays(30), currentStart.minusSeconds(1)));
+                        currentStart.minusDays(DEFAULT_DAYS), currentStart.minusSeconds(1)));
     }
 
     public MetricsDTOs.TasksMetricsResponse getTasksMetrics(User currentUser) {
         LocalDateTime currentEnd = LocalDateTime.now();
         return new MetricsDTOs.TasksMetricsResponse(
-                getTaskMetrics(resolveOwner(currentUser, null), currentEnd, currentEnd.minusDays(30)));
+                getTaskMetrics(resolveOwner(currentUser, null), currentEnd, currentEnd.minusDays(DEFAULT_DAYS)));
     }
 
     public MetricsDTOs.UsersMetricsResponse getUsersMetrics(User currentUser) {
@@ -357,37 +324,34 @@ public class MetricsService {
                     calculateMetric(0, 0), calculateMetric(0, 0), calculateMetric(0, 0), calculateMetric(0, 0)));
         }
         LocalDateTime currentEnd = LocalDateTime.now();
-        LocalDateTime previousEnd = currentEnd.minusDays(30);
-        LocalDateTime currentStart = currentEnd.minusDays(30);
-        LocalDateTime previousStart = currentStart.minusDays(30);
-
         return new MetricsDTOs.UsersMetricsResponse(new MetricsDTOs.UserMetrics(
-                calculateMetric(userRepository.countTotalWithDate(currentEnd), userRepository.countTotalWithDate(previousEnd)),
-                calculateMetric(userRepository.countActiveWithDate(currentEnd), userRepository.countActiveWithDate(previousEnd)),
+                calculateMetric(userRepository.countTotalWithDate(currentEnd), userRepository.countTotalWithDate(currentEnd.minusDays(DEFAULT_DAYS))),
+                calculateMetric(userRepository.countActiveWithDate(currentEnd), userRepository.countActiveWithDate(currentEnd.minusDays(DEFAULT_DAYS))),
                 calculateMetric(0, 0),
-                calculateMetric(userRepository.countByCreatedAtAfter(currentStart), userRepository.countByCreatedAtAfter(previousStart))));
+                calculateMetric(userRepository.countByCreatedAtAfter(currentEnd.minusDays(DEFAULT_DAYS)),
+                        userRepository.countByCreatedAtAfter(currentEnd.minusDays(DEFAULT_DAYS * 2)))));
     }
 
     // ==================== PANEL METRICS ====================
 
     public MetricsDTOs.PanelMetrics getPanelMetrics(User currentUser) {
         LocalDateTime currentEnd = LocalDateTime.now();
-        LocalDateTime previousEnd = currentEnd.minusDays(30);
+        LocalDateTime previousEnd = currentEnd.minusDays(DEFAULT_DAYS);
         User owner = resolveOwner(currentUser, null);
 
-        Map<String, Long> currentContactStats = getFunnelStatsForPeriodCached(owner, currentEnd);
-        Map<String, Long> previousContactStats = getFunnelStatsForPeriodCached(owner, previousEnd);
+        Map<String, Long> currentContactStats = getFunnelStatsForPeriod(owner, currentEnd);
+        Map<String, Long> previousContactStats = getFunnelStatsForPeriod(owner, previousEnd);
 
         long currentTotalContacts = currentContactStats.values().stream().mapToLong(Long::longValue).sum();
         long previousTotalContacts = previousContactStats.values().stream().mapToLong(Long::longValue).sum();
 
-        LocalDateTime currentStart = currentEnd.minusDays(30);
+        LocalDateTime currentStart = currentEnd.minusDays(DEFAULT_DAYS);
         long currentTotalMessages = getMessageCount(owner, currentStart, currentEnd, true) + getMessageCount(owner, currentStart, currentEnd, false);
-        long previousTotalMessages = getMessageCount(owner, currentStart.minusDays(30), currentStart.minusSeconds(1), true) +
-                getMessageCount(owner, currentStart.minusDays(30), currentStart.minusSeconds(1), false);
+        long previousTotalMessages = getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS), currentStart.minusSeconds(1), true) +
+                getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS), currentStart.minusSeconds(1), false);
 
-        long currentUpcomingTasks = getTaskCountCached(owner, TaskStatus.PENDING, currentEnd, "pending") + getTaskDueTodayCount(owner);
-        long previousUpcomingTasks = getTaskCountCached(owner, TaskStatus.PENDING, previousEnd, "pending");
+        long currentUpcomingTasks = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, currentEnd) + getTaskDueTodayCount(owner);
+        long previousUpcomingTasks = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, previousEnd);
 
         return new MetricsDTOs.PanelMetrics(
                 calculateMetric(currentTotalContacts, previousTotalContacts),
@@ -398,23 +362,21 @@ public class MetricsService {
     // ==================== GLOBAL METRICS ====================
 
     public MetricsDTOs.GlobalMetricsResponse getGlobalMetrics(User currentUser) {
-        LocalDateTime currentStart = LocalDateTime.now().minusDays(30);
+        LocalDateTime currentStart = LocalDateTime.now().minusDays(DEFAULT_DAYS);
         LocalDateTime currentEnd = LocalDateTime.now();
-        LocalDateTime previousStart = currentStart.minusDays(30);
+        LocalDateTime previousStart = currentStart.minusDays(DEFAULT_DAYS);
         LocalDateTime previousEnd = currentStart.minusSeconds(1);
         User owner = resolveOwner(currentUser, null);
 
         long currentConversations = getTotalConversations(owner, currentEnd);
         long previousConversations = getTotalConversations(owner, previousEnd);
-
         long currentSent = getMessageCount(owner, currentStart, currentEnd, true);
         long previousSent = getMessageCount(owner, previousStart, previousEnd, true);
         long currentReceived = getMessageCount(owner, currentStart, currentEnd, false);
         double currentResponseRate = currentSent > 0 ? Math.round((currentReceived * 100.0 / currentSent) * 10) / 10.0 : 0.0;
         double previousResponseRate = previousSent > 0 ? Math.round((getMessageCount(owner, previousStart, previousEnd, false) * 100.0 / previousSent) * 10) / 10.0 : 0.0;
-
-        long currentCompletedTasks = getTaskCountCached(owner, TaskStatus.COMPLETED, currentEnd, "completed");
-        long previousCompletedTasks = getTaskCountCached(owner, TaskStatus.COMPLETED, previousEnd, "completed");
+        long currentCompletedTasks = getTaskCountByStatusWithDate(owner, TaskStatus.COMPLETED, currentEnd);
+        long previousCompletedTasks = getTaskCountByStatusWithDate(owner, TaskStatus.COMPLETED, previousEnd);
 
         return new MetricsDTOs.GlobalMetricsResponse(
                 calculateMetric(currentConversations, previousConversations),
@@ -426,7 +388,7 @@ public class MetricsService {
     private long getTotalConversations(User owner, LocalDateTime endDate) {
         if (owner != null) {
             return conversationRepository.findByAssignedTo(owner).stream()
-                    .filter(c -> c.getCreatedAt().isBefore(endDate) || c.getCreatedAt().isEqual(endDate))
+                    .filter(c -> !c.getCreatedAt().isAfter(endDate))
                     .count();
         }
         return conversationRepository.countByCreatedAtBefore(endDate);
@@ -438,47 +400,67 @@ public class MetricsService {
         List<User> salespersons = userRepository.findByRole(Role.SALESPERSON);
         if (salespersons.isEmpty()) return null;
 
-        // Calcular métricas para todos los vendedores en una sola pasada
-        List<SellerMetrics> sellerMetricsList = salespersons.parallelStream().map(seller -> {
-            long sent = messageRepository.countOutboundBySenderAndPeriod(seller, start, end);
-            long received = messageRepository.countInboundByContactOwnerAndPeriod(seller, start, end);
-            return new SellerMetrics(seller, sent, received,
-                    contactRepository.countByOwnerAndFunnelStatus(seller, FunnelStatus.CLOSED_WON),
-                    contactRepository.countByOwnerAndFunnelStatus(seller, FunnelStatus.NEW_LEAD),
-                    taskRepository.countByAssignedToAndStatus(seller, TaskStatus.COMPLETED));
-        }).collect(Collectors.toList());
+        // Una sola consulta que trae todo junto
+        List<Object[]> results = messageRepository.countOutboundPerSenderInPeriod(start, end);
+
+        if (results == null || results.isEmpty()) return null;
+
+        // Crear mapa de mensajes enviados por vendedor
+        Map<Long, Long> messagesBySeller = results.stream()
+                .collect(Collectors.toMap(
+                        r -> ((User) r[0]).getId(),
+                        r -> (Long) r[1]
+                ));
+
+        // Calcular CLOSED_WON por vendedor
+        Map<Long, Long> closedWonBySeller = new HashMap<>();
+        for (User seller : salespersons) {
+            long closedWon = contactRepository.countByOwnerAndFunnelStatus(seller, FunnelStatus.CLOSED_WON);
+            closedWonBySeller.put(seller.getId(), closedWon);
+        }
+
+        // Encontrar el mejor vendedor (60% mensajes, 40% CLOSED_WON)
+        User bestSeller = null;
+        double bestScore = 0;
+        long bestMessages = 0;
 
         // Calcular máximos para normalización
-        long maxSent = sellerMetricsList.stream().mapToLong(SellerMetrics::sent).max().orElse(1);
-        long maxClosedWon = sellerMetricsList.stream().mapToLong(SellerMetrics::closedWon).max().orElse(1);
-        long maxNewLeads = sellerMetricsList.stream().mapToLong(SellerMetrics::newLeads).max().orElse(1);
-        long maxCompletedTasks = sellerMetricsList.stream().mapToLong(SellerMetrics::completedTasks).max().orElse(1);
-        double maxResponseRate = sellerMetricsList.stream()
-                .mapToDouble(sm -> sm.sent() > 0 ? (sm.received() * 100.0 / sm.sent()) : 0)
-                .max().orElse(1);
+        long maxMessages = messagesBySeller.values().stream().max(Long::compare).orElse(1L);
+        long maxClosedWon = closedWonBySeller.values().stream().max(Long::compare).orElse(1L);
 
-        // Calcular scores y encontrar el mejor
-        Object[] best = sellerMetricsList.stream()
-                .map(sm -> {
-                    double responseRate = sm.sent() > 0 ? (sm.received() * 100.0 / sm.sent()) : 0;
-                    double score = ((double) sm.closedWon() / maxClosedWon) * 0.35 +
-                            ((double) sm.newLeads() / maxNewLeads) * 0.25 +
-                            ((double) sm.sent() / maxSent) * 0.20 +
-                            (responseRate / maxResponseRate) * 0.10 +
-                            ((double) sm.completedTasks() / maxCompletedTasks) * 0.10;
-                    return new Object[]{sm.seller(), score, sm.sent()};
-                })
-                .max(Comparator.comparingDouble(o -> (double) o[1]))
-                .orElse(null);
+        for (User seller : salespersons) {
+            long messages = messagesBySeller.getOrDefault(seller.getId(), 0L);
+            long closedWon = closedWonBySeller.getOrDefault(seller.getId(), 0L);
 
-        if (best == null) return null;
+            // Score simplificado: 60% mensajes, 40% ventas cerradas
+            double score = ((double) messages / maxMessages) * 0.6 +
+                    ((double) closedWon / maxClosedWon) * 0.4;
 
-        User bestSeller = (User) best[0];
-        double bestScore = (double) best[1];
-        long bestMessages = (long) best[2];
+            if (score > bestScore) {
+                bestScore = score;
+                bestSeller = seller;
+                bestMessages = messages;
+            }
+        }
 
-        return new MetricsDTOs.TopSalespersonInfo(bestSeller.getId(), bestSeller.getName(),
-                bestSeller.getEmail(), bestMessages, Math.round(bestScore * 100) / 100.0);
+        if (bestSeller == null) return null;
+
+        return new MetricsDTOs.TopSalespersonInfo(
+                bestSeller.getId(),
+                bestSeller.getName(),
+                bestSeller.getEmail(),
+                bestMessages,
+                Math.round(bestScore * 100) / 100.0
+        );
+    }
+
+    private double calculateSellerScore(SellerMetrics sm, long maxSent, long maxClosedWon, long maxNewLeads, long maxCompletedTasks, double maxResponseRate) {
+        double responseRate = sm.sent() > 0 ? (sm.received() * 100.0 / sm.sent()) : 0;
+        return ((double) sm.closedWon() / maxClosedWon) * 0.35 +
+                ((double) sm.newLeads() / maxNewLeads) * 0.25 +
+                ((double) sm.sent() / maxSent) * 0.20 +
+                (responseRate / maxResponseRate) * 0.10 +
+                ((double) sm.completedTasks() / maxCompletedTasks) * 0.10;
     }
 
     private record SellerMetrics(User seller, long sent, long received, long closedWon, long newLeads, long completedTasks) {}
@@ -487,23 +469,14 @@ public class MetricsService {
 
     private User resolveOwner(User currentUser, String salespersonEmail) {
         if (currentUser.getRole() != Role.ADMIN) return currentUser;
-        if (salespersonEmail != null && !salespersonEmail.isEmpty()) {
-            User owner = userRepository.findByEmail(salespersonEmail)
-                    .orElseThrow(() -> new ResourceNotFoundException("Vendedor", salespersonEmail));
-            if (owner.getRole() != Role.SALESPERSON) {
-                throw new BusinessRuleViolationException("El usuario no es un vendedor");
-            }
-            return owner;
-        }
-        return null;
-    }
+        if (salespersonEmail == null || salespersonEmail.isEmpty()) return null;
 
-    @CacheEvict(value = "dashboardMetrics", allEntries = true)
-    public void clearCache() {
-        funnelStatsCache.clear();
-        taskCountCache.clear();
-        messageCountCache.clear();
-        log.info("🗑️ Caché de métricas limpiado");
+        User owner = userRepository.findByEmail(salespersonEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Vendedor", salespersonEmail));
+        if (owner.getRole() != Role.SALESPERSON) {
+            throw new BusinessRuleViolationException("El usuario no es un vendedor");
+        }
+        return owner;
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -543,51 +516,35 @@ public class MetricsService {
                                       String startDate, String endDate, String salespersonEmail) {
         StringBuilder csv = new StringBuilder();
         csv.append("# REPORTE DE MÉTRICAS DEL CRM\n");
-        csv.append("# Generado: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).append("\n");
+        csv.append("# Generado: ").append(LocalDateTime.now().format(DATE_FORMATTER)).append("\n");
         csv.append("# Período: ").append(formatPeriod(startDate, endDate)).append("\n");
         if (salespersonEmail != null) csv.append("# Vendedor: ").append(salespersonEmail).append("\n");
         csv.append("\n=== RESUMEN GENERAL ===\n");
         csv.append("Métrica,Valor,Cambio %,Tendencia\n");
-        csv.append("Contactos activos,").append(dashboard.funnel().totalActive().value()).append(",")
-                .append(dashboard.funnel().totalActive().changePercent()).append(",")
-                .append(dashboard.funnel().totalActive().trend()).append("\n");
-        csv.append("Tareas para hoy,").append(dashboard.tasks().dueToday().value()).append(",")
-                .append(dashboard.tasks().dueToday().changePercent()).append(",")
-                .append(dashboard.tasks().dueToday().trend()).append("\n");
-        csv.append("Tareas vencidas,").append(dashboard.tasks().overdue().value()).append(",")
-                .append(dashboard.tasks().overdue().changePercent()).append(",")
-                .append(dashboard.tasks().overdue().trend()).append("\n");
+        appendCsvRow(csv, "Contactos activos", dashboard.funnel().totalActive());
+        appendCsvRow(csv, "Tareas para hoy", dashboard.tasks().dueToday());
+        appendCsvRow(csv, "Tareas vencidas", dashboard.tasks().overdue());
         return csv.toString();
+    }
+
+    private void appendCsvRow(StringBuilder csv, String label, MetricsDTOs.MetricValue metric) {
+        csv.append(label).append(",")
+                .append(metric.value()).append(",")
+                .append(metric.changePercent()).append(",")
+                .append(metric.trend()).append("\n");
     }
 
     private String generatePdfMetrics(MetricsDTOs.DashboardMetrics dashboard,
                                       String startDate, String endDate, String salespersonEmail) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4);
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
-            Paragraph title = new Paragraph("Reporte de Métricas CRM", titleFont);
-            title.setAlignment(Element.ALIGN_CENTER);
-            document.add(title);
-            document.add(new Paragraph(" "));
+            addTitle(document);
+            addInfo(document, startDate, endDate, salespersonEmail);
+            addSummaryTable(document, dashboard);
 
-            Font infoFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
-            document.add(new Paragraph("Generado: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), infoFont));
-            document.add(new Paragraph("Período: " + formatPeriod(startDate, endDate), infoFont));
-            if (salespersonEmail != null) document.add(new Paragraph("Vendedor: " + salespersonEmail, infoFont));
-            document.add(new Paragraph(" "));
-
-            addSectionHeader(document);
-            PdfPTable summaryTable = new PdfPTable(3);
-            summaryTable.setWidthPercentage(100);
-            addMetricRow(summaryTable, "Contactos activos", dashboard.funnel().totalActive());
-            addMetricRow(summaryTable, "Tareas para hoy", dashboard.tasks().dueToday());
-            addMetricRow(summaryTable, "Tareas vencidas", dashboard.tasks().overdue());
-
-            document.add(summaryTable);
             document.close();
             return Base64.getEncoder().encodeToString(baos.toByteArray());
         } catch (Exception e) {
@@ -596,126 +553,118 @@ public class MetricsService {
         }
     }
 
+    private void addTitle(Document document) throws DocumentException {
+        Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
+        Paragraph title = new Paragraph("Reporte de Métricas CRM", titleFont);
+        title.setAlignment(Element.ALIGN_CENTER);
+        document.add(title);
+        document.add(new Paragraph(" "));
+    }
+
+    private void addInfo(Document document, String startDate, String endDate, String salespersonEmail) throws DocumentException {
+        Font infoFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+        document.add(new Paragraph("Generado: " + LocalDateTime.now().format(DATE_FORMATTER), infoFont));
+        document.add(new Paragraph("Período: " + formatPeriod(startDate, endDate), infoFont));
+        if (salespersonEmail != null) document.add(new Paragraph("Vendedor: " + salespersonEmail, infoFont));
+        document.add(new Paragraph(" "));
+    }
+
+    private void addSummaryTable(Document document, MetricsDTOs.DashboardMetrics dashboard) throws DocumentException {
+        addSectionHeader(document, "Resumen General");
+        PdfPTable summaryTable = new PdfPTable(3);
+        summaryTable.setWidthPercentage(100);
+        addMetricRow(summaryTable, "Contactos activos", dashboard.funnel().totalActive());
+        addMetricRow(summaryTable, "Tareas para hoy", dashboard.tasks().dueToday());
+        addMetricRow(summaryTable, "Tareas vencidas", dashboard.tasks().overdue());
+        document.add(summaryTable);
+    }
+
     private void addMetricRow(PdfPTable table, String label, MetricsDTOs.MetricValue metric) {
         Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+        String trendSymbol = switch (metric.trend()) {
+            case "up" -> "↑";
+            case "down" -> "↓";
+            default -> "→";
+        };
+
         table.addCell(new PdfPCell(new Phrase(label, normalFont)));
         table.addCell(new PdfPCell(new Phrase(String.valueOf(metric.value()), normalFont)));
-        String trendSymbol = metric.trend().equals("up") ? "↑" : (metric.trend().equals("down") ? "↓" : "→");
         table.addCell(new PdfPCell(new Phrase(trendSymbol + " " + metric.changePercent() + "%", normalFont)));
     }
 
-    private void addSectionHeader(Document document) throws DocumentException {
+    private void addSectionHeader(Document document, String title) throws DocumentException {
         Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
-        Paragraph header = new Paragraph("Resumen General", headerFont);
+        Paragraph header = new Paragraph(title, headerFont);
         header.setSpacingBefore(15);
         header.setSpacingAfter(5);
         document.add(header);
     }
 
     private String formatPeriod(String startDate, String endDate) {
-        if (startDate == null && endDate == null) return "Últimos 30 días";
+        if (startDate == null && endDate == null) return "Últimos " + DEFAULT_DAYS + " días";
         return (startDate != null ? startDate : "inicio") + " a " + (endDate != null ? endDate : "hoy");
     }
 
     private LocalDateTime parseStartDate(String dateStr) {
-        if (dateStr == null || dateStr.isEmpty()) return LocalDate.now().minusDays(30).atStartOfDay();
+        if (dateStr == null || dateStr.isEmpty()) {
+            return LocalDate.now().minusDays(DEFAULT_DAYS).atStartOfDay();
+        }
         return LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
     }
 
     private LocalDateTime parseEndDate(String dateStr) {
-        if (dateStr == null || dateStr.isEmpty()) return LocalDateTime.now();
+        if (dateStr == null || dateStr.isEmpty()) {
+            return LocalDateTime.now();
+        }
         return LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).atTime(23, 59, 59);
     }
+
+    // ==================== MÉTRICAS DE PLANTILLAS ====================
 
     public MetricsDTOs.TemplatesMetricsResponse getTemplatesMetrics(User currentUser) {
         log.info("📊 Generando métricas de plantillas para usuario: {}", currentUser.getEmail());
 
         LocalDateTime currentEnd = LocalDateTime.now();
-        LocalDateTime previousEnd = currentEnd.minusDays(30);
-
-        // Calcular fechas para hoy
-        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime todayEnd = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
-
-        // Calcular fechas para este mes
+        LocalDateTime previousEnd = currentEnd.minusDays(DEFAULT_DAYS);
         LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime monthEnd = LocalDateTime.now();
         LocalDateTime previousMonthStart = monthStart.minusMonths(1);
         LocalDateTime previousMonthEnd = monthStart.minusSeconds(1);
-
-        // Calcular fecha 30 días atrás
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        LocalDateTime previousThirtyDaysAgo = thirtyDaysAgo.minusDays(30);
+        LocalDateTime thirtyDaysAgo = currentEnd.minusDays(DEFAULT_DAYS);
+        LocalDateTime previousThirtyDaysAgo = thirtyDaysAgo.minusDays(DEFAULT_DAYS);
 
         User owner = resolveOwner(currentUser, null);
 
-        // 1. Total de plantillas (vs hace 30 días)
         long currentTotal = getTotalTemplates(owner, currentEnd);
         long previousTotal = getTotalTemplates(owner, previousEnd);
-        MetricsDTOs.MetricValue total = calculateMetric(currentTotal, previousTotal);
-
-        // 2. Plantillas creadas este mes (vs mes anterior)
-        long currentMonthTemplates = getTemplatesCreatedInPeriod(owner, monthStart, monthEnd);
+        long currentMonthTemplates = getTemplatesCreatedInPeriod(owner, monthStart, currentEnd);
         long previousMonthTemplates = getTemplatesCreatedInPeriod(owner, previousMonthStart, previousMonthEnd);
-        MetricsDTOs.MetricValue createdThisMonth = calculateMetric(currentMonthTemplates, previousMonthTemplates);
-
-        // 3. Plantillas creadas hoy (vs ayer o promedio diario)
-        long createdToday = getTemplatesCreatedToday(owner, todayStart, todayEnd);
-
-        // Calcular promedio diario del mes anterior para comparación realista
-        long previousMonthTotal = getTemplatesCreatedInPeriod(owner, previousMonthStart, previousMonthEnd);
-        long daysInPreviousMonth = java.time.temporal.ChronoUnit.DAYS.between(previousMonthStart, previousMonthEnd) + 1;
-        double previousDailyAverage = daysInPreviousMonth > 0 ? (double) previousMonthTotal / daysInPreviousMonth : 0;
-
-        // Para un cambio realista (ej: 1.5%), el valor anterior debe ser similar
-        // Si createdToday = 4 y previousDailyAverage = 3.94, entonces cambio ≈ 1.5%
-        long previousValueForToday = (long) previousDailyAverage;
-        MetricsDTOs.MetricValue createdTodayMetric = calculateMetric(createdToday, previousValueForToday);
-
-        // 4. Promedio diario (últimos 30 días vs período anterior)
-        long totalLast30Days = getTemplatesCreatedInPeriod(owner, thirtyDaysAgo, LocalDateTime.now());
+        long createdToday = getTemplatesCreatedToday(owner);
+        long totalLast30Days = getTemplatesCreatedInPeriod(owner, thirtyDaysAgo, currentEnd);
         long totalPrevious30Days = getTemplatesCreatedInPeriod(owner, previousThirtyDaysAgo, thirtyDaysAgo);
 
-        double currentDailyAverage = totalLast30Days / 30.0;
-        double previousDailyAverage30 = totalPrevious30Days / 30.0;
-
-        // Redondear a 1 decimal
+        double currentDailyAverage = totalLast30Days / (double) DEFAULT_DAYS;
+        double previousDailyAverage = totalPrevious30Days / (double) DEFAULT_DAYS;
         double currentDailyAverageRounded = Math.round(currentDailyAverage * 10) / 10.0;
-        double previousDailyAverageRounded = Math.round(previousDailyAverage30 * 10) / 10.0;
 
-        // Calcular cambio porcentual para dailyAverage
-        double dailyChangePercent = 0;
-        String dailyTrend = "stable";
-        if (previousDailyAverageRounded > 0) {
-            dailyChangePercent = ((currentDailyAverageRounded - previousDailyAverageRounded) * 100.0) / previousDailyAverageRounded;
-            dailyChangePercent = Math.round(dailyChangePercent * 10) / 10.0;
-        } else if (currentDailyAverageRounded > 0) {
-            dailyChangePercent = 100;
-        }
-
-        if (dailyChangePercent > 0) dailyTrend = "up";
-        else if (dailyChangePercent < 0) dailyTrend = "down";
-        else dailyTrend = "stable";
-
-        MetricsDTOs.MetricValue dailyAverageMetric = new MetricsDTOs.MetricValue(
-                (long) (currentDailyAverageRounded * 10), // 0.8 → 8
-                dailyChangePercent,
-                dailyTrend
-        );
-
-        log.info("✅ Templates metrics: total={} ({}%), thisMonth={} ({}%), today={} ({}%), dailyAvg={} ({})",
-                currentTotal, total.changePercent(),
-                currentMonthTemplates, createdThisMonth.changePercent(),
-                createdToday, createdTodayMetric.changePercent(),
-                currentDailyAverageRounded, dailyChangePercent);
+        long previousMonthTotal = getTemplatesCreatedInPeriod(owner, previousMonthStart, previousMonthEnd);
+        long daysInPreviousMonth = java.time.temporal.ChronoUnit.DAYS.between(previousMonthStart, previousMonthEnd) + 1;
+        double previousDailyAverageForToday = daysInPreviousMonth > 0 ? (double) previousMonthTotal / daysInPreviousMonth : 0;
+        long previousValueForToday = (long) previousDailyAverageForToday;
 
         return new MetricsDTOs.TemplatesMetricsResponse(
-                new MetricsDTOs.TemplateMetrics(total, createdThisMonth, createdTodayMetric, currentDailyAverageRounded, dailyAverageMetric)
-        );
+                new MetricsDTOs.TemplateMetrics(
+                        calculateMetric(currentTotal, previousTotal),
+                        calculateMetric(currentMonthTemplates, previousMonthTemplates),
+                        calculateMetric(createdToday, previousValueForToday),
+                        currentDailyAverageRounded,
+                        calculateMetric((long) (currentDailyAverageRounded * 10), (long) (Math.round(previousDailyAverage * 10) / 10.0 * 10))
+                ));
     }
 
-    // Método auxiliar con 3 parámetros
-    private long getTemplatesCreatedToday(User owner, LocalDateTime todayStart, LocalDateTime todayEnd) {
+    private long getTemplatesCreatedToday(User owner) {
+        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime todayEnd = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+
         if (owner != null && owner.getRole() == Role.SALESPERSON) {
             return templateRepository.countByCreatedByRoleAndCreatedAtBetween(Role.ADMIN, todayStart, todayEnd) +
                     templateRepository.countByCreatedByAndCreatedAtBetween(owner, todayStart, todayEnd);
@@ -723,11 +672,8 @@ public class MetricsService {
         return templateRepository.countByCreatedAtBetween(todayStart, todayEnd);
     }
 
-    // En MetricsService.java - Agrega/actualiza estos métodos
-
     private long getTotalTemplates(User owner, LocalDateTime endDate) {
         if (owner != null && owner.getRole() == Role.SALESPERSON) {
-            // Vendedor ve: globales (de ADMIN) + sus personales
             return templateRepository.countByCreatedByRoleAndCreatedAtBefore(Role.ADMIN, endDate) +
                     templateRepository.countByCreatedByAndCreatedAtBefore(owner, endDate);
         }
@@ -741,5 +687,4 @@ public class MetricsService {
         }
         return templateRepository.countByCreatedAtBetween(start, end);
     }
-
 }
