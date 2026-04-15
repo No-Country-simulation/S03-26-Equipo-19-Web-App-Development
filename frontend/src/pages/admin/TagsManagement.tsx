@@ -44,6 +44,7 @@ export const TagsManagement = () => {
     { icon: <Tag size={20} className="text-blue-600" />, label: 'Etiqueta más usada', value: '', subtitle: mostUsed },
   ];
 
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">

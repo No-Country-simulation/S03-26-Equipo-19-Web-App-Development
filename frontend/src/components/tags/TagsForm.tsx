@@ -18,7 +18,7 @@ export const TagsForm = ({
     name: initialValues?.name || "",
     color: initialValues?.color || "#3B82F6",
   });
-
+  
   const handleChange = (key: keyof TagRequest, value: string) => {
     setForm((prev) => ({
       ...prev,
