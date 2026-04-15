@@ -129,5 +129,59 @@ export const updateFunnelStatusByContactId = async ( contactId: number, status: 
   }
 };
 
+// Agregar tag a contacto
+export const addTagByContactId = async ( contactId: number, tagId: number) => {
+  const { token } = useAuthStore.getState();
 
+  if (!token) {
+    throw new Error("No hay token de autenticación.");
+  }
+
+  try {
+    const res = await apiContactsService.post(
+      `/${contactId}/tags/${tagId}`,
+      null, 
+      {
+        params: { tagId }, 
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    console.log("Se agregó tag a contacto");
+    
+    return res.data;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+  }
+};
+
+// Borrar tag de contacto
+export const removeTagFromContactId = async ( contactId: number, tagId: number) => {
+  const { token } = useAuthStore.getState();
+
+  if (!token) {
+    throw new Error("No hay token de autenticación.");
+  }
+
+  try {
+    const res = await apiContactsService.delete(
+      `/${contactId}/tags/${tagId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    console.log("Se eliminó tag del contacto");
+    
+    return res.data;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+  }
+};
+
+ 
 

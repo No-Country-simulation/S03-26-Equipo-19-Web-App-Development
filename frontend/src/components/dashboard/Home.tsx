@@ -20,8 +20,6 @@ const Home = () => {
 
   const { data: contacts, isLoading: isLoadingContacts } = useGetContacts()
 
-console.log({tasksMetrics});
-
   return (
     <>
       <div className="flex justify-center md:justify-between mb-6">
@@ -55,7 +53,7 @@ console.log({tasksMetrics});
           title="Nuevos contactos"
           metric={contactsMetrics?.funnel.byStatus.NEW_LEAD  ?? { value: 0, changePercent: 0, trend: 'stable' }}
           color="success"
-          icon={<Calendar size={28} />}
+          icon={<UserStar size={28} />}
         />
       </div>
 

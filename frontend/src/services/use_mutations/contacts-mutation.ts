@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  addTagByContactId,
   postContact,
+  removeTagFromContactId,
   updateContactById,
   updateFunnelStatusByContactId,
 } from "../use_cases/contacts-service";
@@ -37,9 +39,33 @@ export const ContactsMutationsService = () => {
     },
   });
 
+  const mutationAddTagByContactId = useMutation({
+    mutationFn: ({ contactId, tagId }: { contactId: number; tagId: number }) =>
+      addTagByContactId(contactId, tagId),
+
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contact", variables.contactId] });
+    },
+  });
+
+  const mutationRemoveTagFromContactId = useMutation({
+    mutationFn: ({ contactId, tagId }: { contactId: number; tagId: number }) =>
+      removeTagFromContactId(contactId, tagId),
+
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contact", variables.contactId] });
+    },
+  });
+
+
   return {
     mutationPostContact,
     mutationUpdateContactById,
     mutationUpdateFunnelStatusById,
+    mutationAddTagByContactId,
+    mutationRemoveTagFromContactId,
   };
 };
+

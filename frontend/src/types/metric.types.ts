@@ -60,7 +60,7 @@ export interface MessagesResType {
 }
 
 // tasks
-export interface TasksResType {
+export interface TasksMetricsResType {
   tasks: {
     completed: Metric;
     overdue: Metric;

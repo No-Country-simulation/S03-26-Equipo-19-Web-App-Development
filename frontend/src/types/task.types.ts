@@ -1,14 +1,22 @@
-type TaskType = "follow-up" | "reminder";
-type TaskStatus = "pending" | "done";
+type TaskType = "CALL" | "EMAIL" | "MEETING" | "DEMO" | "OTHER";
+type TaskStatus = "PENDING" | "OVERDUE" | "COMPLETED";
 
-export interface Task {
+export interface TaskResType {
   id: number;
-  contactId: number;
-  userId: number;
   title: string;
   description: string;
   type: TaskType;
   status: TaskStatus;
-  dueDate: Date;
-  createdAt: Date;
+  dueDate: string;
+  completeAt: string;
+  contactId: number;
+  assignedTo: number;
+  createdAt: string;
+}
+
+export interface TaskReqType {
+  title: string;
+  description: string;
+  type: TaskType;
+  dueDate: string;
 }
