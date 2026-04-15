@@ -285,4 +285,69 @@ public class ContactController {
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(contactService.reassignContact(id, newOwnerId, currentUser));
     }
+
+    // ==================== GESTIÓN DE ETIQUETAS ====================
+
+        @PostMapping("/{id}/tags/{tagId}")
+        @Operation(
+                summary = "Asignar etiqueta a contacto",
+                description = """
+                        Asigna una etiqueta existente a un contacto.
+
+                        **Permisos:**
+                        - ADMIN: Puede modificar cualquier contacto
+                        - VENDEDOR: Solo sus propios contactos
+
+                        **Reglas:**
+                        - No se puede asignar una etiqueta ya existente en el contacto
+                        """
+        )
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Etiqueta asignada correctamente"),
+                @ApiResponse(responseCode = "400", description = "La etiqueta ya está asignada"),
+                @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+                @ApiResponse(responseCode = "404", description = "Contacto o etiqueta no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
+        public ResponseEntity<ContactDTOs.ContactDetailResponse> addTagToContact(
+                @Parameter(description = "ID del contacto", example = "1", required = true)
+                @PathVariable Long id,
+                @Parameter(description = "ID de la etiqueta", example = "10", required = true)
+                @PathVariable Long tagId,
+                @AuthenticationPrincipal User currentUser) {
+
+        return ResponseEntity.ok(contactService.addTagToContact(id, tagId, currentUser));
+        }
+
+
+        @DeleteMapping("/{id}/tags/{tagId}")
+        @Operation(
+                summary = "Remover etiqueta de contacto",
+                description = """
+                        Elimina una etiqueta de un contacto.
+
+                        **Permisos:**
+                        - ADMIN: Puede modificar cualquier contacto
+                        - VENDEDOR: Solo sus propios contactos
+
+                        **Reglas:**
+                        - El contacto debe tener previamente la etiqueta
+                        """
+        )
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Etiqueta removida correctamente"),
+                @ApiResponse(responseCode = "400", description = "El contacto no tiene esta etiqueta"),
+                @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+                @ApiResponse(responseCode = "404", description = "Contacto o etiqueta no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
+        public ResponseEntity<ContactDTOs.ContactDetailResponse> removeTagFromContact(
+                @Parameter(description = "ID del contacto", example = "1", required = true)
+                @PathVariable Long id,
+                @Parameter(description = "ID de la etiqueta", example = "10", required = true)
+                @PathVariable Long tagId,
+                @AuthenticationPrincipal User currentUser) {
+
+        return ResponseEntity.ok(contactService.removeTagFromContact(id, tagId, currentUser));
+        }
 }
