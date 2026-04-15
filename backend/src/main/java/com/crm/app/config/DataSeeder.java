@@ -473,105 +473,79 @@ public class DataSeeder implements ApplicationRunner {
 
     private void seedTasksWithDates(List<Contact> contacts, List<User> salespersons) {
         Random random = new Random();
+        LocalDateTime now = LocalDateTime.of(2026, 4, 15, 10, 0);
 
         int totalTasks = 0;
 
-        // Tareas completadas en Enero-Febrero (base)
+        // ================= COMPLETED (pasadas y coherentes)
+        for (int i = 0; i < 20; i++) {
+            Contact contact = contacts.get(random.nextInt(contacts.size()));
+            User assignedTo = contact.getOwner();
+
+            LocalDateTime dueDate = now.minusDays(5 + random.nextInt(10));
+            LocalDateTime completedAt = dueDate.plusHours(1 + random.nextInt(5));
+
+            Task task = Task.builder()
+                    .title("Seguimiento completado")
+                    .description("Tarea ya realizada con " + contact.getName())
+                    .type(TaskType.CALL)
+                    .status(TaskStatus.COMPLETED)
+                    .dueDate(dueDate)
+                    .completedAt(completedAt)
+                    .contact(contact)
+                    .assignedTo(assignedTo)
+                    .createdAt(dueDate.minusDays(2))
+                    .build();
+
+            taskRepository.save(task);
+            totalTasks++;
+        }
+
+        // ================= PENDING (futuras)
+        for (int i = 0; i < 25; i++) {
+            Contact contact = contacts.get(random.nextInt(contacts.size()));
+            User assignedTo = contact.getOwner();
+
+            LocalDateTime dueDate = now.plusDays(1 + random.nextInt(10));
+
+            Task task = Task.builder()
+                    .title("Tarea pendiente")
+                    .description("Pendiente con " + contact.getName())
+                    .type(TaskType.EMAIL)
+                    .status(TaskStatus.PENDING)
+                    .dueDate(dueDate)
+                    .contact(contact)
+                    .assignedTo(assignedTo)
+                    .createdAt(now.minusDays(random.nextInt(3)))
+                    .build();
+
+            taskRepository.save(task);
+            totalTasks++;
+        }
+
+        // ================= OVERDUE (pasadas sin completar)
         for (int i = 0; i < 15; i++) {
             Contact contact = contacts.get(random.nextInt(contacts.size()));
             User assignedTo = contact.getOwner();
-            LocalDateTime dueDate = LocalDateTime.of(2026, 1 + random.nextInt(2), 5 + random.nextInt(20), 10, 0);
+
+            LocalDateTime dueDate = now.minusDays(1 + random.nextInt(7));
 
             Task task = Task.builder()
-                    .title("Seguimiento inicial")
-                    .description("Contactar a " + contact.getName() + " de " + contact.getCompany())
+                    .title("Tarea vencida")
+                    .description("No se contactó a tiempo a " + contact.getName())
                     .type(TaskType.CALL)
-                    .status(TaskStatus.COMPLETED)
+                    .status(TaskStatus.OVERDUE)
                     .dueDate(dueDate)
                     .contact(contact)
                     .assignedTo(assignedTo)
                     .createdAt(dueDate.minusDays(2))
-                    .completedAt(dueDate.plusHours(2))
                     .build();
+
             taskRepository.save(task);
             totalTasks++;
         }
 
-        // Tareas en Marzo (período anterior)
-        for (int i = 0; i < 25; i++) {
-            Contact contact = contacts.get(random.nextInt(contacts.size()));
-            User assignedTo = contact.getOwner();
-            LocalDateTime dueDate = LocalDateTime.of(2026, 3, 5 + random.nextInt(25), 10, 0);
-            TaskStatus status = i < 15 ? TaskStatus.COMPLETED : (i < 20 ? TaskStatus.PENDING : TaskStatus.OVERDUE);
-
-            Task task = Task.builder()
-                    .title(i < 15 ? "Reunión de seguimiento" : (i < 20 ? "Enviar propuesta" : "Contacto pendiente"))
-                    .description("Seguimiento con " + contact.getName())
-                    .type(i % 2 == 0 ? TaskType.CALL : TaskType.EMAIL)
-                    .status(status)
-                    .dueDate(dueDate)
-                    .contact(contact)
-                    .assignedTo(assignedTo)
-                    .createdAt(dueDate.minusDays(random.nextInt(5)))
-                    .build();
-            if (status == TaskStatus.COMPLETED) {
-                task.setCompletedAt(dueDate.plusHours(random.nextInt(24)));
-            }
-            taskRepository.save(task);
-            totalTasks++;
-        }
-
-        // Tareas en Abril (período actual - mayor actividad)
-        for (int i = 0; i < 40; i++) {
-            Contact contact = contacts.get(random.nextInt(contacts.size()));
-            User assignedTo = contact.getOwner();
-            LocalDateTime dueDate = LocalDateTime.of(2026, 4, 1 + random.nextInt(14), 10, 0);
-            TaskStatus status;
-            if (i < 18) {
-                status = TaskStatus.COMPLETED;
-            } else if (i < 30) {
-                status = TaskStatus.PENDING;
-            } else {
-                status = TaskStatus.OVERDUE;
-            }
-
-            Task task = Task.builder()
-                    .title(i < 18 ? "Cierre de venta" : (i < 30 ? "Demo programada" : "Llamada de seguimiento"))
-                    .description("Gestión con " + contact.getName() + " - " + contact.getCompany())
-                    .type(i % 2 == 0 ? TaskType.MEETING : TaskType.CALL)
-                    .status(status)
-                    .dueDate(dueDate)
-                    .contact(contact)
-                    .assignedTo(assignedTo)
-                    .createdAt(dueDate.minusDays(random.nextInt(3)))
-                    .build();
-            if (status == TaskStatus.COMPLETED) {
-                task.setCompletedAt(dueDate.plusHours(random.nextInt(12)));
-            }
-            taskRepository.save(task);
-            totalTasks++;
-        }
-        
-        LocalDateTime base = LocalDateTime.of(2026, 4, 14, 10, 0);
-        // Tareas para hoy (8 tareas)
-        for (int i = 0; i < 8; i++) {
-            Contact contact = contacts.get(random.nextInt(contacts.size()));
-            User assignedTo = contact.getOwner();
-            Task task = Task.builder()
-                    .title("Tarea prioritaria del día")
-                    .description("Contactar urgentemente a " + contact.getName() + " para cerrar acuerdo")
-                    .type(TaskType.CALL)
-                    .status(TaskStatus.PENDING)
-                    .dueDate(base.plusHours(random.nextInt(12)))
-                    .contact(contact)
-                    .assignedTo(assignedTo)
-                    .createdAt(base.minusDays(1))
-                    .build();
-            taskRepository.save(task);
-            totalTasks++;
-        }
-
-        log.info("Tasks seeded: {} total tasks", totalTasks);
+        log.info("Tasks seeded (FIXED): {} total", totalTasks);
     }
 
     private String generateWhatsAppProviderId() {

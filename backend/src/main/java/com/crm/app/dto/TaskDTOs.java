@@ -28,8 +28,7 @@ public class TaskDTOs {
             @Schema(
                 description = "Fecha de vencimiento de la tarea",
                 example = "2026-04-10T14:30:00",
-                type = "string",
-                format = "date-time"
+                type = "string"
                 )
             @NotNull(message = "La fecha de vencimiento es obligatoria")
             @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -56,8 +55,7 @@ public class TaskDTOs {
                 @Schema(
                         description = "Nueva fecha de vencimiento (opcional)",
                         example = "2026-04-10T14:30:00",
-                        type = "string",
-                        format = "date-time"
+                        type = "string"
                 )
                 @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
                 LocalDateTime dueDate
@@ -76,8 +74,7 @@ public class TaskDTOs {
             @Schema(
                 description = "Fecha de vencimiento",
                 example = "2026-04-10T14:30:00",
-                type = "string",
-                format = "date-time"
+                type = "string"
             )
             @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime dueDate,
@@ -85,8 +82,7 @@ public class TaskDTOs {
             @Schema(
                 description = "Fecha de finalización (si está completada)",
                 example = "2026-04-10T18:00:00",
-                type = "string",
-                format = "date-time"
+                type = "string"
             )
             @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime completedAt,
@@ -94,6 +90,11 @@ public class TaskDTOs {
             Long contactId,
             Long assignedTo,
 
+            @Schema(
+                description = "Fecha de creación",
+                example = "2026-04-15T12:23:22",
+                type = "string"
+            )
             @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime createdAt
     ) {}
