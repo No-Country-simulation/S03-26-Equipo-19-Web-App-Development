@@ -56,3 +56,7 @@ export const apiExportService = addAuthInterceptor(
 export const apiSavedViewsService = addAuthInterceptor(
   axios.create({ baseURL: `${import.meta.env.VITE_URL_BASE}/saved-views` })
 );
+
+export const apiTasksService = addAuthInterceptor(
+  axios.create({ baseURL: `${import.meta.env.VITE_URL_BASE}/tasks` })
+);

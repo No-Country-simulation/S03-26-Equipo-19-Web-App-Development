@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Tag } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { useGetTags, useTagsMutations } from '../../services/use_queries/tags-query';
+import { useGetTags } from '../../services/use_queries/tags-query';
 import type { TagResponse } from '../../types/admin.types';
+import { useTagsMutations } from '../../services/use_mutations/tags-mutation';
 
 const KpiCard = ({ icon, label, value, trend, isPositive, subtitle }: {
   icon: React.ReactNode; label: string; value?: string;
