@@ -1,7 +1,7 @@
 type TaskType = "CALL" | "EMAIL" | "MEETING" | "DEMO" | "OTHER";
 type TaskStatus = "PENDING" | "OVERDUE" | "COMPLETED";
 
-// ✅ definís el tipo del backend acá mismo
+
 export interface TaskResponse {
   id: number;
   title: string;
@@ -15,12 +15,11 @@ export interface TaskResponse {
   createdAt: string;
 }
 
-// ✅ alias opcional (podés incluso no usarlo)
-export type Task = TaskResponse;
 
 export interface TaskReqType {
   title: string;
   description: string;
   type: TaskType;
   dueDate: string;
+  contactId: number;
 }

@@ -12,27 +12,30 @@ import { useTasksMutationsService } from "../services/use_mutations/tasks-mutati
 import TaskItem, { type Color } from "../components/tasks/TaskItem";
 import { useGetTasks } from "../services/use_queries/tasks-query";
 import { useGetContacts } from "../services/use_queries/contacts-query";
-import type { TaskReqType } from "../types/task.types";
 
 const TASK_GROUPS_CONFIG: {
-  key: string
-  label: string
-  color: Color
+    key: string
+    label: string
+    color: Color
 }[] = [
-  { key: "OVERDUE", label: "Vencidas", color: "error" },
-  { key: "TODAY", label: "Para hoy", color: "primary" },
-  { key: "UPCOMING", label: "Próximas", color: "secondary" },
-  { key: "COMPLETED", label: "Completadas", color: "success" },
-]
+        { key: "OVERDUE", label: "Vencidas", color: "error" },
+        { key: "TODAY", label: "Para hoy", color: "primary" },
+        { key: "UPCOMING", label: "Próximas", color: "secondary" },
+        { key: "COMPLETED", label: "Completadas", color: "success" },
+    ]
 
 const colorMap: Record<Color, string> = {
-  primary: "text-primary",
-  secondary: "text-secondary",
-  success: "text-success",
-  error: "text-error",
+    primary: "text-primary",
+    secondary: "text-secondary",
+    success: "text-success",
+    error: "text-error",
 }
 
 const TasksPage = () => {
+
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+    const [selectedTask, setSelectedTask] = useState<TaskResType | null>(null);
+    const [selectedViewName, setSelectedViewName] = useState<string | null>(null);
 
     const { data: tasksMetrics } = useGetTasksMetrics()
     const { data: views = [] } = useGetSavedViews();
@@ -41,21 +44,105 @@ const TasksPage = () => {
 
     console.log({ tasks });
 
-    const { mutationPostTask } = useTasksMutationsService()
+    const { mutationPostTask, mutationUpdateTaskById } = useTasksMutationsService()
+
+    const handleOpenCreate = () => {
+        setSelectedTask(null);
+        setIsTaskModalOpen(true);
+    };
+
+    const handleOpenEdit = (task: TaskResType) => {
+        setSelectedTask(task);
+        setIsTaskModalOpen(true);
+    };
 
 
-    const handleCreateTask = (data: Record<string, unknown>) => {
-        mutationPostTask.mutate(data as unknown as TaskReqType, {
+    const handleCreateTask = (data: TaskReqType) => {
+        mutationPostTask.mutate(data, {
             onSuccess: () => {
-                setModalOpen(false);
+                setIsTaskModalOpen(false);
+            },
+        });
+    };
+
+    const handleUpdateTask = (data: TaskReqType) => {
+        if (!selectedTask) return;
+        console.log({ selectedTask, data });
+
+        mutationUpdateTaskById.mutate({ id: selectedTask.id, data: { ...data } }, {
+            onSuccess: () => {
+                setIsTaskModalOpen(false);
             },
         });
     };
 
     const tasksViews = views.filter(view => view.entity === "TASKS");
 
-    const [modalOpen, setModalOpen] = useState(false);
-    const [selectedViewName, setSelectedViewName] = useState<string | null>(null);
+    const selectedView = tasksViews.find(
+        (view) => view.name === selectedViewName
+    );
+
+
+    const applyViewFilters = (tasks: TaskResType[], view: any) => {
+        if (!view?.filters) return tasks;
+
+        const { status, dueDateFrom, dueDateTo } = view.filters;
+
+        return tasks.filter((task) => {
+            // status
+            if (status && task.status !== status) return false;
+
+            // fechas
+            if (dueDateFrom) {
+                const from = new Date(dueDateFrom);
+                const taskDate = new Date(task.dueDate);
+
+                if (taskDate < from) return false;
+            }
+
+            if (dueDateTo) {
+                const to = new Date(dueDateTo);
+                const taskDate = new Date(task.dueDate);
+
+                if (taskDate > to) return false;
+            }
+
+            return true;
+        });
+    };
+
+    const applySorting = (tasks: TaskResType[], view: any) => {
+        if (!view?.sortBy) return tasks;
+
+        const sorted = [...tasks].sort((a, b) => {
+            if (view.sortBy === "dueDate") {
+                const dateA = new Date(a.dueDate).getTime();
+                const dateB = new Date(b.dueDate).getTime();
+
+                return dateA - dateB;
+            }
+
+            return 0;
+        });
+
+        return view.sortOrder === "DESC" ? sorted.reverse() : sorted;
+    };
+
+
+    const processedTasks = useMemo(() => {
+        if (!tasks) return [];
+
+        let result = [...tasks];
+
+        if (selectedView) {
+            result = applyViewFilters(result, selectedView);
+            result = applySorting(result, selectedView);
+        }
+
+        return result;
+    }, [tasks, selectedView]);
+
+
 
     const contactsMap = useMemo(() => {
         const map = new Map()
@@ -94,19 +181,26 @@ const TasksPage = () => {
     }
 
     const groupedTasks = useMemo(() => {
-        if (!tasks) return {}
+        if (!processedTasks.length) return {};
 
-        return tasks.reduce((acc, task) => {
-            const group = getTaskGroup(task)
+        return processedTasks.reduce((acc, task) => {
+            const group = getTaskGroup(task);
 
-            if (!acc[group]) acc[group] = []
+            if (!acc[group]) acc[group] = [];
 
-            acc[group].push(task)
+            acc[group].push(task);
 
-            return acc
-        }, {} as Record<string, typeof tasks>)
-    }, [tasks])
+            return acc;
+        }, {} as Record<string, typeof tasks>);
+    }, [processedTasks]);
 
+    const mapTaskToForm = (task: TaskResType): TaskReqType => ({
+        title: task.title,
+        description: task.description,
+        type: task.type,
+        dueDate: task.dueDate.slice(0, 16),
+        contactId: task.contactId,
+    });
 
     if (isLoadingTasks) return <div className="flex items-center justify-center">
         <p className="text-lg font-medium text-primary">Cargando tareas...</p>
@@ -117,7 +211,7 @@ const TasksPage = () => {
         <>
             <div className="flex justify-center md:justify-between mb-6">
                 <TitleSection text="Mis tareas" className='hidden md:flex' />
-                <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={() => setModalOpen(true)}>
+                <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={handleOpenCreate}>
                     Nueva tarea
                 </Button>
             </div>
@@ -165,48 +259,51 @@ const TasksPage = () => {
                     </SelectContent>
                 </Select>
             </div>
-          <div className="flex flex-col gap-6">
-  {TASK_GROUPS_CONFIG.map((group) => {
-    const tasksInGroup = groupedTasks[group.key] || []
+            <div className="flex flex-col gap-6">
+                {TASK_GROUPS_CONFIG.map((group) => {
+                    const tasksInGroup = groupedTasks[group.key] || []
 
-    if (tasksInGroup.length === 0) return null
+                    if (tasksInGroup.length === 0) return null
 
-    return (
-      <div key={group.key}>
-        
-        <h3 className={`text-sm font-semibold mb-3 ${colorMap[group.color]}`}>
-          {group.label} ({tasksInGroup.length})
-        </h3>
+                    return (
+                        <div key={group.key}>
 
-        <div className="flex flex-col gap-2 lg:px-10">
-          {tasksInGroup.map((task: TaskReqType & { status?: string; dueDate?: string; id?: string; contactId?: number }) => {
-            const contact = contactsMap.get(task.contactId)
+                            <h3 className={`text-sm font-semibold mb-3 ${colorMap[group.color]}`}>
+                                {group.label} ({tasksInGroup.length})
+                            </h3>
 
-            return (
-              <TaskItem
-                key={task.id}
-                task={task}
-                contact={contact}
-                color={group.color}
-              />
-            )
-          })}
-        </div>
+                            <div className="flex flex-col gap-2 lg:px-10">
+                                {tasksInGroup.map((task) => {
+                                    const contact = contactsMap.get(task.contactId)
 
-      </div>
-    )
-  })}
-</div>
+                                    return (
+                                        <TaskItem
+                                            key={task.id}
+                                            task={task}
+                                            contact={contact}
+                                            color={group.color}
+                                            openModal={handleOpenEdit}
+                                        />
+                                    )
+                                })}
+                            </div>
 
-            {/* Modal para crear nueva tarea */}
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Modal para crear/editar tarea */}
             <Modal
-                isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
-                title="Nueva tarea">
+                isOpen={isTaskModalOpen}
+                onClose={() => setIsTaskModalOpen(false)}
+                title={selectedTask ? "Editar tarea" : "Nueva tarea"}
+            >
                 <TaskForm
-                    contactId={1}
-                    onSubmit={handleCreateTask}
-                    onCancel={() => setModalOpen(false)}
+                    contacts={contacts}
+                    initialData={selectedTask ? mapTaskToForm(selectedTask) : undefined}
+                    onSubmit={selectedTask ? handleUpdateTask : handleCreateTask}
+                    onCancel={() => setIsTaskModalOpen(false)}
                 />
             </Modal>
 

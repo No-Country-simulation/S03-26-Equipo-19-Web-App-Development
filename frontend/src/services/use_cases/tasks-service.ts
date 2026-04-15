@@ -11,11 +11,16 @@ export const getTasks = async (token: string): Promise<TaskResType[]> => {
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
 
-export const getTaskByContactId = async ( contactId: number): Promise<TaskResType[]>=> {
+export const getTaskByContactId = async (
+  contactId: number,
+): Promise<TaskResType[]> => {
   const { token } = useAuthStore.getState();
   if (!token) {
     throw new Error("No hay token de autenticación.");
@@ -29,19 +34,21 @@ export const getTaskByContactId = async ( contactId: number): Promise<TaskResTyp
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
 
-
-export const createTask = async (data: TaskReqType): Promise<TaskResType>=> {
+export const createTask = async (data: TaskReqType): Promise<TaskResType> => {
   const { token } = useAuthStore.getState();
   if (!token) {
     throw new Error("No hay token de autenticación.");
   }
   try {
     console.log("Data crea tarea", data);
-    
+
     const res = await apiTasksService.post("", data, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -51,12 +58,17 @@ export const createTask = async (data: TaskReqType): Promise<TaskResType>=> {
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
 
-
-export const updateTaskById = async ( taskId: number, data: TaskReqType,): Promise<TaskResType>=> {
+export const updateTaskById = async (
+  taskId: number,
+  data: TaskReqType,
+): Promise<TaskResType> => {
   const { token } = useAuthStore.getState();
   if (!token) {
     throw new Error("No hay token de autenticación.");
@@ -71,12 +83,16 @@ export const updateTaskById = async ( taskId: number, data: TaskReqType,): Promi
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
 
-
-export const updateTaskStatusById = async ( taskId: number): Promise<TaskResType>=> {
+export const updateTaskStatusById = async (
+  taskId: number,
+): Promise<TaskResType> => {
   const { token } = useAuthStore.getState();
   if (!token) {
     throw new Error("No hay token de autenticación.");
@@ -90,6 +106,30 @@ export const updateTaskStatusById = async ( taskId: number): Promise<TaskResType
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
+  }
+};
+
+export const deleteTaskById = async (taskId: number): Promise<TaskResType> => {
+  const { token } = useAuthStore.getState();
+  if (!token) {
+    throw new Error("No hay token de autenticación.");
+  }
+  try {
+    const res = await apiTasksService.delete(`/${taskId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
