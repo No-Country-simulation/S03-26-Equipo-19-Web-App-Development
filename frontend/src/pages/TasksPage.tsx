@@ -14,6 +14,7 @@ import { useGetTasks } from "../services/use_queries/tasks-query";
 import { useGetContacts } from "../services/use_queries/contacts-query";
 import type { TaskReqType, TaskResType } from "../types/task.types";
 
+
 const TASK_GROUPS_CONFIG: {
     key: string
     label: string
@@ -79,6 +80,71 @@ const TasksPage = () => {
 
     const tasksViews = views.filter(view => view.entity === "TASKS");
 
+    const selectedView = tasksViews.find(
+        (view) => view.name === selectedViewName
+    );
+
+
+    const applyViewFilters = (tasks: TaskResType[], view: any) => {
+        if (!view?.filters) return tasks;
+
+        const { status, dueDateFrom, dueDateTo } = view.filters;
+
+        return tasks.filter((task) => {
+            // status
+            if (status && task.status !== status) return false;
+
+            // fechas
+            if (dueDateFrom) {
+                const from = new Date(dueDateFrom);
+                const taskDate = new Date(task.dueDate);
+
+                if (taskDate < from) return false;
+            }
+
+            if (dueDateTo) {
+                const to = new Date(dueDateTo);
+                const taskDate = new Date(task.dueDate);
+
+                if (taskDate > to) return false;
+            }
+
+            return true;
+        });
+    };
+
+    const applySorting = (tasks: TaskResType[], view: any) => {
+        if (!view?.sortBy) return tasks;
+
+        const sorted = [...tasks].sort((a, b) => {
+            if (view.sortBy === "dueDate") {
+                const dateA = new Date(a.dueDate).getTime();
+                const dateB = new Date(b.dueDate).getTime();
+
+                return dateA - dateB;
+            }
+
+            return 0;
+        });
+
+        return view.sortOrder === "DESC" ? sorted.reverse() : sorted;
+    };
+
+
+    const processedTasks = useMemo(() => {
+        if (!tasks) return [];
+
+        let result = [...tasks];
+
+        if (selectedView) {
+            result = applyViewFilters(result, selectedView);
+            result = applySorting(result, selectedView);
+        }
+
+        return result;
+    }, [tasks, selectedView]);
+
+
 
     const contactsMap = useMemo(() => {
         const map = new Map()
@@ -117,18 +183,18 @@ const TasksPage = () => {
     }
 
     const groupedTasks = useMemo(() => {
-        if (!tasks) return {}
+        if (!processedTasks.length) return {};
 
-        return tasks.reduce((acc, task) => {
-            const group = getTaskGroup(task)
+        return processedTasks.reduce((acc, task) => {
+            const group = getTaskGroup(task);
 
-            if (!acc[group]) acc[group] = []
+            if (!acc[group]) acc[group] = [];
 
-            acc[group].push(task)
+            acc[group].push(task);
 
-            return acc
-        }, {} as Record<string, typeof tasks>)
-    }, [tasks])
+            return acc;
+        }, {} as Record<string, typeof tasks>);
+    }, [processedTasks]);
 
     const mapTaskToForm = (task: TaskResType): TaskReqType => ({
         title: task.title,
