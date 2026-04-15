@@ -51,7 +51,7 @@ public class DataSeeder implements ApplicationRunner {
 
         User admin = userRepository.findByEmail("admin@crm.com").orElseThrow();
         List<User> salespersons = userRepository.findByRole(Role.SALESPERSON);
-        
+
         List<Template> templates = seedTemplates(admin, salespersons);
 
         List<Contact> contacts = seedContactsWithDates(salespersons, tags);
@@ -143,7 +143,7 @@ public class DataSeeder implements ApplicationRunner {
 
         // ==================== PLANTILLAS ADMIN (GLOBALES) ====================
 
-        // 1. Email - Bienvenida para nuevos leads
+        // 1. Email y Whatsapp - Bienvenida para nuevos leads
         templates.add(createTemplate(admin, "Email de bienvenida - Lead", Channel.EMAIL,
                 "✅ Bienvenido a nuestro ecosistema",
                 """
@@ -157,6 +157,23 @@ public class DataSeeder implements ApplicationRunner {
                 
                 Saludos cordiales,
                 Equipo de Ventas
+                """,
+                "{\"name\":\"string\"}"));
+
+        templates.add(createTemplate(admin, "Bienvenida automática - WhatsApp", Channel.WHATSAPP,
+                null,
+                """
+                👋 Hola {{name}}! Gracias por contactarte con nosotros.
+                
+                Soy el asistente virtual de CRM Cross-Industry. 🚀
+                
+                Te informo que tu consulta ha sido recibida y será derivada a uno de nuestros asesores comerciales en breve.
+                
+                Mientras tanto, ¿podrías contarnos un poco más sobre lo que necesitas? Así podemos ayudarte mejor.
+                
+                📌 *Importante:* Un agente te responderá a la brevedad.
+                
+                ¡Gracias por tu paciencia!
                 """,
                 "{\"name\":\"string\"}"));
 
