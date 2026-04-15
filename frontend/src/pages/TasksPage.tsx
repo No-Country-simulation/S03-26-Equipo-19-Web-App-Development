@@ -12,49 +12,73 @@ import { useTasksMutationsService } from "../services/use_mutations/tasks-mutati
 import TaskItem, { type Color } from "../components/tasks/TaskItem";
 import { useGetTasks } from "../services/use_queries/tasks-query";
 import { useGetContacts } from "../services/use_queries/contacts-query";
+import type { TaskReqType, TaskResType } from "../types/task.types";
 
 const TASK_GROUPS_CONFIG: {
-  key: string
-  label: string
-  color: Color
+    key: string
+    label: string
+    color: Color
 }[] = [
-  { key: "OVERDUE", label: "Vencidas", color: "error" },
-  { key: "TODAY", label: "Para hoy", color: "primary" },
-  { key: "UPCOMING", label: "Próximas", color: "secondary" },
-  { key: "COMPLETED", label: "Completadas", color: "success" },
-]
+        { key: "OVERDUE", label: "Vencidas", color: "error" },
+        { key: "TODAY", label: "Para hoy", color: "primary" },
+        { key: "UPCOMING", label: "Próximas", color: "secondary" },
+        { key: "COMPLETED", label: "Completadas", color: "success" },
+    ]
 
 const colorMap: Record<Color, string> = {
-  primary: "text-primary",
-  secondary: "text-secondary",
-  success: "text-success",
-  error: "text-error",
+    primary: "text-primary",
+    secondary: "text-secondary",
+    success: "text-success",
+    error: "text-error",
 }
 
 const TasksPage = () => {
 
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+    const [selectedTask, setSelectedTask] = useState<TaskResType | null>(null);
+    const [selectedViewName, setSelectedViewName] = useState<string | null>(null);
+
     const { data: tasksMetrics } = useGetTasksMetrics()
-    const { data: views = [], isLoading } = useGetSavedViews();
+    const { data: views = [] } = useGetSavedViews();
     const { data: tasks, isLoading: isLoadingTasks } = useGetTasks()
     const { data: contacts } = useGetContacts()
 
     console.log({ tasks });
 
-    const { mutationPostTask } = useTasksMutationsService()
+    const { mutationPostTask, mutationUpdateTaskById } = useTasksMutationsService()
+
+    const handleOpenCreate = () => {
+        setSelectedTask(null);
+        setIsTaskModalOpen(true);
+    };
+
+    const handleOpenEdit = (task: TaskResType) => {
+        setSelectedTask(task);
+        setIsTaskModalOpen(true);
+    };
 
 
-    const handleCreateTask = (data: any) => {
+    const handleCreateTask = (data: TaskReqType) => {
         mutationPostTask.mutate(data, {
             onSuccess: () => {
-                setModalOpen(false);
+                setIsTaskModalOpen(false);
+            },
+        });
+    };
+
+    const handleUpdateTask = (data: TaskReqType) => {
+        if (!selectedTask) return;
+        console.log({ selectedTask, data });
+
+        mutationUpdateTaskById.mutate({ id: selectedTask.id, data: { ...data } }, {
+            onSuccess: () => {
+                setIsTaskModalOpen(false);
             },
         });
     };
 
     const tasksViews = views.filter(view => view.entity === "TASKS");
 
-    const [modalOpen, setModalOpen] = useState(false);
-    const [selectedViewName, setSelectedViewName] = useState<string | null>(null);
 
     const contactsMap = useMemo(() => {
         const map = new Map()
@@ -106,6 +130,13 @@ const TasksPage = () => {
         }, {} as Record<string, typeof tasks>)
     }, [tasks])
 
+    const mapTaskToForm = (task: TaskResType): TaskReqType => ({
+        title: task.title,
+        description: task.description,
+        type: task.type,
+        dueDate: task.dueDate.slice(0, 16),
+        contactId: task.contactId,
+    });
 
     if (isLoadingTasks) return <div className="flex items-center justify-center">
         <p className="text-lg font-medium text-primary">Cargando tareas...</p>
@@ -116,7 +147,7 @@ const TasksPage = () => {
         <>
             <div className="flex justify-center md:justify-between mb-6">
                 <TitleSection text="Mis tareas" className='hidden md:flex' />
-                <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={() => setModalOpen(true)}>
+                <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={handleOpenCreate}>
                     Nueva tarea
                 </Button>
             </div>
@@ -164,48 +195,51 @@ const TasksPage = () => {
                     </SelectContent>
                 </Select>
             </div>
-          <div className="flex flex-col gap-6">
-  {TASK_GROUPS_CONFIG.map((group) => {
-    const tasksInGroup = groupedTasks[group.key] || []
+            <div className="flex flex-col gap-6">
+                {TASK_GROUPS_CONFIG.map((group) => {
+                    const tasksInGroup = groupedTasks[group.key] || []
 
-    if (tasksInGroup.length === 0) return null
+                    if (tasksInGroup.length === 0) return null
 
-    return (
-      <div key={group.key}>
-        
-        <h3 className={`text-sm font-semibold mb-3 ${colorMap[group.color]}`}>
-          {group.label} ({tasksInGroup.length})
-        </h3>
+                    return (
+                        <div key={group.key}>
 
-        <div className="flex flex-col gap-2 lg:px-10">
-          {tasksInGroup.map((task) => {
-            const contact = contactsMap.get(task.contactId)
+                            <h3 className={`text-sm font-semibold mb-3 ${colorMap[group.color]}`}>
+                                {group.label} ({tasksInGroup.length})
+                            </h3>
 
-            return (
-              <TaskItem
-                key={task.id}
-                task={task}
-                contact={contact}
-                color={group.color}
-              />
-            )
-          })}
-        </div>
+                            <div className="flex flex-col gap-2 lg:px-10">
+                                {tasksInGroup.map((task) => {
+                                    const contact = contactsMap.get(task.contactId)
 
-      </div>
-    )
-  })}
-</div>
+                                    return (
+                                        <TaskItem
+                                            key={task.id}
+                                            task={task}
+                                            contact={contact}
+                                            color={group.color}
+                                            openModal={handleOpenEdit}
+                                        />
+                                    )
+                                })}
+                            </div>
 
-            {/* Modal para crear nueva tarea */}
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Modal para crear/editar tarea */}
             <Modal
-                isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
-                title="Nueva tarea">
+                isOpen={isTaskModalOpen}
+                onClose={() => setIsTaskModalOpen(false)}
+                title={selectedTask ? "Editar tarea" : "Nueva tarea"}
+            >
                 <TaskForm
-                    contactId={1}
-                    onSubmit={handleCreateTask}
-                    onCancel={() => setModalOpen(false)}
+                    contacts={contacts}
+                    initialData={selectedTask ? mapTaskToForm(selectedTask) : undefined}
+                    onSubmit={selectedTask ? handleUpdateTask : handleCreateTask}
+                    onCancel={() => setIsTaskModalOpen(false)}
                 />
             </Modal>
 

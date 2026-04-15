@@ -1,3 +1,4 @@
+import { useTasksMutationsService } from '../../services/use_mutations/tasks-mutation'
 import type { ContactResType } from '../../types/contact.types'
 import type { TaskResType } from '../../types/task.types'
 import { Badge } from '../ui/Badge'
@@ -37,18 +38,27 @@ interface TaskItemProps {
   task: TaskResType
   contact: ContactResType
   color: Color
+  openModal: (task: TaskResType) => void
 }
 
-const TaskItem = ({ task, contact, color }: TaskItemProps) => {
+const TaskItem = ({ task, contact, color, openModal }: TaskItemProps) => {
   const styles = colorMap[color as keyof typeof colorMap] ?? colorMap.primary
 
-  console.log({task});
-  
+  const { mutationUpdateTaskStatusById, mutationDeleteTaskById } = useTasksMutationsService()
+
+  const onToggleTask = (id: number) => {
+    mutationUpdateTaskStatusById.mutate({ id });
+  };
+
+  const onDeleteTask = (id: number) => {
+    mutationDeleteTaskById.mutate({ id });
+  };
+
   return (
     <div className={`grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] gap-4 justify-between ${styles.bg} ${styles.border} rounded-2xl py-4 px-6`}>
       <div className='flex items-center gap-6'>
         {task.status !== "COMPLETED" ? (
-          <button className={`flex items-center gap-2 ${styles.text}`}>
+          <button className={`flex items-center gap-2 ${styles.text}`} onClick={() => onToggleTask?.(task.id)}>
             <Circle className='h-5 w-5' />
           </button>
         ) : (
@@ -78,8 +88,12 @@ const TaskItem = ({ task, contact, color }: TaskItemProps) => {
       </p>
 
       <div className='flex items-center gap-6 justify-end'>
-        <Edit className={`h-6 w-6 ${styles.text}`} />
-        <Trash2 className={`h-6 w-6 ${styles.text}`} />
+        {task.status !== "COMPLETED" && task.status !== "OVERDUE" && (
+          <Edit className={`h-6 w-6 ${styles.text}`} onClick={() => openModal(task)} />
+        )}
+        {task.status !== "COMPLETED" && (
+          <Trash2 className={`h-6 w-6 ${styles.text}`} onClick={() => onDeleteTask(task.id)} />
+        )}
       </div>
     </div>
   )

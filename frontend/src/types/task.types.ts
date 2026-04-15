@@ -19,4 +19,5 @@ export interface TaskReqType {
   description: string;
   type: TaskType;
   dueDate: string;
+  contactId: number;
 }

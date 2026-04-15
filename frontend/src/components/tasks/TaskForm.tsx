@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 import {
@@ -9,12 +9,16 @@ import {
   SelectValue,
 } from "../ui/select";
 import type { TaskReqType } from "../../types/task.types";
+import type { ContactResType } from "../../types/contact.types";
+import { dateAdapter } from "../../utils/dateAdapter";
 
 
 
 type Props = {
   contactId?: number;
-  onSubmit: (data: any) => void;
+  contacts?: ContactResType[];
+  initialData?: TaskReqType;
+  onSubmit: (data: TaskReqType) => void;
   onCancel: () => void;
 };
 
@@ -26,42 +30,72 @@ const TASK_TYPES = [
   { value: "OTHER", label: "Otro" },
 ];
 
-export const TaskForm = ({ contactId, onSubmit, onCancel }: Props) => {
+export const TaskForm = ({ contactId, onSubmit, onCancel, initialData, contacts }: Props) => {
 
-  const [form, setForm] = useState<TaskReqType>({
-    title: "",
-    description: "",
-    type: "EMAIL",
-    dueDate: "",
-  });
+  const [form, setForm] = useState<TaskReqType>(
+    initialData ?? {
+      title: "",
+      description: "",
+      type: "EMAIL",
+      dueDate: "",
+      contactId: contactId ?? 1,
+    }
+  );
+
+  const shouldShowContactSelect = !contactId && !initialData;
 
   const handleChange = (key: keyof TaskReqType, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-const formatToLocalDateTime = (value: string) => {
-  if (!value) return value
-
-  // si viene sin segundos, agregar
-  if (value.length === 16) {
-    return value + ":00"
-  }
-
-  return value
-}
-
   const handleSubmit = () => {
     const payload = {
       ...form,
-      dueDate: formatToLocalDateTime(form.dueDate),
-      contactId,
+      dueDate: dateAdapter.toBackend(form.dueDate),
     }
 
     onSubmit(payload)
   }
 
+  const selectedContact = contacts?.find(
+    (c) => c.id === form.contactId
+  );
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        ...initialData,
+        dueDate: dateAdapter.toInput(initialData.dueDate),
+      });
+    } else if (contactId) {
+      setForm((prev) => ({ ...prev, contactId }));
+    }
+  }, [initialData, contactId]);
+
   return (
     <div className="flex flex-col gap-4">
+      {shouldShowContactSelect && contacts && (
+        <Select
+          value={String(form.contactId)}
+          onValueChange={(value) => handleChange("contactId", Number(value))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Seleccionar contacto">
+              {selectedContact
+                ? `${selectedContact.name} ${selectedContact.lastName}`
+                : "Seleccionar contacto"}
+            </SelectValue>
+          </SelectTrigger>
+
+          <SelectContent className={"bg-white"}>
+            {contacts.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>
+                {c.name} {c.lastName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <Input
         placeholder="Título"
         value={form.title}
@@ -103,7 +137,7 @@ const formatToLocalDateTime = (value: string) => {
           Cancelar
         </Button>
         <Button onClick={handleSubmit} className="w-1/2">
-          Crear tarea
+          {initialData ? "Guardar cambios" : "Crear tarea"}
         </Button>
       </div>
     </div>
