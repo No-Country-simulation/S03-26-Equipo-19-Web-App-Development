@@ -6,11 +6,13 @@ import com.crm.app.mapper.ContactMapper;
 import com.crm.app.model.Contact;
 import com.crm.app.model.Conversation;
 import com.crm.app.model.User;
+import com.crm.app.model.Tag;
 import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.FunnelStatus;
 import com.crm.app.model.enums.Role;
 import com.crm.app.repository.ContactRepository;
 import com.crm.app.repository.ConversationRepository;
+import com.crm.app.repository.TagRepository;
 import com.crm.app.repository.UserRepository;
 import com.crm.app.util.PhoneNumberNormalizer;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class ContactService {
     private final PhoneNumberNormalizer phoneNormalizer;
     private final ContactMapper contactMapper;
     private final ConversationRepository conversationRepository;
+    private final TagRepository tagRepository;
 
 
     private static final List<String> ALLOWED_SORT_FIELDS =
@@ -227,6 +230,45 @@ public class ContactService {
         return contactMapper.toDetailResponseList(contacts);
     }
 
+    // ==================== GESTIÓN DE ETIQUETAS ====================
+
+    @Transactional
+    public ContactDTOs.ContactDetailResponse addTagToContact(Long contactId, Long tagId, User currentUser) {
+
+        Contact contact = findByIdAndCheckAccess(contactId, currentUser);
+
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag", tagId));
+
+        if (contact.getTags().contains(tag)) {
+            throw new BusinessRuleViolationException("El contacto ya tiene esta etiqueta");
+        }
+
+        contact.getTags().add(tag);
+
+        Contact updated = contactRepository.save(contact);
+
+        return contactMapper.toDetailResponse(updated);
+    }
+
+    @Transactional
+    public ContactDTOs.ContactDetailResponse removeTagFromContact(Long contactId, Long tagId, User currentUser) {
+
+        Contact contact = findByIdAndCheckAccess(contactId, currentUser);
+
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag", tagId));
+
+        if (!contact.getTags().contains(tag)) {
+            throw new BusinessRuleViolationException("El contacto no tiene esta etiqueta");
+        }
+
+        contact.getTags().remove(tag);
+
+        Contact updated = contactRepository.save(contact);
+
+        return contactMapper.toDetailResponse(updated);
+    }
     // ==================== MÉTODOS INTERNOS ====================
 
     public Contact findByIdAndCheckAccess(Long id, User currentUser) {
