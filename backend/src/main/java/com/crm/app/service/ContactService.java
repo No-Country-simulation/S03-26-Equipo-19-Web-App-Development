@@ -5,8 +5,8 @@ import com.crm.app.exception.*;
 import com.crm.app.mapper.ContactMapper;
 import com.crm.app.model.Contact;
 import com.crm.app.model.Conversation;
-import com.crm.app.model.User;
 import com.crm.app.model.Tag;
+import com.crm.app.model.User;
 import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.FunnelStatus;
 import com.crm.app.model.enums.Role;
@@ -14,6 +14,7 @@ import com.crm.app.repository.ContactRepository;
 import com.crm.app.repository.ConversationRepository;
 import com.crm.app.repository.TagRepository;
 import com.crm.app.repository.UserRepository;
+import com.crm.app.service.api.WelcomeMessageService;
 import com.crm.app.util.PhoneNumberNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,11 +43,9 @@ public class ContactService {
     private final ContactMapper contactMapper;
     private final ConversationRepository conversationRepository;
     private final TagRepository tagRepository;
+    private final WelcomeMessageService welcomeMessageService;
 
-
-    private static final List<String> ALLOWED_SORT_FIELDS =
-        List.of("name", "createdAt", "funnelStatus");
-
+    private static final List<String> ALLOWED_SORT_FIELDS = List.of("name", "createdAt", "funnelStatus");
 
     // ==================== CREATE MANUAL ====================
 
@@ -102,7 +101,21 @@ public class ContactService {
                 .build();
 
         Contact saved = contactRepository.save(contact);
+
+        // 🔥 FORZAR FLUSH para que el contacto esté disponible en la BD antes de crear conversaciones
+        contactRepository.flush();
+
         log.info("✅ Contacto creado: ID={}, asignado a {}", saved.getId(), owner.getEmail());
+
+        // ==================== Inicializar conversaciones y enviar bienvenida ====================
+        try {
+            User admin = getDefaultAdmin();
+            welcomeMessageService.initializeContactChannels(saved, admin);
+            log.info("🎉 Conversaciones y mensajes de bienvenida iniciados para contacto ID={}", saved.getId());
+        } catch (Exception e) {
+            // No fallar la creación del contacto si falla el envío de bienvenida
+            log.error("⚠️ Error inicializando conversaciones para contacto ID={}: {}", saved.getId(), e.getMessage());
+        }
 
         return contactMapper.toSummaryResponse(saved);
     }
@@ -135,6 +148,10 @@ public class ContactService {
                 .build();
 
         Contact saved = contactRepository.save(contact);
+
+        // Forzar flush para webhook también
+        contactRepository.flush();
+
         log.info("✅ Contacto creado desde webhook: ID={}, Canal={}, asignado a ADMIN", saved.getId(), channel);
         return saved;
     }
@@ -199,7 +216,7 @@ public class ContactService {
     public List<ContactDTOs.ContactDetailResponse> getFilteredContacts(
             User currentUser, FunnelStatus funnelStatus, Long ownerId,
             List<Long> tagIds, Channel preferredChannel, String sortBy, String sortOrder) {
-        
+
         if (sortBy == null || sortBy.isBlank()) {
             sortBy = "createdAt";
         }
@@ -212,13 +229,11 @@ public class ContactService {
             throw new BusinessRuleViolationException("Parámetro de ordenamiento inválido: " + sortBy);
         }
 
-        // 1. Construir specification
         Specification<Contact> spec = Specification.where(byFunnelStatus(funnelStatus))
                 .and(byOwnerId(ownerId))
                 .and(byPreferredChannel(preferredChannel))
                 .and(byTagIds(tagIds));
 
-        // 2. Filtrar por owner según rol
         List<Contact> contacts;
         if (currentUser.getRole() == Role.ADMIN) {
             contacts = contactRepository.findAll(spec, Sort.by(Sort.Direction.fromString(sortOrder), sortBy));
@@ -234,9 +249,7 @@ public class ContactService {
 
     @Transactional
     public ContactDTOs.ContactDetailResponse addTagToContact(Long contactId, Long tagId, User currentUser) {
-
         Contact contact = findByIdAndCheckAccess(contactId, currentUser);
-
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tag", tagId));
 
@@ -245,17 +258,13 @@ public class ContactService {
         }
 
         contact.getTags().add(tag);
-
         Contact updated = contactRepository.save(contact);
-
         return contactMapper.toDetailResponse(updated);
     }
 
     @Transactional
     public ContactDTOs.ContactDetailResponse removeTagFromContact(Long contactId, Long tagId, User currentUser) {
-
         Contact contact = findByIdAndCheckAccess(contactId, currentUser);
-
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tag", tagId));
 
@@ -264,11 +273,10 @@ public class ContactService {
         }
 
         contact.getTags().remove(tag);
-
         Contact updated = contactRepository.save(contact);
-
         return contactMapper.toDetailResponse(updated);
     }
+
     // ==================== MÉTODOS INTERNOS ====================
 
     public Contact findByIdAndCheckAccess(Long id, User currentUser) {
@@ -345,12 +353,9 @@ public class ContactService {
         return contactRepository.save(contact);
     }
 
-    // En ContactService.java - Agrega estos métodos
-
     // ==================== DASHBOARD DE CONTACTOS CON MÉTRICAS ====================
 
     public ContactDTOs.ContactDashboardListResponse getContactDashboard(User currentUser) {
-        // 1. Obtener contactos del usuario
         List<Contact> contacts;
         if (currentUser.getRole() == Role.ADMIN) {
             contacts = contactRepository.findAllWithConversations();
@@ -358,7 +363,6 @@ public class ContactService {
             contacts = contactRepository.findByOwnerWithConversations(currentUser);
         }
 
-        // 2. Obtener estadísticas de mensajes no leídos por contacto
         List<Object[]> unreadStats = contactRepository.countUnreadMessagesByContact(currentUser);
         Map<Long, Long> unreadByContactId = new HashMap<>();
         for (Object[] stat : unreadStats) {
@@ -367,22 +371,17 @@ public class ContactService {
             unreadByContactId.put(contactId, count);
         }
 
-        // 3. Obtener conversaciones para cada contacto
         Map<Long, List<Conversation>> conversationsByContactId = new HashMap<>();
         for (Contact contact : contacts) {
             List<Conversation> conversations = conversationRepository.findByContact(contact);
             conversationsByContactId.put(contact.getId(), conversations);
         }
 
-        // 4. Construir respuesta para cada contacto
         List<ContactDTOs.ContactDashboardResponse> contactResponses = new ArrayList<>();
         for (Contact contact : contacts) {
             List<Conversation> conversations = conversationsByContactId.getOrDefault(contact.getId(), List.of());
-
-            // Calcular no leídos por contacto
             Long totalUnread = unreadByContactId.getOrDefault(contact.getId(), 0L);
 
-            // Mapear conversaciones
             List<ContactDTOs.ConversationBriefInfo> conversationInfos = conversations.stream()
                     .map(this::toConversationBriefInfo)
                     .collect(Collectors.toList());
@@ -404,11 +403,9 @@ public class ContactService {
             ));
         }
 
-        // 5. Calcular métricas globales
         long totalContacts = contacts.size();
         long totalUnreadMessages = contactRepository.countTotalUnreadMessages(currentUser);
 
-        // No leídos por canal
         List<Object[]> channelStats = contactRepository.countUnreadMessagesByChannel(currentUser);
         long whatsappUnread = 0;
         long emailUnread = 0;
@@ -428,12 +425,9 @@ public class ContactService {
                 new ContactDTOs.UnreadByChannel(whatsappUnread, emailUnread)
         );
 
-        // 6. Ordenar contactos: los que tienen NO LEÍDOS primero, luego por fecha de creación
         contactResponses.sort((a, b) -> {
-            // Primero por no leídos (descendente)
             int unreadCompare = Long.compare(b.totalUnreadCount(), a.totalUnreadCount());
             if (unreadCompare != 0) return unreadCompare;
-            // Luego por fecha de creación (más reciente primero)
             return b.createdAt().compareTo(a.createdAt());
         });
 
@@ -446,7 +440,7 @@ public class ContactService {
                 conv.getChannel(),
                 conv.getStatus(),
                 conv.getLastInteraction(),
-                null // El unreadCount por conversación se puede calcular si es necesario
+                null
         );
     }
 }
