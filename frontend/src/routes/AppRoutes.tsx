@@ -1,3 +1,4 @@
+// src/routes/AppRoutes.tsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
@@ -14,14 +15,13 @@ import Register from "../pages/Register";
 
 // Páginas de Vendedor / Generales
 import Home from "../components/dashboard/Home";
-import { ContactsPage } from "../pages/ContactsPage";
+import { ContactsPage } from "../pages/ContactsPage"; 
 import { MessagesPage } from "../pages/MessagesPage";
 import ContactDetailPage from "../pages/ContactDetailPage";
 import TasksPage from "../pages/TasksPage";
 
 // Páginas de Admin
 import { AdminPanel } from "../pages/admin/AdminPanel";
-import { UsersManagement } from "../pages/admin/UsersManagement";
 import { TagsManagement } from "../pages/admin/TagsManagement";
 import { EmailTemplates } from "../pages/admin/EmailTemplates";
 import { ExportsManagement } from "../pages/admin/ExportsManagement";
@@ -66,9 +66,10 @@ export const AppRoutes: React.FC = () => {
         {/* VISTA VENDEDOR (solo si NO es admin) */}
         {!isAdmin && (
           <>
-            <Route path={ROUTES.CONTACTS} element={<ContactsPage />} />
+            {/* 👈 USAMOS ContactsPage con isAdminView=false */}
+            <Route path={ROUTES.CONTACTS} element={<ContactsPage isAdminView={false} />} />
             <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
-             <Route path={ROUTES.TASKS} element={<TasksPage />}/>
+            <Route path={ROUTES.TASKS} element={<TasksPage />}/>
             <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
           </>
         )}
@@ -77,7 +78,8 @@ export const AppRoutes: React.FC = () => {
         {isAdmin && (
           <Route path="admin">
             <Route index element={<AdminPanel />} />
-            <Route path={ROUTES.CONTACTS} element={<UsersManagement />} />
+            {/* 👈 USAMOS ContactsPage con isAdminView=true */}
+            <Route path={ROUTES.CONTACTS} element={<ContactsPage isAdminView={true} />} />
             <Route path={ROUTES.MESSAGES} element={<Conversations />} />
             <Route path={ROUTES.TASKS} element={<TasksManagement />} />
             <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
@@ -89,6 +91,7 @@ export const AppRoutes: React.FC = () => {
           </Route>
         )}
         
+        {/* Ruta de detalle - se mantiene igual para ambos roles */}
         <Route path={ROUTES.CONTACT_DETALLE} element={<ContactDetailPage />} />
       </Route>
 

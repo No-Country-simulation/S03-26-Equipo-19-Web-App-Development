@@ -183,5 +183,29 @@ export const removeTagFromContactId = async ( contactId: number, tagId: number) 
   }
 };
 
+export const assignContactToSalesperson = async (contactId: number, newOwnerId: number) => {
+  const { token } = useAuthStore.getState();
+  if (!token) {
+    throw new Error("No hay token de autenticación.");
+  }
+  try {
+    const res = await apiContactsService.patch(
+      `/${contactId}/assign`,
+      null,
+      {
+        params: { newOwnerId },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    console.log("Contacto reasignado exitosamente");
+    return res.data;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+  }
+};
+
  
 
