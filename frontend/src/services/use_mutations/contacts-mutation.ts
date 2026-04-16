@@ -16,6 +16,7 @@ export const ContactsMutationsService = () => {
     mutationFn: (data: ContactReqType) => postContact(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
 
@@ -25,6 +26,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
 
@@ -34,6 +36,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
 

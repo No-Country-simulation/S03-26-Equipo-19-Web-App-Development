@@ -67,32 +67,21 @@ export interface ExportRequest {
   filters?: Record<string, unknown>;
 }
 
-/* // ---- SAVED VIEWS ----
-export interface SavedViewResponse {
-  id: number;
-  name: string;
-  entity: "CONTACTS" | "TASKS";
-  isDefault?: boolean;
-  isGlobal?: boolean;
-  filters: Record<string, unknown>;
-  creator: string;
-}
+type TaskFilters = {
+  status?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+};
 
-export interface SavedViewRequest {
-  name: string;
-  entity: "CONTACTS" | "TASKS";
-  isDefault?: boolean;
-  global?: boolean;
-  filters: Record<string, unknown>;
-}
- */
+
 export interface SavedViewResponse {
   id: number;
   name: string;
   entity: "CONTACTS" | "TASKS";
   isDefault?: boolean;
   isGlobal?: boolean;
-  filters: Record<string, unknown>;
+  filters: TaskFilters;
+/*   filters: Record<string, unknown>; */
   sortBy?: string;
   sortOrder?: "ASC" | "DESC";
   creator: string;

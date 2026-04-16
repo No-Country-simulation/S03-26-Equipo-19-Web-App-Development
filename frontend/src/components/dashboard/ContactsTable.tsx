@@ -167,7 +167,12 @@ export const ContactsTable = ({
             </thead>
 
             <tbody>
-              {processedContacts.length === 0 ? (
+               {isLoading ? (
+                <div className="flex items-center justify-center pt-5 col-span-full">
+                  <p className="text-sm font-medium text-primary animate-pulse">Cargando contactos...</p>
+                </div>
+              ) : (
+              processedContacts.length === 0 ? (
                 <tr>
                   <td colSpan={totalColumns} className="py-6 text-center text-sm text-neutro-2">
                     No hay datos que coincidan con el filtro
@@ -262,7 +267,7 @@ export const ContactsTable = ({
                     </td>
                   </tr>
                 ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
