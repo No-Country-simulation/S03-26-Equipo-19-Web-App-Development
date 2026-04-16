@@ -331,6 +331,8 @@ public class ContactService {
         return admins.getFirst();
     }
 
+    // En ContactService.java
+    @Transactional
     public Contact reassignContact(Long id, Long newOwnerId, User currentUser) {
         if (currentUser.getRole() != Role.ADMIN) {
             throw new UnauthorizedAccessException("Solo el Administrador puede reasignar contactos");
@@ -346,11 +348,21 @@ public class ContactService {
             throw new BusinessRuleViolationException("Solo se pueden asignar contactos a vendedores");
         }
 
-        log.info("📌 Admin {} reasignando contacto {} de {} a {}",
-                currentUser.getEmail(), id, contact.getOwner().getEmail(), newOwner.getEmail());
+        User oldOwner = contact.getOwner();
 
+        log.info("📌 Admin {} reasignando contacto {} de {} a {}",
+                currentUser.getEmail(), id, oldOwner.getEmail(), newOwner.getEmail());
+
+        // 1. Actualizar owner del contacto
         contact.setOwner(newOwner);
-        return contactRepository.save(contact);
+        contactRepository.save(contact);
+
+        // 2. 🔥 ACTUALIZAR TODAS LAS CONVERSACIONES DEL CONTACTO
+        conversationRepository.updateAssignedToByContactId(contact.getId(), newOwner);
+
+        log.info("✅ Contacto {} reasignado correctamente. Conversaciones actualizadas.", id);
+
+        return contact;
     }
 
     // ==================== DASHBOARD DE CONTACTOS CON MÉTRICAS ====================
