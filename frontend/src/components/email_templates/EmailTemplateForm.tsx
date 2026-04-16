@@ -51,6 +51,16 @@ const buildVariablesObject = (vars: string[]): Record<string, string> => {
   return obj;
 };
 
+// template.types.ts
+
+export interface CreateTemplateRequest {
+  name: string;
+  channel: 'EMAIL' | 'WHATSAPP';
+  subject?: string;           // solo para EMAIL
+  body: string;
+  variables: Record<string, string>; // objeto clave-valor
+}
+
 export const EmailTemplateForm = ({ onCancel, onSuccess }: Props) => {
   const [form, setForm] = useState<EmailTemplateFormData>({
     name: '',
@@ -61,13 +71,13 @@ export const EmailTemplateForm = ({ onCancel, onSuccess }: Props) => {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const qc = useQueryClient();
 
-  const mutation = useMutation({
-    mutationFn: (data: any) => apiTemplatesService.post('', data),
+    const mutation = useMutation({
+    mutationFn: (data: CreateTemplateRequest) => apiTemplatesService.post('', data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['templates'] });
-      onSuccess?.();
+        qc.invalidateQueries({ queryKey: ['templates'] });
+        onSuccess?.();
     },
-  });
+    });
 
   const handleChange = (key: keyof EmailTemplateFormData, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -86,29 +96,27 @@ export const EmailTemplateForm = ({ onCancel, onSuccess }: Props) => {
     }, 0);
   };
 
-  const handleSubmit = () => {
+    const handleSubmit = () => {
     if (!form.name.trim() || !form.body.trim()) return;
 
-    // Extraer variables del cuerpo y del asunto (si es email)
     const bodyVars = extractVariables(form.body);
     const subjectVars = form.channel === 'EMAIL' ? extractVariables(form.subject) : [];
     const allVariables = [...new Set([...bodyVars, ...subjectVars])];
 
-    // Construir el objeto exacto que espera el backend
-    const payload: any = {
-      name: form.name.trim(),
-      channel: form.channel,
-      body: form.body.trim(),
-      variables: buildVariablesObject(allVariables),
+    // Construir el objeto tipado
+    const payload: CreateTemplateRequest = {
+        name: form.name.trim(),
+        channel: form.channel,
+        body: form.body.trim(),
+        variables: buildVariablesObject(allVariables),
     };
 
-    // Agregar subject solo si el canal es EMAIL
     if (form.channel === 'EMAIL') {
-      payload.subject = form.subject.trim();
+        payload.subject = form.subject.trim();
     }
 
     mutation.mutate(payload);
-  };
+    };
 
   return (
     <div className="flex flex-col gap-4">
