@@ -1,7 +1,6 @@
 import type { Channel } from './contact.types';
 
 export type MessageDirection = 'INBOUND' | 'OUTBOUND';
-export type MessageType = 'TEXT' | 'MEDIA';
 export type MessageStatus = 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
 export type InboundMessageStatus = "ENTRANTE" | "READ"
 
@@ -9,15 +8,17 @@ export type InboundMessageStatus = "ENTRANTE" | "READ"
 export interface MessageResType {
   id: number;
   userId: number;
-  channel: Channel;
   direction: MessageDirection;
   body: string;
-  createdAt: string;
-  externalId: string;
-  messageType: MessageType;
-  fileUrl?: string;
-  status: MessageStatus;
-  conversationId: number;
+  deliveryStatus: MessageStatus;
+  conversation: {
+    id: number;
+    channel: Channel;
+  };
+  providerId: string;
+  sender: string | null;
+  template: string | null;
+  sentAt: string;
 }
 
 

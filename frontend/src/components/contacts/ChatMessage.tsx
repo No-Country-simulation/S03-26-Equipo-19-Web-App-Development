@@ -3,6 +3,7 @@ import { Check, CheckCheck, Mail, MessageCircleMore } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import type { MessageResType } from "../../types/message.types"
+import { formatTime } from "../../utils/formateDate"
 
 
 interface ChatMessageProps {
@@ -11,8 +12,11 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, showChannelIndicator = false }: ChatMessageProps) {
-  const StatusIcon = message.status === "READ" ? CheckCheck : Check
-  const isEmail = message.channel === "EMAIL"
+  const StatusIcon = message.deliveryStatus === "READ" ? CheckCheck : Check
+  const isEmail = message.conversation.channel === "EMAIL"
+
+  console.log({message});
+  
 
   return (
     <div
@@ -65,12 +69,12 @@ export function ChatMessage({ message, showChannelIndicator = false }: ChatMessa
               : "text-muted-foreground"
           )}
         >
-          <span>{message.createdAt}</span>
+          <span>{formatTime(message.sentAt)}</span>
           {message.direction === "OUTBOUND" && (
             <StatusIcon
               className={cn(
                 "h-3.5 w-3.5",
-                message.status === "READ" && message.direction === "OUTBOUND" && "text-success"
+                message.deliveryStatus === "READ" && message.direction === "OUTBOUND" && "text-success"
               )}
             />
           )}

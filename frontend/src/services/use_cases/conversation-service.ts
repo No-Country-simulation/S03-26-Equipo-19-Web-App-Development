@@ -1,7 +1,13 @@
 import { apiConversationsService } from "../general_api";
-import type { ConversationInboxItemType, ConversationResType } from "../../types/conversation.types";
+import type {
+  ConversationInboxItemType,
+  ConversationResType,
+} from "../../types/conversation.types";
+import { useAuthStore } from "../../store/useAuthStore";
 
-export const getConversations = async (token: string): Promise<ConversationResType[]> => {
+export const getConversations = async (
+  token: string,
+): Promise<ConversationResType[]> => {
   if (!token) throw new Error("No hay token de autenticación.");
   try {
     const res = await apiConversationsService.get("", {
@@ -10,7 +16,10 @@ export const getConversations = async (token: string): Promise<ConversationResTy
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
 
@@ -26,7 +35,10 @@ export const getConversationById = async (
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
 
@@ -42,12 +54,16 @@ export const getConversationsByContactId = async (
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };
 
-
-export const getConversationsInbox = async (token: string): Promise<ConversationInboxItemType[]> => {
+export const getConversationsInbox = async (
+  token: string,
+): Promise<ConversationInboxItemType[]> => {
   if (!token) throw new Error("No hay token de autenticación.");
   try {
     const res = await apiConversationsService.get("/inbox", {
@@ -56,6 +72,59 @@ export const getConversationsInbox = async (token: string): Promise<Conversation
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
-    throw new Error((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? msg);
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
+  }
+};
+
+export const closeConversationById = async (
+  conversationId: number,
+): Promise<ConversationResType> => {
+  const { token } = useAuthStore.getState();
+  if (!token) throw new Error("No hay token de autenticación.");
+  try {
+    const res = await apiConversationsService.patch(
+      `/${conversationId}/close`,
+      null,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    console.log("Se cerró la conversación");
+
+    return res.data;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
+  }
+};
+
+export const reOpenConversationById = async (
+  conversationId: number,
+): Promise<ConversationResType> => {
+  const { token } = useAuthStore.getState();
+  if (!token) throw new Error("No hay token de autenticación.");
+  try {
+     const res = await apiConversationsService.patch(
+      `/${conversationId}/reopen`,
+      null,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    console.log("Se reabrió la conversación");
+
+    return res.data;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Error de conexión";
+    throw new Error(
+      (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? msg,
+    );
   }
 };

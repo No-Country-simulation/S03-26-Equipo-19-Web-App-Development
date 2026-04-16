@@ -1,4 +1,4 @@
-import { ScrollArea } from "../ui/scroll-area"
+import { ScrollArea, ScrollBar } from "../ui/scroll-area"
 import { MessageSquare } from "lucide-react"
 import { ChatMessage } from "../contacts/ChatMessage"
 import { useEffect, useRef } from "react"
@@ -19,7 +19,7 @@ export function ConversationPanel({messages, activeConversation, isLoading}: Pro
   }, [messages]);
 
   return (
-    <ScrollArea className="h-[calc(100vh-400px)] p-6">
+  <ScrollArea className="h-[calc(100vh-400px)] p-6">
       {!activeConversation ? (
         <div className="text-center py-20">
           <MessageSquare className="mx-auto mb-4" />
@@ -35,6 +35,7 @@ export function ConversationPanel({messages, activeConversation, isLoading}: Pro
           <div ref={bottomRef} />
         </>
       )}
+      <ScrollBar orientation="vertical" />
     </ScrollArea>
   )
 }
