@@ -21,13 +21,13 @@ import {
 
 const getFunnelStatusColor = (status: string) => {
   switch (status) {
-    case 'NEW_LEAD':       return 'bg-accent';
-    case 'CONTACTED':      return 'bg-secondary';
+    case 'NEW_LEAD': return 'bg-accent';
+    case 'CONTACTED': return 'bg-secondary';
     case 'IN_NEGOTIATION': return 'bg-primary';
-    case 'PROPOSAL_SENT':  return 'bg-primary/70';
-    case 'CLOSED_WON':     return 'bg-success';
-    case 'CLOSED_LOST':    return 'bg-error';
-    default:               return 'bg-neutro-3';
+    case 'PROPOSAL_SENT': return 'bg-primary/70';
+    case 'CLOSED_WON': return 'bg-success';
+    case 'CLOSED_LOST': return 'bg-error';
+    default: return 'bg-neutro-3';
   }
 };
 
@@ -98,13 +98,6 @@ export const ContactsTable = ({
     return result;
   }, [contacts, sortOrder, statusFilter]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <p className="text-lg font-medium text-primary">Cargando datos...</p>
-      </div>
-    );
-  }
 
   // Total de columnas: Admin 6 columnas, Vendedor 5 columnas
   const totalColumns = isAdminView ? 6 : 5;
@@ -112,7 +105,7 @@ export const ContactsTable = ({
   return (
     <>
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col">
-        
+
         {/* HEADER */}
         <div className='flex justify-between items-center mb-4'>
           <h3 className="text-lg font-bold text-primary">
@@ -167,107 +160,115 @@ export const ContactsTable = ({
             </thead>
 
             <tbody>
-               {isLoading ? (
-                <div className="flex items-center justify-center pt-5 col-span-full">
-                  <p className="text-sm font-medium text-primary animate-pulse">Cargando contactos...</p>
-                </div>
-              ) : (
-              processedContacts.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan={totalColumns} className="py-6 text-center text-sm text-neutro-2">
-                    No hay datos que coincidan con el filtro
+                  <td colSpan={6} className="text-center py-6">
+                    <p className="text-sm font-medium text-primary animate-pulse">
+                      Cargando contactos...
+                    </p>
                   </td>
                 </tr>
               ) : (
-                processedContacts.map((contact) => (
-                  <tr
-                    key={contact.id}
-                    className="border-b border-slate-50 hover:bg-slate-50 transition-colors text-slate-600"
-                  >
-                    {/* Nombre */}
-                    <td className="py-4 px-2">
-                      <div className="flex items-center gap-3">
-                        <AvatarContact name={contact.name} lastName={contact.lastName} size='sm' />
-                        <span className="font-medium">{contact.name} {contact.lastName}</span>
-                      </div>
-                    </td>
-
-                    {/* Estado */}
-                    <td className="py-4 px-2">
-                      <span className={`px-3 py-1 rounded-md text-white text-[10px] ${getFunnelStatusColor(contact.funnelStatus)}`}>
-                        {getStatusLabel(contact.funnelStatus)}
-                      </span>
-                    </td>
-
-                    {/* Fecha */}
-                    <td className="py-4 px-2 text-gray-500">
-                      {timeAgo(contact.updatedAt!)}
-                    </td>
-
-                    {/* Tags */}
-                    <td className="py-4 px-2">
-                      <div className="flex flex-wrap gap-1">
-                        {contact.tags && contact.tags.length > 0 ? (
-                          contact.tags.map((tag) => (
-                            <span key={tag.id} className="px-2 py-0.5 rounded-md text-[10px] bg-gray-100 text-gray-600">
-                              {tag.name}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-gray-400 text-[10px]">-</span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* ADMIN: Vendedor asignado EDITABLE - UNA SOLA COLUMNA */}
-                    {isAdminView && (
-                      <td className="py-4 px-2">
-                        <SalespersonSelector
-                          contactId={contact.id}
-                          currentOwnerId={contact.owner?.id}
-                          currentOwnerName={contact.owner?.name || "Sin asignar"}
-                          onAssign={handleAssign}
-                          isAssigning={mutationAssignContact.isPending}
-                        />
-                      </td>
-                    )}
-
-                    {/* Acciones */}
-                    <td className="py-2 px-2">
-                      <div className="flex justify-end gap-3">
-                        <button 
-                          onClick={() => navigate(`/dashboard/contacts/${contact.id}`)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
-                          title="Ver detalle"
-                        >
-                          <Eye size={20} />
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setSelectedContact(contact);
-                            setModalOpen(true);
-                          }}
-                          className="text-green-600 hover:text-green-800 transition-colors"
-                          title="Editar contacto"
-                        >
-                          <UserRoundPen size={20} />
-                        </button>
-
-                        {isAdminView && onDelete && (
-                          <button
-                            onClick={() => onDelete(contact.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                            title="Eliminar contacto"
-                          >
-                            <Trash2 size={20} />
-                          </button>
-                        )}
-                      </div>
+                processedContacts.length === 0 ? (
+                  <tr>
+                    <td colSpan={totalColumns} className="py-6 text-center text-sm text-neutro-2">
+                      No hay datos que coincidan con el filtro
                     </td>
                   </tr>
-                ))
-              ))}
+                ) : (
+                  processedContacts.map((contact) => (
+                    <tr
+                      key={contact.id}
+                      className="border-b border-slate-50 hover:bg-slate-50 transition-colors text-slate-600"
+                    >
+                      {/* Nombre */}
+                      <td className="py-4 px-2">
+                        <div className="flex items-center gap-3">
+                          <AvatarContact name={contact.name} lastName={contact.lastName} size='sm' />
+                          <span className="font-medium">{contact.name} {contact.lastName}</span>
+                        </div>
+                      </td>
+
+                      {/* Estado */}
+                      <td className="py-4 px-2 ">
+                        <span className={`px-3 py-1 rounded-md text-white text-[10px] whitespace-nowrap ${getFunnelStatusColor(contact.funnelStatus)}`}>
+                          {getStatusLabel(contact.funnelStatus)}
+                        </span>
+                      </td>
+
+                      {/* Fecha */}
+                      <td className="py-4 px-2 text-gray-500">
+                        {timeAgo(contact.updatedAt!)}
+                      </td>
+
+                      {/* Tags */}
+                      <td className="py-4 px-2">
+                        <div className="flex flex-wrap gap-1">
+                          {contact.tags && contact.tags.length > 0 ? (
+                            contact.tags.map((tag) => (
+                              <span key={tag.id} className="px-2 py-0.5 rounded-md text-[10px]" style={{
+                                backgroundColor: `${tag.color}22`,
+                                color: tag.color,
+                                border: `1px solid ${tag.color}55`,
+                              }}>
+                                {tag.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-400 text-[10px]">-</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* ADMIN: Vendedor asignado EDITABLE - UNA SOLA COLUMNA */}
+                      {isAdminView && (
+                        <td className="py-4 px-2">
+                          <SalespersonSelector
+                            contactId={contact.id}
+                            currentOwnerId={contact.owner?.id}
+                            currentOwnerName={contact.owner?.name || "Sin asignar"}
+                            onAssign={handleAssign}
+                            isAssigning={mutationAssignContact.isPending}
+                          />
+                        </td>
+                      )}
+
+                      {/* Acciones */}
+                      <td className="py-2 px-2">
+                        <div className="flex justify-end gap-3">
+                          <button
+                            onClick={() => navigate(`/dashboard/contacts/${contact.id}`)}
+                            className="text-primary hover:text-secondary transition-colors"
+                            title="Ver detalle"
+                          >
+                            <Eye size={20} />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedContact(contact);
+                              setModalOpen(true);
+                            }}
+                            className="text-primary hover:text-secondary transition-colors"
+                            title="Editar contacto"
+                          >
+                            <UserRoundPen size={20} />
+                          </button>
+
+                          {isAdminView && onDelete && (
+                            <button
+                              onClick={() => onDelete(contact.id)}
+                              className="text-error hover:text-red-800 transition-colors"
+                              title="Eliminar contacto"
+                            >
+                              <Trash2 size={20} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ))}
             </tbody>
           </table>
         </div>

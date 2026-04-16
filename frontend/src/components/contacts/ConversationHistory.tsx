@@ -2,8 +2,6 @@ import { Eye, LockKeyhole, LockOpen, Mail, MessageCircleMore } from "lucide-reac
 import type { ConversationResType } from "../../types/conversation.types"
 import { formatDateTime } from "../../utils/formateDate"
 import { useState } from "react"
-
-import type { ContactResType } from "../../types/contact.types"
 import { Modal } from "../ui/Modal"
 import { ConversationPanel } from "./ConversationPanel"
 import { useGetMessagesByConversationId } from "../../services/use_queries/messages-query"
@@ -11,11 +9,10 @@ import { useConversationsMutationsService } from "../../services/use_mutations/c
 
 
 interface ConversationHistoryProps {
-    contact: ContactResType
     conversations: ConversationResType[]
 }
 
-const ConversationHistory = ({ contact, conversations }: ConversationHistoryProps) => {
+const ConversationHistory = ({conversations }: ConversationHistoryProps) => {
 
 
     const [modalOpen, setModalOpen] = useState(false);

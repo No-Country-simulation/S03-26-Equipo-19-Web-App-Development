@@ -1,4 +1,4 @@
-import { Send, ChevronDown, Paperclip } from "lucide-react"
+import { Send, ChevronDown } from "lucide-react"
 import { Textarea } from "../ui/textarea"
 import { Button } from "../ui/Button"
 import {
@@ -123,10 +123,6 @@ export function MessageInput({ activeChannel, contact }: Props) {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-      {/*   <Button onClick={onSend} variant="outline"
-          className="transition-all flex items-center justify-center w-15">
-          <Paperclip size={20} />
-        </Button> */}
       </div>
       <div className="w-full flex flex-col gap-2 items-end md:flex-row md:items-start">
         <Textarea

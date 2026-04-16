@@ -50,7 +50,7 @@ const ContactDetailPage = () => {
                                 <ContactStatus contact={contactData} />
                                 <ContactTags contact={contactData} onAddTag={handleAddTag} onRemoveTag={handleRemoveTag} />
                                 <TaskList contactId={contactData.id}/>
-                                <ConversationHistory contact={contactData} conversations={conversationsData ?? []} />
+                                <ConversationHistory conversations={conversationsData ?? []} />
                             </div>
                         </ScrollArea>
                     </div>

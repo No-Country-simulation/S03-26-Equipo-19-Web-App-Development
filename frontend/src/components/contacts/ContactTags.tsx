@@ -73,6 +73,11 @@ const ContactTags = ({ contact, onAddTag, onRemoveTag }: Props) => {
                     <Badge
                         key={tag.id}
                         className="bg-neutro-2/50 flex items-center gap-1"
+                        style={{
+                            backgroundColor: `${tag.color}22`,
+                            color: tag.color,
+                            border: `1px solid ${tag.color}55`,
+                        }}
                         onClick={() => handleRemoveTag(tag.id)}
                     >
                         {tag.name}
