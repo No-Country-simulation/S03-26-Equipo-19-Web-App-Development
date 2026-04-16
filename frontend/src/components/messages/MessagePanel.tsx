@@ -27,6 +27,9 @@ const MessagePanel = ({ conversations, contact, activeChatId, onBack }: MessageP
 
     const { data: messagesData = [], isLoading } = useGetMessagesByConversationId(conversationId);
 
+    console.log({messagesData});
+    
+
     const channelCounts = useMemo(() => {
         return {
             WHATSAPP: conversations

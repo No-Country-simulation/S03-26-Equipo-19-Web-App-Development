@@ -14,7 +14,7 @@ import type { Channel, ContactResType } from "../../types/contact.types"
 import { useState } from "react"
 import { useGetTemplates } from "../../services/use_queries/templates-query"
 import { parseTemplate } from "../../utils/parseTemplate"
-import { MessagesMutationsService } from "../../services/use_mutations/messages-mutation"
+import { useMessagesMutationsService } from "../../services/use_mutations/messages-mutation";
 import { useQueryClient } from "@tanstack/react-query"
 
 
@@ -32,7 +32,7 @@ export function MessageInput({ activeChannel, contact }: Props) {
 
   const queryClient = useQueryClient();
 
-  const { mutationPostMessage } = MessagesMutationsService();
+  const { mutationPostMessage } = useMessagesMutationsService();
 
   const filteredTemplates = templates.filter(
     (template) =>
@@ -57,26 +57,26 @@ export function MessageInput({ activeChannel, contact }: Props) {
   }
 
   const onSend = () => {
-  if (!message.trim() || mutationPostMessage.isPending) return;
+    if (!message.trim() || mutationPostMessage.isPending) return;
 
-  mutationPostMessage.mutate(
-    {
-      contactId: contact.id,
-      channel: activeChannel,
-      content: {
-        body: message,
+    mutationPostMessage.mutate(
+      {
+        contactId: contact.id,
+        channel: activeChannel,
+        content: {
+          body: message,
+        },
       },
-    },
-    {
-      onSuccess: () => {
-        setMessage("");
-        queryClient.invalidateQueries({
-          queryKey: ["messages"],
-        });
-      },
-    }
-  );
-};
+      {
+        onSuccess: () => {
+          setMessage("");
+          queryClient.invalidateQueries({
+            queryKey: ["messages", contact.id],
+          });
+        },
+      }
+    );
+  };
 
 
   if (isLoading) return <div className="flex items-center justify-center">
@@ -123,10 +123,10 @@ export function MessageInput({ activeChannel, contact }: Props) {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button onClick={onSend} variant="outline"
+      {/*   <Button onClick={onSend} variant="outline"
           className="transition-all flex items-center justify-center w-15">
           <Paperclip size={20} />
-        </Button>
+        </Button> */}
       </div>
       <div className="w-full flex flex-col gap-2 items-end md:flex-row md:items-start">
         <Textarea
