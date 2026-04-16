@@ -6,6 +6,7 @@ import com.crm.app.model.User;
 import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.ConversationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -64,4 +65,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             @Param("isAdmin") boolean isAdmin);
 
     long countByCreatedAtBefore(LocalDateTime endDate);
+
+    // En ConversationRepository.java
+    @Modifying
+    @Query("UPDATE Conversation c SET c.assignedTo = :newOwner WHERE c.contact.id = :contactId")
+    void updateAssignedToByContactId(@Param("contactId") Long contactId, @Param("newOwner") User newOwner);
 }
