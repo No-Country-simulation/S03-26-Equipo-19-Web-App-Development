@@ -1,9 +1,9 @@
+// src/components/tasks/TaskItem.tsx
 import { useTasksMutationsService } from '../../services/use_mutations/tasks-mutation'
 import type { ContactResType } from '../../types/contact.types'
 import type { TaskResType } from '../../types/task.types'
 import { Badge } from '../ui/Badge'
 import { Circle, CircleCheck, Clock, Edit, Trash2, User } from 'lucide-react'
-
 
 const colorMap: Record<Color, {
   bg: string
@@ -58,16 +58,15 @@ const TaskItem = ({ task, contact, color, openModal }: TaskItemProps) => {
     <div className={`grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] gap-4 justify-between ${styles.bg} ${styles.border} rounded-2xl py-4 px-6`}>
       <div className='flex items-center gap-6'>
         {task.status !== "COMPLETED" ? (
-          <button className={`flex items-center gap-2 ${styles.text}`} onClick={() => onToggleTask?.(task.id)}>
+          <button className={`flex items-center gap-2 ${styles.text}`} onClick={() => onToggleTask(task.id)}>
             <Circle className='h-5 w-5' />
           </button>
         ) : (
           <CircleCheck className='h-5 w-5 shrink-0 text-success' />
         )}
 
-
         <div>
-          <div className='flex items-center gap-4'>
+          <div className='flex items-center gap-4 flex-wrap'>
             <p className='text-md font-bold'>{task.title}</p>
             <Badge variant='outline'>{task.type}</Badge>
             <span className='text-sm text-muted-foreground'>{task.status}</span>
@@ -75,7 +74,7 @@ const TaskItem = ({ task, contact, color, openModal }: TaskItemProps) => {
 
           <p className='text-sm mb-2'>{task.description}</p>
 
-          <span className='text-sm flex items-center gap-2'>
+          <span className='flex items-center gap-2 text-sm'>
             <User className='h-4 w-4' />
             {contact?.name} {contact?.lastName}
           </span>
@@ -89,10 +88,10 @@ const TaskItem = ({ task, contact, color, openModal }: TaskItemProps) => {
 
       <div className='flex items-center gap-6 justify-end'>
         {task.status !== "COMPLETED" && task.status !== "OVERDUE" && (
-          <Edit className={`h-6 w-6 ${styles.text}`} onClick={() => openModal(task)} />
+          <Edit className={`h-6 w-6 ${styles.text} cursor-pointer`} onClick={() => openModal(task)} />
         )}
         {task.status !== "COMPLETED" && (
-          <Trash2 className={`h-6 w-6 ${styles.text}`} onClick={() => onDeleteTask(task.id)} />
+          <Trash2 className={`h-6 w-6 ${styles.text} cursor-pointer`} onClick={() => onDeleteTask(task.id)} />
         )}
       </div>
     </div>

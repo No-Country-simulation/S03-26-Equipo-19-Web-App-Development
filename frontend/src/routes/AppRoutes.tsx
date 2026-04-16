@@ -81,7 +81,7 @@ export const AppRoutes: React.FC = () => {
             {/* 👈 USAMOS ContactsPage con isAdminView=true */}
             <Route path={ROUTES.CONTACTS} element={<ContactsPage isAdminView={true} />} />
             <Route path={ROUTES.MESSAGES} element={<Conversations />} />
-            <Route path={ROUTES.TASKS} element={<TasksManagement />} />
+            <Route path={ROUTES.TASKS} element={<TasksPage isAdminView={true} />} />
             <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
             <Route path={ROUTES.METRICS} element={<MetricsPage />} />
             <Route path={ROUTES.SALESPERSONS} element={<SalespersonsManagement />} />
