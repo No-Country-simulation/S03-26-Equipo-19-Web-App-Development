@@ -26,8 +26,6 @@ import { TagsManagement } from "../pages/admin/TagsManagement";
 import { EmailTemplates } from "../pages/admin/EmailTemplates";
 import { ExportsManagement } from "../pages/admin/ExportsManagement";
 import { MetricsPage } from "../pages/admin/MetricsPage";
-import { Conversations } from "../pages/admin/Conversations";
-import { TasksManagement } from "../pages/admin/TasksManagement";
 import { SalespersonsManagement } from "../pages/admin/SalespersonsManagement";
 import { SavedViewsPage } from "../pages/admin/SavedViewsPage";
 
@@ -63,24 +61,22 @@ export const AppRoutes: React.FC = () => {
           element={isAdmin ? <Navigate to="admin" replace /> : <Home />} 
         />
 
-        {/* VISTA VENDEDOR (solo si NO es admin) */}
+       {/* VISTA VENDEDOR */}
         {!isAdmin && (
           <>
-            {/* 👈 USAMOS ContactsPage con isAdminView=false */}
             <Route path={ROUTES.CONTACTS} element={<ContactsPage isAdminView={false} />} />
-            <Route path={ROUTES.MESSAGES} element={<MessagesPage />} />
-            <Route path={ROUTES.TASKS} element={<TasksPage />}/>
+            <Route path={ROUTES.MESSAGES} element={<MessagesPage isAdminView={false} />} />
+            <Route path={ROUTES.TASKS} element={<TasksPage isAdminView={false} />} />
             <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
           </>
         )}
 
-        {/* VISTA ADMIN */}
+         {/* VISTA ADMIN */}
         {isAdmin && (
           <Route path="admin">
             <Route index element={<AdminPanel />} />
-            {/* 👈 USAMOS ContactsPage con isAdminView=true */}
             <Route path={ROUTES.CONTACTS} element={<ContactsPage isAdminView={true} />} />
-            <Route path={ROUTES.MESSAGES} element={<Conversations />} />
+            <Route path={ROUTES.MESSAGES} element={<MessagesPage isAdminView={true} />} />
             <Route path={ROUTES.TASKS} element={<TasksPage isAdminView={true} />} />
             <Route path={ROUTES.SAVED_VIEWS} element={<SavedViewsPage />} />
             <Route path={ROUTES.METRICS} element={<MetricsPage />} />
