@@ -12,4 +12,3 @@ export const useGetSavedViews = () =>
     queryKey: ["saved-views"],
     queryFn: getSavedViews,
   });
-

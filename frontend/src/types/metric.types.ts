@@ -100,4 +100,3 @@ export interface GlobalMetricsResType {
   completedTasks: Metric;
   topSalesperson: TopSalesPerson
 }
-

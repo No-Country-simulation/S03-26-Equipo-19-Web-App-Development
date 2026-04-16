@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { UserPlus, Download, Users, UserCheck, UserX, Filter, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { useGetSalespersons, useSalespersonsMutations } from '../../services/use_queries/salespersons-query';
+import { useGetSalespersons, useGetSalespersonById } from '../../services/use_queries/salespersons-query';
 import type { SalespersonResponse } from '../../types/admin.types';
+import { Modal } from '../../components/ui/Modal';
 
 // NOTA: El Swagger no expone un endpoint /users separado para ADMIN.
 // Esta página lista los vendedores (SALESPERSON) via /api/v1/salespersons.

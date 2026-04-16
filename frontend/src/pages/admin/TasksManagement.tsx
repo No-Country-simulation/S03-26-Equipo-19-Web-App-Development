@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { Plus, FileText, CheckCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { useQuery } from '@tanstack/react-query';
 import { apiContactsService } from '../../services/general_api';
-import type { Task } from '../../types/task.types';
+import type { TaskReqType, TaskResType } from "../../types/task.types";
+import type { TaskResType as Task } from "../../types/task.types";
+import { TaskAdminForm } from "../../components/tasks/TaskAdminForm";
+import { useTasksMutationsService } from "../../services/use_mutations/tasks-mutation";
 
 const KpiCard = ({ icon, label, value, trend, isPositive }: {
   icon: React.ReactNode; label: string; value: string; trend: string; isPositive: boolean;
@@ -44,7 +48,11 @@ const isTaskOverdue = (task: Task): boolean => {
 };
 
 export const TasksManagement = () => {
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskResType | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const { mutationPostTask, mutationUpdateTaskById } = useTasksMutationsService();
 
   const { data: tasks = [], isLoading, isError } = useQuery<Task[]>({
     queryKey: ['admin-tasks'],
@@ -53,6 +61,29 @@ export const TasksManagement = () => {
       return res.data;
     },
   });
+
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: async () => {
+      const res = await apiContactsService.get('/contacts');
+      return res.data;
+    },
+  });
+
+  const handleCreateTask = (data: TaskReqType) => {
+    mutationPostTask.mutateAsync(data).then(() => {
+      setIsTaskModalOpen(false);
+    });
+  };
+
+  const handleUpdateTask = (data: TaskReqType) => {
+    if (selectedTask) {
+      mutationUpdateTaskById.mutateAsync({ id: selectedTask.id, data }).then(() => {
+        setIsTaskModalOpen(false);
+        setSelectedTask(null);
+      });
+    }
+  };
 
   const pending  = tasks.filter((t) => t.status === 'PENDING');
   const done     = tasks.filter((t) => t.status === 'COMPLETED');
@@ -73,7 +104,7 @@ export const TasksManagement = () => {
           <h1 className="text-2xl font-bold text-[#13316b]">Gestión de tareas</h1>
           <p className="text-slate-500 text-sm mt-0.5">Organiza y da seguimiento a las tareas del equipo</p>
         </div>
-        <Button variant="primary" size="md" className="flex items-center gap-2 whitespace-nowrap">
+        <Button variant="primary" size="md" className="flex items-center gap-2 whitespace-nowrap" onClick={() => setIsTaskModalOpen(true)}>
           <Plus size={16} /> Crear Tarea
         </Button>
       </div>
@@ -180,6 +211,27 @@ export const TasksManagement = () => {
           <button className="hover:text-slate-600 transition-colors">Preguntas Frecuentes</button>
         </div>
       </div>
+
+            {/* Modal para crear/editar tarea */}
+      <Modal
+        isOpen={isTaskModalOpen}
+        onClose={() => {
+          setIsTaskModalOpen(false);
+          setSelectedTask(null);
+        }}
+        title={selectedTask ? "Editar tarea" : "Nueva tarea"}
+      >
+        <TaskAdminForm
+          contacts={contacts}
+          initialData={selectedTask || undefined}
+          onSubmit={selectedTask ? handleUpdateTask : handleCreateTask}
+          onCancel={() => {
+            setIsTaskModalOpen(false);
+            setSelectedTask(null);
+          }}
+        />
+      </Modal>
+
     </div>
   );
 };

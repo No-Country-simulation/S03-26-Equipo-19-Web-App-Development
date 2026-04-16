@@ -1,13 +1,13 @@
-import { apiTagsService } from "../general_api";
-import type { TagResponse, TagRequest } from "../../types/admin.types";
+import { apiTagsService } from '../general_api';
+import type { TagResponse, TagRequest } from '../../types/admin.types';
 
 export const getTags = async (): Promise<TagResponse[]> => {
-  const res = await apiTagsService.get("");
+  const res = await apiTagsService.get('');
   return res.data;
 };
 
 export const createTag = async (data: TagRequest): Promise<TagResponse> => {
-  const res = await apiTagsService.post("", data);
+  const res = await apiTagsService.post('', data);
   return res.data;
 };
 

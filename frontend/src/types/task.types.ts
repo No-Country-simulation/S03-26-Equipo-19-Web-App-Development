@@ -20,4 +20,5 @@ export interface TaskReqType {
   type: TaskType;
   dueDate: string;
   contactId: number;
+  assignedTo?: number; // 👈 Agregar este campo opcional
 }

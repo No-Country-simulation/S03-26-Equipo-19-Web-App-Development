@@ -1,6 +1,6 @@
 import { apiConversationsService } from "../general_api";
 import type { ConversationInboxItemType, ConversationResType } from "../../types/conversation.types";
-import { log } from "console";
+// import { log } from "console";
 
 export const getConversations = async (token: string): Promise<ConversationResType[]> => {
   if (!token) throw new Error("No hay token de autenticación.");

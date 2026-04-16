@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { UserPlus, Download, Filter, Pencil, Trash2, Users, MessageSquare, TrendingUp, UserCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { useGetSalespersons, useSalespersonsMutations } from '../../services/use_queries/salespersons-query';
+import { Modal } from '../../components/ui/Modal';
+import { SalespersonsMutationsService } from '../../services/use_mutations/salespersons-mutation';
+import { useGetSalespersons } from '../../services/use_queries/salespersons-query';
 import type { SalespersonResponse } from '../../types/admin.types';
 
 // --- SUBCOMPONENTES ---
@@ -44,6 +46,7 @@ export const SalespersonsManagement = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'INACTIVE'>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const { data: salespersons = [], isLoading, isError } = useGetSalespersons(true);
   const { remove } = useSalespersonsMutations();
@@ -204,6 +207,24 @@ export const SalespersonsManagement = () => {
           <button className="hover:text-slate-600 transition-colors">Preguntas Frecuentes</button>
         </div>
       </div>
+            
+            <Modal
+              isOpen={modalOpen}
+              onClose={() => {
+                setModalOpen(false);
+              }}
+              title="Nueva Campaña"
+            >
+              <SalesPersonsForm
+                onSubmit={() => {
+                  setModalOpen(false);
+                  
+                }}
+                onCancel={() => {
+                  setModalOpen(false);
+                }}       
+              />
+            </Modal>
     </div>
   );
 };

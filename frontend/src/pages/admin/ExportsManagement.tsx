@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, FileText, Download, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { useMutation } from '@tanstack/react-query';
 import { exportData, downloadBlob } from '../../services/use_cases/export-service';
 import type { ExportEntity, ExportFormat } from '../../types/admin.types';

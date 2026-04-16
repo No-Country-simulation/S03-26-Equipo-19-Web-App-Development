@@ -1,12 +1,12 @@
-import { apiSalespersonService } from "../general_api";
+import { apiSalespersonService } from '../general_api';
 import type {
   SalespersonResponse,
   CreateSalespersonRequest,
   UpdateSalespersonRequest,
-} from "../../types/admin.types";
+} from '../../types/admin.types';
 
 export const getSalespersons = async (): Promise<SalespersonResponse[]> => {
-  const res = await apiSalespersonService.get("");
+  const res = await apiSalespersonService.get('');
   return res.data;
 };
 
@@ -15,12 +15,17 @@ export const getSalespersonById = async (id: number): Promise<SalespersonRespons
   return res.data;
 };
 
-export const createSalesperson = async (data: CreateSalespersonRequest): Promise<SalespersonResponse> => {
-  const res = await apiSalespersonService.post("", data);
+export const createSalesperson = async (
+  data: CreateSalespersonRequest,
+): Promise<SalespersonResponse> => {
+  const res = await apiSalespersonService.post('', data);
   return res.data;
 };
 
-export const updateSalesperson = async (id: number, data: UpdateSalespersonRequest): Promise<SalespersonResponse> => {
+export const updateSalesperson = async (
+  id: number,
+  data: UpdateSalespersonRequest,
+): Promise<SalespersonResponse> => {
   const res = await apiSalespersonService.put(`/${id}`, data);
   return res.data;
 };

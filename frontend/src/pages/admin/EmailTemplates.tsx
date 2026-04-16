@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Mail, Pencil, Trash2, Star } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { useGetTemplates } from '../../services/use_queries/templates-query';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiTemplatesService } from '../../services/general_api';

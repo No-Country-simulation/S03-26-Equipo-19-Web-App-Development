@@ -1,10 +1,13 @@
 import { Download, Plus, Users, Mail, Calendar, Settings, UserPlus, Tag, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { useGetConversations } from '../../services/use_queries/conversations-query';
 import { useAuthStore } from '../../store/useAuthStore';
 import type { ConversationResType } from '../../types/conversation.types';
 import { useGetPanelAdminMetrics } from '../../services/use_queries/metrics-query';
 import { KpiCard } from '../../components/ui/KpiCard';
+import { useState } from 'react';
+import { AdminPanelForm } from '../../components/admin_panel/AdminPanelForm';
 
 
 
@@ -46,6 +49,7 @@ const recentActivity = [
 // --- PÁGINA PRINCIPAL ---
 export const AdminPanel = () => {
   const user = useAuthStore(s => s.user);
+  const [modalOpen, setModalOpen] = useState(false);
   const { data: metricsPanel } = useGetPanelAdminMetrics();
   const { data: conversations = [] } = useGetConversations();
 
@@ -64,9 +68,15 @@ export const AdminPanel = () => {
           <Button variant="outline" size="sm" className="border border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center gap-2">
             <Download size={15} /> Exportar Reporte
           </Button>
-          <Button variant="primary" size="sm" className="flex items-center gap-2">
-            <Plus size={15} /> Nueva Campaña
-          </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          className="flex items-center gap-2"
+          onClick={() => {
+            setModalOpen(true);
+          }}>
+          <Plus size={15} /> Nueva Campaña
+        </Button>
         </div>
       </div>
 
@@ -147,6 +157,26 @@ export const AdminPanel = () => {
           </button>
         </div>
       </div>
+      
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+        }}
+        title="Nueva Campaña"
+      >
+        <AdminPanelForm
+          onSubmit={() => {
+            setModalOpen(false);
+            
+          }}
+          onCancel={() => {
+            setModalOpen(false);
+          }}       
+        />
+      </Modal>
+
+      
     </div>
   );
 };

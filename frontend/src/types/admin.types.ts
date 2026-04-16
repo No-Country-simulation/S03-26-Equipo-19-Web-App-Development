@@ -1,3 +1,143 @@
+// ─── SALESPERSONS ─────────────────────────────────────────────────────────────
+export interface SalespersonResponse {
+  id: number;
+  name: string;
+  email: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  assignedContacts: number;
+  messagesSent: number;
+  responseRate: number;
+  lastActivity: string;
+}
+
+export interface CreateSalespersonRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface UpdateSalespersonRequest {
+  name?: string;
+  email?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+// ─── TAGS ─────────────────────────────────────────────────────────────────────
+export interface TagResponse {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface TagRequest {
+  name: string;
+  color: string;
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+export type ExportFormat = 'CSV' | 'PDF';
+export type ExportEntity =
+  | 'contacts'
+  | 'users'
+  | 'tasks'
+  | 'salespersons'
+  | 'conversations';
+
+export interface ExportRequest {
+  format: ExportFormat;
+  entity: ExportEntity;
+  filters?: Record<string, unknown>;
+}
+
+// ─── SAVED VIEWS ──────────────────────────────────────────────────────────────
+export interface SavedViewResponse {
+  id: number;
+  name: string;
+  entity: 'CONTACTS' | 'TASKS';
+  isDefault?: boolean;
+  isGlobal?: boolean;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+  filters: Record<string, unknown>;
+  creator: string;
+}
+
+export interface SavedViewRequest {
+  name: string;
+  entity: 'CONTACTS' | 'TASKS';
+  isDefault?: boolean;
+  global: boolean;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+  filters: Record<string, unknown>;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ---- SALESPERSONS ----
 export interface SalespersonResponse {
   id: number;
@@ -51,16 +191,6 @@ export interface AgentMetrics {
   responseRate: number;
 }
 
-// ---- EXPORT ----
-export type ExportFormat = "CSV" | "PDF";
-export type ExportEntity =
-  | "CONTACTS"
-  | "USERS"
-  | "TASKS"
-  | "FUNNEL_STAGES"
-  | "SALESPERSONS"
-  | "CONVERSATIONS";
-
 export interface ExportRequest {
   format: ExportFormat;
   entity: ExportEntity;
@@ -98,15 +228,6 @@ export interface SavedViewResponse {
   creator: string;
 }
 
-export interface SavedViewRequest {
-  name: string;
-  entity: "CONTACTS" | "TASKS";
-  isDefault?: boolean;
-  global?: boolean;
-  filters: Record<string, unknown>;
-  sortBy?: string;
-  sortOrder?: "ASC" | "DESC";
-}
 // ---- FUNNEL ----
 export interface FunnelStageResponse {
   id: number;
