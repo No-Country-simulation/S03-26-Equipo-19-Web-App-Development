@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/useAuthStore";
-import type { ConversationResType } from "../../types/conversation.types";
-import { getConversationById, getConversations, getConversationsByContactId } from "../use_cases/conversation-service";
+import type { ConversationInboxItemType, ConversationResType } from "../../types/conversation.types";
+import { getConversationById, getConversations, getConversationsByContactId, getConversationsInbox } from "../use_cases/conversation-service";
 
 export const useGetConversations = () => {
   const token = useAuthStore((state) => state.token);
@@ -29,3 +29,13 @@ export const useGetConversationsByContactId = (contactId: number) => {
     enabled: !!token && contactId !== undefined,
   });
 };  
+
+
+export const useGetConversationsInbox = () => {
+  const token = useAuthStore((state) => state.token);
+  return useQuery<ConversationInboxItemType[]>({ 
+    queryKey: ["conversations-inbox"],
+    queryFn: () => getConversationsInbox(token!),
+    enabled: !!token,
+  });
+};    
