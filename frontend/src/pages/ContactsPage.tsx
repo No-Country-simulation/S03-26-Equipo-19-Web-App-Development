@@ -20,24 +20,23 @@ import {
 import { useGetContactsMetrics } from '../services/use_queries/metrics-query';
 
 
+interface ContactsPageProps {
+  isAdminView?: boolean;
+}
 
-
-export const ContactsPage = () => {
+export const ContactsPage = ({ isAdminView = false }: ContactsPageProps) => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedViewName, setSelectedViewName] = useState<string | null>(null);
 
   const { mutationPostContact } = ContactsMutationsService();
-
   const { data: views = [], isLoading } = useGetSavedViews();
-  const { data: contacts = [] } = useGetContacts();
-  const { data: metrics } = useGetContactsMetrics()
+  const { data: contacts = [] } = useGetContacts();       // backend filtra por rol automáticamente
+  const { data: metrics } = useGetContactsMetrics();
 
   const addContact = (data: ContactReqType) => {
     mutationPostContact.mutate(data, {
-      onSuccess: () => {
-        setModalOpen(false);
-      }
+      onSuccess: () => setModalOpen(false)
     });
   };
 
@@ -78,79 +77,54 @@ export const ContactsPage = () => {
   return (
     <>
       <div className="flex justify-center md:justify-between mb-6">
-        <TitleSection text="Mis contactos" className='hidden md:flex' />
-        <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={() => setModalOpen(true)}>
+        {/* Título dinámico según rol */}
+        <TitleSection
+          text={isAdminView ? "Todos los contactos" : "Mis contactos"}
+          className='hidden md:flex'
+        />
+        {/* Ambos roles pueden crear contacto */}
+        <Button
+          variant='secondary'
+          className="w-1/2 md:w-1/4 lg:w-1/6"
+          onClick={() => setModalOpen(true)}
+        >
           Nuevo contacto
         </Button>
       </div>
+      {/* KPIs — igual para ambos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard
-          title="Total de contactos"
-          metric={metrics?.funnel.total ?? { value: 0, changePercent: 0, trend: 'stable' }}
-          color="primary"
-          icon={<UsersRound size={28} />}
-        />
-        <KpiCard
-          title="Contactos activos"
-          metric={metrics?.funnel.totalActive ?? { value: 0, changePercent: 0, trend: 'stable' }}
-          color="secondary"
-          icon={<Speech size={28} />}
-        />
-        <KpiCard
-          title="Nuevos contactos"
-          metric={metrics?.funnel.byStatus.NEW_LEAD ?? { value: 0, changePercent: 0, trend: 'stable' }}
-          color="success"
-          icon={<UserStar size={28} />}
-        />
-        <KpiCard
-          title="Contactos perdidos"
-          metric={metrics?.funnel.byStatus.CLOSED_LOST ?? { value: 0, changePercent: 0, trend: 'stable' }}
-          color="error"
-          icon={<FileUser size={28} />}
-          impact="negative"
-        />
+        <KpiCard title="Total de contactos"   metric={metrics?.funnel.total          ?? { value: 0, changePercent: 0, trend: 'stable' }} color="primary"    icon={<UsersRound size={28} />} />
+        <KpiCard title="Contactos activos"    metric={metrics?.funnel.totalActive    ?? { value: 0, changePercent: 0, trend: 'stable' }} color="secondary"  icon={<Speech size={28} />} />
+        <KpiCard title="Nuevos contactos"     metric={metrics?.funnel.byStatus.NEW_LEAD    ?? { value: 0, changePercent: 0, trend: 'stable' }} color="success"    icon={<UserStar size={28} />} />
+        <KpiCard title="Contactos perdidos"   metric={metrics?.funnel.byStatus.CLOSED_LOST ?? { value: 0, changePercent: 0, trend: 'stable' }} color="error"      icon={<FileUser size={28} />} impact="negative" />
       </div>
 
+      {/* Selector de vistas guardadas */}
       <div className="flex justify-center md:justify-end mb-6">
-        <Select
-          value={selectedViewName ?? ""}
-          onValueChange={(value) =>
-            setSelectedViewName(value || null)
-          }
-        >
+        <Select value={selectedViewName ?? ""} onValueChange={(v) => setSelectedViewName(v || null)}>
           <SelectTrigger className="w-1/2 md:w-1/4 lg:w-1/6">
             <SelectValue placeholder="Vistas guardadas" />
           </SelectTrigger>
-
-          <SelectContent className={"bg-white"}>
+          <SelectContent className="bg-white">
             <SelectItem value="">Sin selección</SelectItem>
-
             {contactViews.map((view) => (
-              <SelectItem key={view.id} value={view.name}>
-                {view.name}
-              </SelectItem>
+              <SelectItem key={view.id} value={view.name}>{view.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <ContactsTable
+       <ContactsTable
         contacts={contactsToShow}
         isLoading={isLoading}
+        isAdminView={isAdminView}
       />
 
 
       {/* Modal para crear nuevo contacto */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Nuevo contacto"
-      >
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Nuevo contacto">
         <ContactForm
-          onSubmit={(data) => {
-            addContact(data);
-            setModalOpen(false);
-          }}
+          onSubmit={(data) => { addContact(data); setModalOpen(false); }}
           onCancel={() => setModalOpen(false)}
         />
       </Modal>
