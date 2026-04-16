@@ -46,39 +46,39 @@ export function ContactHeader({
             onBack ? "block lg:hidden" : "block"
           )}
         >
-          <ChevronLeft className="h-5 w-5 text-primary" />
+          <ChevronLeft className="h-5 w-5 text-primary cursor-pointer" />
         </button>
-
-        <AvatarContact name={contact.name} lastName={contact.lastName} />
-
-        <div className="flex-1">
-          <h2 className="font-semibold">{contact.name} {contact.lastName}</h2>
-          <p className="text-sm text-muted-foreground">{contact.email}</p>
-        </div>
+        <button className={cn("flex items-center gap-4", onBack && "cursor-pointer hover:text-secondary transition-colors")} onClick={onBack ? (() => navigate(`${ROUTES.DASHBOARD}/${ROUTES.CONTACTS}/${contact.id}`)) : undefined}>
+          <AvatarContact name={contact.name} lastName={contact.lastName} />
+          <div className="flex-1 justify-start text-left">
+            <h2 className="font-semibold">{contact.name} {contact.lastName}</h2>
+            <p className="text-sm text-muted-foreground">{contact.email}</p>
+          </div>
+        </button>
       </div>
-<div className="flex flex-col items-end md:pr-6 gap-0.5">
-  <p className="text-xs mr-2">Conversaciones activas</p>
-      <Tabs value={activeChannel} onValueChange={(v) => setActiveChannel(v as Channel)} >
-        <TabsList className="bg-neutro-2/50 rounded-2xl">
-          <TabsTrigger value="WHATSAPP">
-            <MessageCircleMore className="h-4 w-4 text-success" />
-            WhatsApp
-            {channelCounts.WHATSAPP > 0 && (
-              <Badge className="border border-primary/30 bg-white text-primary">{channelCounts.WHATSAPP}</Badge>
-            )}
-          </TabsTrigger>
+      <div className="flex flex-col items-end md:pr-6 gap-0.5">
+        <p className="text-xs mr-2">Conversaciones activas</p>
+        <Tabs value={activeChannel} onValueChange={(v) => setActiveChannel(v as Channel)} >
+          <TabsList className="bg-neutro-2/50 rounded-2xl">
+            <TabsTrigger value="WHATSAPP">
+              <MessageCircleMore className="h-4 w-4 text-success" />
+              WhatsApp
+              {channelCounts.WHATSAPP > 0 && (
+                <Badge className="border border-primary/30 bg-white text-primary">{channelCounts.WHATSAPP}</Badge>
+              )}
+            </TabsTrigger>
 
-          <TabsTrigger value="EMAIL">
-            <Mail className="h-4 w-4 text-primary" />
-            Email
-            {channelCounts.EMAIL > 0 && (
-              <Badge className="border border-primary/30 bg-white text-primary">
-                {channelCounts.EMAIL}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+            <TabsTrigger value="EMAIL">
+              <Mail className="h-4 w-4 text-primary" />
+              Email
+              {channelCounts.EMAIL > 0 && (
+                <Badge className="border border-primary/30 bg-white text-primary">
+                  {channelCounts.EMAIL}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
     </div>
   )
