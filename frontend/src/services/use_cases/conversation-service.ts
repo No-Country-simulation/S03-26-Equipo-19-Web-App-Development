@@ -1,6 +1,5 @@
 import { apiConversationsService } from "../general_api";
 import type { ConversationInboxItemType, ConversationResType } from "../../types/conversation.types";
-import { log } from "console";
 
 export const getConversations = async (token: string): Promise<ConversationResType[]> => {
   if (!token) throw new Error("No hay token de autenticación.");
@@ -54,7 +53,6 @@ export const getConversationsInbox = async (token: string): Promise<Conversation
     const res = await apiConversationsService.get("/inbox", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    log("Conversations Inbox Response:", res);
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";

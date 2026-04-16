@@ -16,6 +16,7 @@ export const ContactsMutationsService = () => {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
 
@@ -26,6 +27,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
 
@@ -36,6 +38,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
 
@@ -46,7 +49,8 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contact", variables.contactId] });
-    },
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
+      },
   });
 
   const mutationRemoveTagFromContactId = useMutation({
@@ -56,6 +60,8 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contact", variables.contactId] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
+
     },
   });
 

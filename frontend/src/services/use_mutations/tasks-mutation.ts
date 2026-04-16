@@ -33,6 +33,7 @@ export const useTasksMutationsService = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-tasks"] });
     },
   });
 
@@ -43,6 +44,7 @@ export const useTasksMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["tasks", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-tasks"] });
     },
   });
 
@@ -52,6 +54,7 @@ export const useTasksMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["tasks", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-tasks"] });
     },
   });
 
@@ -61,6 +64,7 @@ export const useTasksMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["tasks", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-tasks"] });
     },
   });
 
