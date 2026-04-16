@@ -1,4 +1,4 @@
-import { Building2, Mail, Smartphone } from "lucide-react"
+import { Building2, Mail, Smartphone, UserRoundPen } from "lucide-react"
 
 import type { ContactResType } from "../../types/contact.types"
 import AvatarContact from "../ui/AvatarContact"
@@ -6,15 +6,15 @@ import AvatarContact from "../ui/AvatarContact"
 
 interface Props {
   contact: ContactResType
-
+openModal: () => void
 }
 
-export function ContactCard({ contact }: Props) {
+export function ContactCard({ contact, openModal }: Props) {
 
 
   return (
-    <div className="bg-white border-border shadow-md rounded-lg">
-      <div className="flex items-start gap-5 px-10 py-4">
+    <div className="bg-white border-border shadow-md rounded-lg flex justify-between items-start p-4">
+      <div className="flex flex-col lg:flex-row items-start gap-5 px-3 lg:px-6 py-4">
         <AvatarContact name={contact.name} lastName={contact.lastName} size="lg" />
         <div className="mt-3">
           <h3 className="font-semibold text-lg text-foreground">
@@ -36,6 +36,7 @@ export function ContactCard({ contact }: Props) {
           </div>
         </div>
       </div>
+        <UserRoundPen className="w-6 h-6 text-primary lg:mt-4 lg:mr-4" onClick={openModal} />
     </div>
   )
 }
