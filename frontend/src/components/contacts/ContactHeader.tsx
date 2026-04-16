@@ -51,8 +51,9 @@ export function ContactHeader({
         <button className={cn("flex items-center gap-4", onBack && "cursor-pointer hover:text-secondary transition-colors")} onClick={onBack ? (() => navigate(`${ROUTES.DASHBOARD}/${ROUTES.CONTACTS}/${contact.id}`)) : undefined}>
           <AvatarContact name={contact.name} lastName={contact.lastName} />
           <div className="flex-1 justify-start text-left">
-            <h2 className="font-semibold">{contact.name} {contact.lastName}</h2>
-            <p className="text-sm text-muted-foreground">{contact.email}</p>
+            {contact.name || contact.lastName || contact.email ? (<><h2 className="font-semibold">{contact.name} {contact.lastName}</h2>
+              <p className="text-sm text-muted-foreground">{contact.email}</p></>) : (<p className="text-sm text-muted-foreground">Sin nombre</p>)}
+
           </div>
         </button>
       </div>

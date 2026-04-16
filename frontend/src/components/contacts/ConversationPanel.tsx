@@ -12,11 +12,14 @@ interface Props {
 
 export function ConversationPanel({messages, activeConversation, isLoading}: Props) {
 
+
   const bottomRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
 
   return (
   <ScrollArea className="h-[calc(100vh-400px)] p-6">

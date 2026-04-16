@@ -12,19 +12,19 @@ export const useGetConversations = () => {
   });
 };
 
-export const useGetConversationById = (contactId: number) => {
+export const useGetConversationById = (conversationId: number) => {
   const token = useAuthStore((state) => state.token);
   return useQuery<ConversationResType>({
-    queryKey: ["conversation", contactId],
-    queryFn: () => getConversationById(token!, contactId),
-    enabled: !!token && !!contactId,
+    queryKey: ["conversations", conversationId],
+    queryFn: () => getConversationById(token!, conversationId),
+    enabled: !!token && !!conversationId,
   });
 };  
 
 export const useGetConversationsByContactId = (contactId: number) => {
   const token = useAuthStore((state) => state.token);
   return useQuery<ConversationResType[]>({
-    queryKey: ["conversation", contactId],
+    queryKey: ["conversations", contactId],
     queryFn: () => getConversationsByContactId(token!, contactId),
     enabled: !!token && contactId !== undefined,
   });

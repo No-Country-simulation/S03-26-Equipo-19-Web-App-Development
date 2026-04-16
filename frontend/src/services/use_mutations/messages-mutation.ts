@@ -1,67 +1,104 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { MessageReqType, MessageResType } from "../../types/message.types";
-import { postMessage } from "../use_cases/messages-service";
+import {
+  postMessage,
+  readAllMessagesInConversationById,
+} from "../use_cases/messages-service";
+
 
 export const useMessagesMutationsService = () => {
   const queryClient = useQueryClient();
 
-  const mutationPostMessage = useMutation({
-    mutationFn: (data: MessageReqType) => postMessage(data),
+ const mutationPostMessage = useMutation({
+  mutationFn: ({
+    data,
+  }: {
+    data: MessageReqType;
+    conversationId: number;
+  }) => postMessage(data),
 
-    onMutate: async (newMessage) => {
-      const conversationId = newMessage.contactId; 
+  onMutate: async ({ data, conversationId }) => {
+    await queryClient.cancelQueries({
+      queryKey: ["messages", conversationId],
+    });
 
-      await queryClient.cancelQueries({
-        queryKey: ["messages", conversationId],
-      });
+    const previous = queryClient.getQueryData<MessageResType[]>([
+      "messages",
+      conversationId,
+    ]);
 
-      const previous = queryClient.getQueryData<MessageResType[]>([
-        "messages",
-        conversationId,
-      ]);
+    const optimisticMessage: MessageResType = {
+      id: Date.now(),
+      userId: 0,
+      conversation: {
+        id: conversationId,
+        channel: data.channel,
+      } as MessageResType["conversation"],
+      direction: "OUTBOUND",
+      body: data.content.body,
+      deliveryStatus: "SENT",
+      sentAt: new Date().toISOString(),
+      providerId: "",
+      sender: null,
+      template: null,
+    };
 
-      const optimisticMessage: MessageResType = {
-        id: Date.now(),
-        userId: 0,
-        conversationId,
-        channel: newMessage.channel,
-        direction: "OUTBOUND",
-        body: newMessage.content.body,
-        status: "SENT",
-        createdAt: new Date().toISOString(),
-        externalId: `temp-${Date.now()}`,
-        messageType: "TEXT",
-      };
+    queryClient.setQueryData<MessageResType[]>(
+      ["messages", conversationId],
+      (old = []) => [...old, optimisticMessage]
+    );
 
-      queryClient.setQueryData<MessageResType[]>(
-        ["messages", conversationId],
-        (old = []) => [...old, optimisticMessage],
+    return { previous, conversationId };
+  },
+
+  onError: (_err, _vars, context) => {
+    if (!context) return;
+
+    queryClient.setQueryData(
+      ["messages", context.conversationId],
+      context.previous
+    );
+  },
+
+  onSuccess: (_data, _vars, context) => {
+    if (!context) return;
+
+    queryClient.invalidateQueries({
+      queryKey: ["messages", context.conversationId],
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ["conversations"],
+    });
+  },
+});
+
+  const mutationReadAllMessages = useMutation({
+    mutationFn: (conversationId: number) =>
+      readAllMessagesInConversationById(conversationId),
+    
+
+    onSuccess: (_, conversationId) => {
+      queryClient.setQueryData(["conversations"], (old: any[]) =>
+        old.map((c) =>
+          c.id === conversationId ? { ...c, unreadCount: 0 } : c,
+        ),
       );
 
-      return { previous, conversationId };
-    },
-
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(
-          ["messages", context.conversationId],
-          context.previous,
-        );
-      }
-    },
-
-    onSettled: (_data, _err, _vars, context) => {
       queryClient.invalidateQueries({
-        queryKey: ["messages", context?.conversationId],
+        queryKey: ["messages", conversationId],
       });
 
       queryClient.invalidateQueries({
         queryKey: ["conversations"],
       });
+      console.log("invalidate conversationId:", conversationId);
     },
+    
   });
 
   return {
     mutationPostMessage,
+    mutationReadAllMessages,
   };
 };

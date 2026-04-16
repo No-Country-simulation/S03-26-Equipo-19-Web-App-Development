@@ -14,6 +14,7 @@ export const useGetMessages = () => {
 
 export const useGetMessagesByConversationId = (conversationId?: number) => {
   const token = useAuthStore((state) => state.token);
+  console.log("messages query conversationId:", conversationId);
   return useQuery<MessageResType[]>({
     queryKey: ["messages", conversationId],
     queryFn: () => getMessagesByConversationId(token!, conversationId!),

@@ -17,7 +17,6 @@ export function ChatMessage({ message, showChannelIndicator = false }: ChatMessa
 
   console.log({message});
   
-
   return (
     <div
       className={cn(

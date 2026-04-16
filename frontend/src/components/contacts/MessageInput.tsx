@@ -15,22 +15,22 @@ import { useState } from "react"
 import { useGetTemplates } from "../../services/use_queries/templates-query"
 import { parseTemplate } from "../../utils/parseTemplate"
 import { useMessagesMutationsService } from "../../services/use_mutations/messages-mutation";
-import { useQueryClient } from "@tanstack/react-query"
+import type { ConversationResType } from "../../types/conversation.types"
 
 
 
 interface Props {
   activeChannel: Channel,
   contact: ContactResType
+  activeConversation?: ConversationResType
 }
 
-export function MessageInput({ activeChannel, contact }: Props) {
+export function MessageInput({ activeChannel, contact, activeConversation }: Props) {
 
   const { data: templates = [], isLoading } = useGetTemplates()
 
   const [message, setMessage] = useState("")
 
-  const queryClient = useQueryClient();
 
   const { mutationPostMessage } = useMessagesMutationsService();
 
@@ -59,23 +59,18 @@ export function MessageInput({ activeChannel, contact }: Props) {
   const onSend = () => {
     if (!message.trim() || mutationPostMessage.isPending) return;
 
-    mutationPostMessage.mutate(
-      {
+    const conversationId = activeConversation?.id;
+
+    if (!conversationId) return;
+
+    mutationPostMessage.mutate({
+      data: {
         contactId: contact.id,
         channel: activeChannel,
-        content: {
-          body: message,
-        },
+        content: { body: message },
       },
-      {
-        onSuccess: () => {
-          setMessage("");
-          queryClient.invalidateQueries({
-            queryKey: ["messages", contact.id],
-          });
-        },
-      }
-    );
+      conversationId,
+    });
   };
 
 

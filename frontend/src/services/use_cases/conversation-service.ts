@@ -92,8 +92,6 @@ export const closeConversationById = async (
         headers: { Authorization: `Bearer ${token}` },
       },
     );
-    console.log("Se cerró la conversación");
-
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
@@ -117,8 +115,6 @@ export const reOpenConversationById = async (
         headers: { Authorization: `Bearer ${token}` },
       },
     );
-    console.log("Se reabrió la conversación");
-
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
@@ -128,3 +124,4 @@ export const reOpenConversationById = async (
     );
   }
 };
+
