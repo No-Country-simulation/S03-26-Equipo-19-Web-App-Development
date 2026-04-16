@@ -43,6 +43,9 @@ export const ContactsTable = ({ contacts, isLoading }: ContactsTableProps) => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
+  console.log({contacts});
+  
+
   const navigate = useNavigate()
 
   const { mutationUpdateContactById } = ContactsMutationsService();
@@ -84,9 +87,6 @@ export const ContactsTable = ({ contacts, isLoading }: ContactsTableProps) => {
     return result;
   }, [contacts, sortOrder, statusFilter]);
 
-  if (isLoading) return <div className="flex items-center justify-center">
-    <p className="text-lg font-medium text-primary">Cargando datos...</p>
-  </div>;
 
   return (
     <>
@@ -153,7 +153,12 @@ export const ContactsTable = ({ contacts, isLoading }: ContactsTableProps) => {
               </tr>
             </thead>
             <tbody>
-              {processedContacts.length === 0 ? (
+               {isLoading ? (
+                <div className="flex items-center justify-center pt-5 col-span-full">
+                  <p className="text-sm font-medium text-primary animate-pulse">Cargando contactos...</p>
+                </div>
+              ) : (
+              processedContacts.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-sm text-neutro-2">
                     No hay datos que coincidan con el filtro
@@ -209,7 +214,7 @@ export const ContactsTable = ({ contacts, isLoading }: ContactsTableProps) => {
                       </button>
                     </td>
                   </tr>
-                )))}
+                ))))}
             </tbody>
           </table>
         </div>

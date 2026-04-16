@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -15,6 +15,7 @@ const variants: Record<ButtonVariant, string> = {
   primary: 'bg-primary hover:bg-secondary text-white',
   secondary: 'bg-accent hover:bg-secondary text-white',
   outline: "",
+  ghost: "border border-primary text-primary hover:bg-secondary hover:text-white hover:border-none",
   danger: 'bg-error hover:bg-red-600 text-white',
 };
 
