@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, FileText, Download, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { ExportForm } from '../../components/exports_management/ExportManagementForm';
 import { useMutation } from '@tanstack/react-query';
 import { exportData, downloadBlob } from '../../services/use_cases/export-service';
 import type { ExportEntity, ExportFormat } from '../../types/admin.types';
@@ -46,18 +47,15 @@ const StatusBadge = ({ status }: { status: ExportStatus }) => {
 export const ExportsManagement = () => {
   const [jobs, setJobs] = useState<ExportJob[]>([]);
   const [nextId, setNextId] = useState(1);
-  const [form, setForm] = useState<{ format: ExportFormat; entity: ExportEntity }>({
-    format: 'CSV',
-    entity: 'CONTACTS',
-  });
+  const [modalOpen, setModalOpen] = useState(false); // 👈 estado del modal
 
   const mutation = useMutation({
     mutationFn: ({ format, entity }: { format: ExportFormat; entity: ExportEntity }) =>
       exportData({ format, entity }),
     onMutate: ({ format, entity }) => {
       const id = nextId;
-      setNextId(n => n + 1);
-      setJobs(prev => [
+      setNextId((n) => n + 1);
+      setJobs((prev) => [
         {
           id,
           format,
@@ -71,17 +69,18 @@ export const ExportsManagement = () => {
     },
     onSuccess: (blob, { format, entity }, context) => {
       const { id } = context as { id: number };
-      setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'done' } : j));
+      setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status: 'done' } : j)));
       downloadBlob(blob, `export_${entity}_${Date.now()}.${format.toLowerCase()}`);
     },
     onError: (_err, _vars, context) => {
       const { id } = context as { id: number };
-      setJobs(prev => prev.map(j => j.id === id ? { ...j, status: 'error' } : j));
+      setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status: 'error' } : j)));
     },
   });
 
-  const handleCreate = () => {
-    mutation.mutate({ format: form.format, entity: form.entity });
+  const handleExport = (format: ExportFormat, entity: ExportEntity) => {
+    mutation.mutate({ format, entity });
+    setModalOpen(false);
   };
 
   const csvCount = jobs.filter(j => j.format === 'CSV').length;
@@ -89,7 +88,7 @@ export const ExportsManagement = () => {
   const doneCount = jobs.filter(j => j.status === 'done').length;
 
   return (
-    <div>
+   <div>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#13316b]">Gestión de Exportaciones</h1>
@@ -100,34 +99,14 @@ export const ExportsManagement = () => {
 
         {/* Form inline para crear exportación */}
         <div className="flex items-center gap-2 flex-wrap">
-          <select
-            value={form.format}
-            onChange={e => setForm(f => ({ ...f, format: e.target.value as ExportFormat }))}
-            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400"
-          >
-            <option value="CSV">CSV</option>
-            <option value="PDF">PDF</option>
-          </select>
-          <select
-            value={form.entity}
-            onChange={e => setForm(f => ({ ...f, entity: e.target.value as ExportEntity }))}
-            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400"
-          >
-            <option value="contacts">Contactos</option>
-            <option value="users">Usuarios</option>
-            <option value="tasks">Tareas</option>
-            <option value="funnel_stages">Etapas del embudo</option>
-            <option value="salespersons">Vendedores</option>
-            <option value="conversations">Conversaciones</option>
-          </select>
-          <Button
-            variant="primary" size="md"
-            className="flex items-center gap-2 whitespace-nowrap"
-            onClick={handleCreate}
-            disabled={mutation.isPending}
-          >
-            <Plus size={16} /> Crear Exportación
-          </Button>
+        <Button
+          variant="primary"
+          size="md"
+          className="flex items-center gap-2 whitespace-nowrap"
+          onClick={() => setModalOpen(true)}
+        >
+          <Plus size={16} /> Crear Exportación
+        </Button>
         </div>
       </div>
 
@@ -213,6 +192,20 @@ export const ExportsManagement = () => {
           <button className="hover:text-slate-600 transition-colors">Preguntas Frecuentes</button>
         </div>
       </div>
+
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Nueva exportación"
+      >
+        <ExportForm
+          onCancel={() => setModalOpen(false)}
+          onSuccess={handleExport}
+          isPending={mutation.isPending}
+        />
+      </Modal>
+
+
     </div>
   );
 };
