@@ -1,3 +1,4 @@
+// src/components/messages/ConversationList.tsx
 import type { ContactResType } from '../../types/contact.types';
 import AvatarContact from '../ui/AvatarContact';
 import TitleSection from '../ui/TitleSection';
@@ -13,16 +14,17 @@ interface ConversationListProps {
   contacts: ContactResType[];
   activeChatId: number | null;
   onSelect: (contact: ContactResType, conversations: ConversationResType[]) => void;
+  isAdminView?: boolean;
 }
 
 export const ConversationList = ({
   contacts,
   activeChatId,
-  onSelect
+  onSelect,
+  isAdminView = false
 }: ConversationListProps) => {
 
   const [activeStatus, setActiveStatus] = useState<'ALL' | 'UNREAD'>('ALL');
-
 
   const total = contacts.length;
   const unread = contacts.filter(c => (c.totalUnreadCount || 0) > 0).length;
@@ -31,11 +33,13 @@ export const ConversationList = ({
     <div className="relative">
 
       <div className='bg-white rounded-lg shadow-lg pt-8 pb-6 px-6 z-10 relative'>
-        <TitleSection text="Mis Conversaciones" className='hidden md:flex' />
+        <TitleSection 
+          text={isAdminView ? "Todas las conversaciones" : "Mis conversaciones"} 
+          className='hidden md:flex' 
+        />
 
         <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as any)}>
           <TabsList className="bg-neutro-2/30 rounded-2xl lg:mt-4">
-
             <TabsTrigger value="ALL">
               Total
               <Badge variant="outline" className="ml-2">{total}</Badge>
@@ -45,15 +49,12 @@ export const ConversationList = ({
               No leídos
               <Badge variant="outline" className="ml-2">{unread}</Badge>
             </TabsTrigger>
-
           </TabsList>
         </Tabs>
       </div>
 
-  
       <ScrollArea className="h-[520px]">
         <div className="flex flex-col bg-white -mt-4 pt-5">
-
           {contacts
             .filter(c =>
               activeStatus === 'UNREAD'
@@ -61,7 +62,6 @@ export const ConversationList = ({
                 : true
             )
             .map(contact => {
-
               const openConversations = contact.conversations?.filter(
                 c => c.status === "OPEN"
               ) || [];
@@ -84,7 +84,6 @@ export const ConversationList = ({
                   <AvatarContact name={contact.name} lastName={contact.lastName} />
 
                   <div className="flex-1">
-
                     <div className="flex justify-between">
                       <span className="text-sm font-medium">
                         {contact.name} {contact.lastName}
@@ -96,19 +95,21 @@ export const ConversationList = ({
                       <span className="text-xs text-gray-400">
                         {getStatusLabel(contact.funnelStatus).toUpperCase()}
                       </span>
-
-                        <span className="bg-neutro-3 border border-white text-primary text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                          {contact.totalUnreadCount}
-                        </span>
-                    
+                      <span className="bg-neutro-3 border border-white text-primary text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {contact.totalUnreadCount}
+                      </span>
                     </div>
+
+                    {/* Mostrar vendedor asignado solo para admin */}
+                    {isAdminView && contact.owner && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Vendedor: {contact.owner.name}
+                      </div>
+                    )}
 
                     {/* CANALES */}
                     <div className="flex justify-between mt-1">
-                      <span className="text-xs text-gray-500">
-                     
-                      </span>
-
+                      <span className="text-xs text-gray-500"></span>
                       <div className="flex gap-1">
                         {channels.includes('WHATSAPP') && (
                           <MessageCircle className="w-4 h-4 text-green-500" />
@@ -118,7 +119,6 @@ export const ConversationList = ({
                         )}
                       </div>
                     </div>
-
                   </div>
                 </button>
               );
