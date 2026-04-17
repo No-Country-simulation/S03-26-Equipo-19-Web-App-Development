@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, FileText, Download, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { ExportManagementForm } from '../../components/exports_management/ExportManagementForm';
+import { ExportForm } from '../../components/exports_management/ExportManagementForm';
 import { useMutation } from '@tanstack/react-query';
 import { exportData, downloadBlob } from '../../services/use_cases/export-service';
 import type { ExportEntity, ExportFormat } from '../../types/admin.types';
@@ -43,14 +43,15 @@ const StatusBadge = ({ status }: { status: ExportStatus }) => {
   );
 };
 
+// --- PÁGINA PRINCIPAL ---
 export const ExportsManagement = () => {
   const [jobs, setJobs] = useState<ExportJob[]>([]);
   const [nextId, setNextId] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false); // 👈 estado del modal
 
-  const mutation = useMutation({
+    const mutation = useMutation({
     mutationFn: ({ format, entityType }: { format: ExportFormat; entityType: ExportEntity }) =>
-      exportData({ format, entityType }),
+      exportData({ format, entityType: entityType }),
     onMutate: ({ format, entityType }) => {
       const id = nextId;
       setNextId((n) => n + 1);
@@ -58,7 +59,7 @@ export const ExportsManagement = () => {
         {
           id,
           format,
-          entity: entityType,
+          entity: entityType,  // ← Usar entityType para almacenar
           date: new Date().toLocaleString('es-AR'),
           status: 'loading',
         },
@@ -70,6 +71,7 @@ export const ExportsManagement = () => {
       const { id } = context as { id: number };
       setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status: 'done' } : j)));
       downloadBlob(blob, `export_${entityType}_${Date.now()}.${format.toLowerCase()}`);
+      setModalOpen(false);
     },
     onError: (_err, _vars, context) => {
       const { id } = context as { id: number };
@@ -79,15 +81,14 @@ export const ExportsManagement = () => {
 
   const handleExport = (format: ExportFormat, entityType: ExportEntity) => {
     mutation.mutate({ format, entityType });
-    setModalOpen(false);
   };
 
-  const csvCount = jobs.filter((j) => j.format === 'CSV').length;
-  const pdfCount = jobs.filter((j) => j.format === 'PDF').length;
-  const doneCount = jobs.filter((j) => j.status === 'done').length;
+  const csvCount = jobs.filter(j => j.format === 'CSV').length;
+  const pdfCount = jobs.filter(j => j.format === 'PDF').length;
+  const doneCount = jobs.filter(j => j.status === 'done').length;
 
   return (
-    <div>
+   <div>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#13316b]">Gestión de Exportaciones</h1>
@@ -96,6 +97,8 @@ export const ExportsManagement = () => {
           </p>
         </div>
 
+        {/* Form inline para crear exportación */}
+        <div className="flex items-center gap-2 flex-wrap">
         <Button
           variant="primary"
           size="md"
@@ -104,31 +107,19 @@ export const ExportsManagement = () => {
         >
           <Plus size={16} /> Crear Exportación
         </Button>
+        </div>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard
-          icon={<FileText size={20} className="text-blue-600" />}
-          label="Total de exportaciones"
-          value={String(jobs.length)}
-        />
-        <KpiCard
-          icon={<FileText size={20} className="text-blue-600" />}
-          label="Exportaciones CSV"
-          value={String(csvCount)}
-        />
-        <KpiCard
-          icon={<FileText size={20} className="text-blue-600" />}
-          label="Exportaciones PDF"
-          value={String(pdfCount)}
-        />
-        <KpiCard
-          icon={<FileText size={20} className="text-blue-600" />}
-          label="Completadas"
-          value={jobs.length > 0 ? `${Math.round((doneCount / jobs.length) * 100)}%` : '—'}
-        />
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Total de exportaciones" value={String(jobs.length)} />
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Exportaciones CSV" value={String(csvCount)} />
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Exportaciones PDF" value={String(pdfCount)} />
+        <KpiCard icon={<FileText size={20} className="text-blue-600" />} label="Completadas"
+          value={jobs.length > 0 ? `${Math.round((doneCount / jobs.length) * 100)}%` : '—'} />
       </div>
 
+      {/* Tabla */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -149,7 +140,7 @@ export const ExportsManagement = () => {
                   </td>
                 </tr>
               ) : (
-                jobs.map((job) => (
+                jobs.map(job => (
                   <tr key={job.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -161,9 +152,7 @@ export const ExportsManagement = () => {
                     </td>
                     <td className="px-6 py-4 text-slate-600 font-medium capitalize">{job.entity}</td>
                     <td className="px-6 py-4 text-slate-500">{job.date}</td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={job.status} />
-                    </td>
+                    <td className="px-6 py-4"><StatusBadge status={job.status} /></td>
                     <td className="px-6 py-4">
                       {job.status === 'loading' && (
                         <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
@@ -209,12 +198,14 @@ export const ExportsManagement = () => {
         onClose={() => setModalOpen(false)}
         title="Nueva exportación"
       >
-        <ExportManagementForm
+        <ExportForm
           onCancel={() => setModalOpen(false)}
           onSuccess={handleExport}
           isPending={mutation.isPending}
         />
       </Modal>
+
+
     </div>
   );
 };

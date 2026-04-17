@@ -17,16 +17,15 @@ type Props = {
 };
 
 const ENTITY_OPTIONS: { value: ExportEntity; label: string }[] = [
-  { value: 'CONTACTS', label: 'Contactos' },
-  { value: 'USERS', label: 'Usuarios' },
-  { value: 'TASKS', label: 'Tareas' },
-  { value: 'SALESPERSONS', label: 'Vendedores' },
-  { value: 'CONVERSATIONS', label: 'Conversaciones' },
+  { value: 'contacts', label: 'Contactos' },
+  { value: 'conversations', label: 'Conversaciones' },
+  { value: 'messages', label: 'Mensajes' },
+  { value: 'tasks', label: 'Tareas' },
 ];
 
-export const ExportManagementForm = ({ onCancel, onSuccess, isPending }: Props) => {
-  const [format, setFormat] = useState<ExportFormat>('CSV');
-  const [entity, setEntity] = useState<ExportEntity>('CONTACTS');
+export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
+  const [format, setFormat] = useState<ExportFormat>('PDF');
+  const [entity, setEntity] = useState<ExportEntity>('contacts');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -44,8 +43,8 @@ export const ExportManagementForm = ({ onCancel, onSuccess, isPending }: Props) 
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-white">
-            <SelectItem value="CSV">CSV</SelectItem>
             <SelectItem value="PDF">PDF</SelectItem>
+            <SelectItem value="CSV">CSV</SelectItem>
           </SelectContent>
         </Select>
       </div>

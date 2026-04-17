@@ -1,3 +1,5 @@
+// src/types/admin.types.ts
+
 // ─── SALESPERSONS ─────────────────────────────────────────────────────────────
 export interface SalespersonResponse {
   id: number;
@@ -35,17 +37,16 @@ export interface TagRequest {
 }
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
-export type ExportFormat = 'CSV' | 'PDF';
+export type ExportFormat = 'PDF' | 'CSV';
 export type ExportEntity =
-  | 'CONTACTS'
-  | 'USERS'
-  | 'TASKS'
-  | 'SALESPERSONS'
-  | 'CONVERSATIONS';
+  | 'contacts'
+  | 'conversations'
+  | 'messages'
+  | 'tasks';
 
 export interface ExportRequest {
   format: ExportFormat;
-  entityType: ExportEntity;   // antes se llamaba "entity"
+  entityType: ExportEntity; 
   filters?: Record<string, unknown>;
 }
 
@@ -72,111 +73,7 @@ export interface SavedViewRequest {
   filters: Record<string, unknown>;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ---- SALESPERSONS ----
-export interface SalespersonResponse {
-  id: number;
-  name: string;
-  email: string;
-  status: "ACTIVE" | "INACTIVE";
-  assignedContacts: number;
-  messagesSent: number;
-  responseRate: number;
-  lastActivity: string;
-}
-
-export interface CreateSalespersonRequest {
-  name: string;
-  email: string;
-  password: string;
-}
-
-export interface UpdateSalespersonRequest {
-  name?: string;
-  email?: string;
-  status?: "ACTIVE" | "INACTIVE";
-}
-
-// ---- TAGS ----
-export interface TagResponse {
-  id: number;
-  name: string;
-  color: string;
-}
-
-export interface TagRequest {
-  name: string;
-  color: string;
-}
-
-// ---- METRICS ----
-
-
+// ─── METRICS ──────────────────────────────────────────────────────────────────
 export interface PeriodMetrics {
   date: string;
   inbound: number;
@@ -191,27 +88,7 @@ export interface AgentMetrics {
   responseRate: number;
 }
 
-type TaskFilters = {
-  status?: string;
-  dueDateFrom?: string;
-  dueDateTo?: string;
-};
-
-
-export interface SavedViewResponse {
-  id: number;
-  name: string;
-  entity: "CONTACTS" | "TASKS";
-  isDefault?: boolean;
-  isGlobal?: boolean;
-  filters: TaskFilters;
-/*   filters: Record<string, unknown>; */
-  sortBy?: string;
-  sortOrder?: "ASC" | "DESC";
-  creator: string;
-}
-
-// ---- FUNNEL ----
+// ─── FUNNEL ───────────────────────────────────────────────────────────────────
 export interface FunnelStageResponse {
   id: number;
   name: string;
