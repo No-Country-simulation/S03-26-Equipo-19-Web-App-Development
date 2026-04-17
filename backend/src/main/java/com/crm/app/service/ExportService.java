@@ -303,19 +303,19 @@ public class ExportService {
         };
     }
 
-    private String formatContactRowCsv(Contact c) {
-        return String.format("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%s,%s,%s,%s,%d,\"%s\"",
-                c.getId(),
-                escapeCsv(c.getName()),
-                escapeCsv(c.getLastName()),
-                escapeCsv(c.getEmail()),
-                escapeCsv(c.getPhone()),
-                escapeCsv(c.getCompany()),
-                c.getFunnelStatus() != null ? c.getFunnelStatus().name() : "",
-                c.getCreatedAt() != null ? c.getCreatedAt().format(DATE_FORMATTER) : "",
-                c.getUpdatedAt() != null ? c.getUpdatedAt().format(DATE_FORMATTER) : "",
-                c.getOwner() != null ? c.getOwner().getId() : 0,
-                escapeCsv(c.getOwner() != null ? c.getOwner().getName() : "")
+    private String formatContactRowCsv(Contact contact) {
+        return String.format("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+                contact.getId(),
+                contact.getOwner().getId(),
+                escapeCsv(contact.getName()),
+                escapeCsv(contact.getLastName()),
+                escapeCsv(contact.getEmail()),
+                escapeCsv(contact.getPhone()),
+                escapeCsv(contact.getCompany()),
+                escapeCsv(contact.getFunnelStatus() != null ? contact.getFunnelStatus().name() : ""),     // Enum → String
+                escapeCsv(contact.getPreferredChannel() != null ? contact.getPreferredChannel().name() : ""), // Enum → String
+                contact.getCreatedAt() != null ? contact.getCreatedAt().toString() : "",                    // LocalDateTime → String
+                contact.getUpdatedAt() != null ? contact.getUpdatedAt().toString() : ""                     // LocalDateTime → String
         );
     }
 
