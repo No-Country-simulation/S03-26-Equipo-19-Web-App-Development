@@ -186,7 +186,7 @@ export const InboxTable = ({ maxItems = 5, showViewAllButton = true }: InboxTabl
       {showViewAllButton && hasMoreMessages && !showAll && (
         <Button
           variant='ghost'
-          className="w-1/4 mt-4 self-end"
+          className="w-1/3 mt-4 self-end"
           onClick={handleViewAll}
         >
           Ver todo ({filteredConversations.length - maxItems} más)
@@ -197,7 +197,7 @@ export const InboxTable = ({ maxItems = 5, showViewAllButton = true }: InboxTabl
       {showAll && hasMoreMessages && (
         <Button
           variant='ghost'
-          className="w-1/4 mt-4 self-end"
+          className="w-1/3 mt-4 self-end"
           onClick={() => setShowAll(false)}
         >
           Mostrar menos

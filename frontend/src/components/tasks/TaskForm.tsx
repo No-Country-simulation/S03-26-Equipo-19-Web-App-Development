@@ -13,6 +13,7 @@ import type { TaskReqType } from "../../types/task.types";
 import type { ContactResType } from "../../types/contact.types";
 import { dateAdapter } from "../../utils/dateAdapter";
 
+
 type Props = {
   contactId?: number;
   contacts?: ContactResType[];
@@ -20,6 +21,7 @@ type Props = {
   onSubmit: (data: TaskReqType) => void;
   onCancel: () => void;
   isAdminView?: boolean; // Solo para cambiar título, no para asignar
+  isLoading: boolean;
 };
 
 const TASK_TYPES = [
@@ -30,13 +32,14 @@ const TASK_TYPES = [
   { value: "OTHER", label: "Otro" },
 ];
 
-export const TaskForm = ({ 
-  contactId, 
-  onSubmit, 
-  onCancel, 
-  initialData, 
+export const TaskForm = ({
+  contactId,
+  onSubmit,
+  onCancel,
+  initialData,
   contacts,
-  isAdminView = false 
+  isAdminView = false,
+  isLoading = false,
 }: Props) => {
   const [form, setForm] = useState<TaskReqType>(
     initialData ?? {
@@ -63,7 +66,7 @@ export const TaskForm = ({
       alert("Debes ingresar un título");
       return;
     }
-    
+
     const payload = {
       ...form,
       dueDate: dateAdapter.toBackend(form.dueDate),
@@ -178,8 +181,16 @@ export const TaskForm = ({
         <Button variant="outline" onClick={onCancel} className="w-1/2">
           Cancelar
         </Button>
-        <Button onClick={handleSubmit} className="w-1/2">
-          {initialData ? "Guardar cambios" : "Crear tarea"}
+        <Button
+          onClick={handleSubmit}
+          className="w-1/2"
+          disabled={isLoading}
+        >
+          {isLoading
+            ? "Guardando..."
+            : initialData
+              ? "Guardar cambios"
+              : "Crear tarea"}
         </Button>
       </div>
     </div>

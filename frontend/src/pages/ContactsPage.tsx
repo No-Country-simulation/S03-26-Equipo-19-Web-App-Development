@@ -124,8 +124,9 @@ export const ContactsPage = ({ isAdminView = false }: ContactsPageProps) => {
       {/* Modal para crear nuevo contacto */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Nuevo contacto">
         <ContactForm
-          onSubmit={(data) => { addContact(data); setModalOpen(false); }}
+          onSubmit={(data) => { addContact(data)}}
           onCancel={() => setModalOpen(false)}
+          isLoading={mutationPostContact.isPending}
         />
       </Modal>
 

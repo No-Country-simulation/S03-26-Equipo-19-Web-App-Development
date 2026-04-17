@@ -6,6 +6,7 @@ import { useGetSavedViews } from "../../services/use_queries/saved-views-query";
 import { useTasksMutationsService } from "../../services/use_mutations/tasks-mutation";
 import { usePagination } from "../../hooks/usePagination";
 import type { SavedViewResponse } from "../../types/admin.types";
+import { is } from "zod/v4/locales";
 
 
 const GROUP_ORDER = {
@@ -138,15 +139,19 @@ export const useTasksController = () => {
         setIsTaskModalOpen(true);
     };
 
-    const handleSubmit = (data: TaskReqType) => {
+    const isSubmitting =
+        mutationPostTask.isPending || mutationUpdateTaskById.isPending;
+
+    const handleSubmit = async (data: TaskReqType) => {
         if (selectedTask) {
-            mutationUpdateTaskById.mutate({
+            await mutationUpdateTaskById.mutateAsync({
                 id: selectedTask.id,
                 data,
             });
         } else {
-            mutationPostTask.mutate(data);
+            await mutationPostTask.mutateAsync(data);
         }
+
         setIsTaskModalOpen(false);
     };
 
@@ -167,6 +172,7 @@ export const useTasksController = () => {
         mapTaskToForm,
         selectedViewName,
         setSelectedViewName,
+        isSubmitting,
 
         // data
         tasksViews,

@@ -7,24 +7,31 @@ import { ROUTES } from '../../constants/routes'
 import TitleSection from '../ui/TitleSection'
 import { InboxTable } from './InboxTable'
 import { useGetContacts } from '../../services/use_queries/contacts-query'
-import {useGetContactsMetrics, useGetTasksMetrics } from '../../services/use_queries/metrics-query'
+import { useGetContactsMetrics, useGetTasksMetrics } from '../../services/use_queries/metrics-query'
+import { useAuthStore } from '../../store/useAuthStore'
 
 
 
 const Home = () => {
 
   const navigate = useNavigate();
+  const {user} = useAuthStore()
 
-  const { data: tasksMetrics} = useGetTasksMetrics()
-  const { data: contactsMetrics} = useGetContactsMetrics()
+  const { data: tasksMetrics } = useGetTasksMetrics()
+  const { data: contactsMetrics } = useGetContactsMetrics()
 
   const { data: contacts, isLoading: isLoadingContacts } = useGetContacts()
 
   return (
     <>
-      <div className="flex justify-center md:justify-between mb-6">
-        <TitleSection text="Dashboard" className='hidden md:flex' />
-        <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={() => navigate(`/dashboard/${ROUTES.TASKS}`)}>
+      <div className="flex items-center justify-center md:justify-between mb-6">
+        <div>
+          <TitleSection text="Dashboard" className='hidden md:flex' />
+          <p className="text-slate-500 text-sm mt-0.5">
+            Bienvenido de nuevo, {user?.name ?? 'Vendedor'}. Esto es lo que está sucediendo hoy.
+          </p>
+        </div>
+        <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6 h-[40px]" onClick={() => navigate(`/dashboard/${ROUTES.TASKS}`)}>
           Ver Tareas
         </Button>
       </div>
@@ -49,9 +56,9 @@ const Home = () => {
           color="secondary"
           icon={<Calendar size={28} />}
         />
-         <KpiCard
+        <KpiCard
           title="Nuevos contactos"
-          metric={contactsMetrics?.funnel.byStatus.NEW_LEAD  ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          metric={contactsMetrics?.funnel.byStatus.NEW_LEAD ?? { value: 0, changePercent: 0, trend: 'stable' }}
           color="success"
           icon={<UserStar size={28} />}
         />

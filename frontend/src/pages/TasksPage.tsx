@@ -22,11 +22,11 @@ const TASK_GROUPS_CONFIG: {
     label: string
     color: Color
 }[] = [
-    { key: "OVERDUE", label: "Vencidas", color: "error" },
-    { key: "TODAY", label: "Para hoy", color: "primary" },
-    { key: "UPCOMING", label: "Próximas", color: "secondary" },
-    { key: "COMPLETED", label: "Completadas", color: "success" },
-];
+        { key: "OVERDUE", label: "Vencidas", color: "error" },
+        { key: "TODAY", label: "Para hoy", color: "primary" },
+        { key: "UPCOMING", label: "Próximas", color: "secondary" },
+        { key: "COMPLETED", label: "Completadas", color: "success" },
+    ];
 
 const colorMap: Record<Color, string> = {
     primary: "text-primary",
@@ -58,6 +58,7 @@ const TasksPage = ({ isAdminView = false }: TasksPageProps) => {
         openCreate,
         openEdit,
         handleSubmit,
+        isSubmitting,
         isTaskModalOpen,
         setIsTaskModalOpen,
         selectedTask,
@@ -71,9 +72,9 @@ const TasksPage = ({ isAdminView = false }: TasksPageProps) => {
     return (
         <>
             <div className="flex justify-between mb-6">
-                <TitleSection 
-                    text={isAdminView ? "Todas las tareas" : "Mis tareas"} 
-                    className="hidden md:flex" 
+                <TitleSection
+                    text={isAdminView ? "Todas las tareas" : "Mis tareas"}
+                    className="hidden md:flex"
                 />
                 <Button variant='secondary' className="w-1/2 md:w-1/4 lg:w-1/6" onClick={openCreate}>
                     Nueva tarea
@@ -109,7 +110,7 @@ const TasksPage = ({ isAdminView = false }: TasksPageProps) => {
                         resetPage();
                     }}
                 >
-                    <SelectTrigger className="w-60 mb-6">
+                    <SelectTrigger className="w-1/2 md:w-1/4 lg:w-1/6">
                         <SelectValue placeholder="Vistas guardadas" />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
@@ -123,34 +124,34 @@ const TasksPage = ({ isAdminView = false }: TasksPageProps) => {
                 </Select>
             </div>
 
-             <div className="flex flex-col gap-6">
-        {TASK_GROUPS_CONFIG.map((group) => {
-          const visible = groupedTasks[group.key] || [];
-          const total = groupedTasksFull[group.key] || [];
+            <div className="flex flex-col gap-6">
+                {TASK_GROUPS_CONFIG.map((group) => {
+                    const visible = groupedTasks[group.key] || [];
+                    const total = groupedTasksFull[group.key] || [];
 
-          if (!visible.length) return null;
+                    if (!visible.length) return null;
 
-          return (
-            <div key={group.key}>
-              <h3 className={`mb-2 ${colorMap[group.color]}`}>
-                {group.label} ({total.length})
-              </h3>
+                    return (
+                        <div key={group.key}>
+                            <h3 className={`mb-2 ${colorMap[group.color]}`}>
+                                {group.label} ({total.length})
+                            </h3>
 
-              <div className="flex flex-col gap-2 lg:px-10">
-                {visible.map((task) => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    contact={contactsMap.get(task.contactId)}
-                    color={group.color}
-                    openModal={openEdit}
-                  />
-                ))}
-              </div>
+                            <div className="flex flex-col gap-2 lg:px-10">
+                                {visible.map((task) => (
+                                    <TaskItem
+                                        key={task.id}
+                                        task={task}
+                                        contact={contactsMap.get(task.contactId)}
+                                        color={group.color}
+                                        openModal={openEdit}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
-          );
-        })}
-      </div>
 
             <PaginationControls
                 page={page}
@@ -159,21 +160,22 @@ const TasksPage = ({ isAdminView = false }: TasksPageProps) => {
                 onPrev={prevPage}
             />
 
-             <Modal
-        isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
-        title={selectedTask ? "Editar tarea" : "Nueva tarea"}
-      >
-        <TaskForm
-          contacts={contacts}
-          initialData={
-            selectedTask ? mapTaskToForm(selectedTask) : undefined
-          }
-          onSubmit={handleSubmit}
-          onCancel={() => setIsTaskModalOpen(false)}
-          isAdminView={isAdminView}
-        />
-      </Modal>
+            <Modal
+                isOpen={isTaskModalOpen}
+                onClose={() => setIsTaskModalOpen(false)}
+                title={selectedTask ? "Editar tarea" : "Nueva tarea"}
+            >
+                <TaskForm
+                    contacts={contacts}
+                    initialData={
+                        selectedTask ? mapTaskToForm(selectedTask) : undefined
+                    }
+                    onSubmit={handleSubmit}
+                    onCancel={() => setIsTaskModalOpen(false)}
+                    isAdminView={isAdminView}
+                    isLoading={isSubmitting}
+                />
+            </Modal>
         </>
     );
 };

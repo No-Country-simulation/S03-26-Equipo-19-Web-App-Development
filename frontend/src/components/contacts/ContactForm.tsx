@@ -81,7 +81,7 @@ export const ContactForm = ({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
+
         <Input
           label="Nombre"
           placeholder="Ej: Ana"
@@ -140,7 +140,7 @@ export const ContactForm = ({
       </div>
 
       <div className="flex justify-center gap-2">
-        
+
         {onCancel && (
           <Button
             variant="outline"
@@ -157,7 +157,13 @@ export const ContactForm = ({
           onClick={handleSubmit}
           disabled={isLoading}
         >
-          {initialData ? 'GUARDAR CAMBIOS' : 'CREAR CONTACTO'}
+          {isLoading
+            ? initialData
+              ? "Guardando..."
+              : "Creando..."
+            : initialData
+              ? "GUARDAR CAMBIOS"
+              : "CREAR CONTACTO"}
         </Button>
 
       </div>
