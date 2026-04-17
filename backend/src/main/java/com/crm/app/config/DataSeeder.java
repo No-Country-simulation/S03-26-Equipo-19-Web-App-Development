@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Component
 @RequiredArgsConstructor
@@ -33,6 +34,10 @@ public class DataSeeder implements ApplicationRunner {
     private final TaskRepository taskRepository;
     private final SavedViewRepository savedViewRepository;
     private final PasswordEncoder encoder;
+
+    private static final Random RANDOM = new Random();
+    private static final LocalDateTime NOW = LocalDateTime.now();
+    private static final LocalDateTime TWO_MONTHS_AGO = NOW.minusDays(60);
 
     @Override
     @Transactional
@@ -54,11 +59,11 @@ public class DataSeeder implements ApplicationRunner {
 
         List<Template> templates = seedTemplates(admin, salespersons);
 
-        List<Contact> contacts = seedContactsWithDates(salespersons, tags);
+        List<Contact> contacts = seedContactsWithProgressiveDates(salespersons, tags, admin);
 
-        seedConversationsAndMessages(contacts, salespersons, templates);
+        seedConversationsWithProgressiveMessages(contacts, salespersons, templates, admin);
 
-        seedTasksWithDates(contacts, salespersons);
+        seedTasksWithProgressiveDates(contacts, salespersons);
 
         seedSavedViews(admin, salespersons.getFirst(), tags);
 
@@ -78,7 +83,7 @@ public class DataSeeder implements ApplicationRunner {
                 .passwordHash(encoder.encode("Admin1234!"))
                 .role(Role.ADMIN)
                 .active(true)
-                .createdAt(LocalDateTime.of(2026, 1, 15, 10, 0))
+                .createdAt(TWO_MONTHS_AGO.plusDays(10))
                 .build();
 
         userRepository.save(admin);
@@ -89,16 +94,16 @@ public class DataSeeder implements ApplicationRunner {
         record Seed(String name, String email, String password, boolean active, LocalDateTime createdAt) {}
 
         List<Seed> salespersons = List.of(
-                new Seed("Alice Johnson", "alice@crm.com", "Sales001!", true, LocalDateTime.of(2026, 1, 20, 9, 0)),
-                new Seed("Bob Martinez", "bob@crm.com", "Sales002!", true, LocalDateTime.of(2026, 2, 1, 10, 30)),
-                new Seed("Carol Smith", "carol@crm.com", "Sales003!", true, LocalDateTime.of(2026, 2, 15, 14, 0)),
-                new Seed("David Brown", "david@crm.com", "Sales004!", true, LocalDateTime.of(2026, 3, 1, 11, 15)),
-                new Seed("Emma Wilson", "emma@crm.com", "Sales005!", true, LocalDateTime.of(2026, 3, 10, 9, 45)),
-                new Seed("Frank Miller", "frank@crm.com", "Sales006!", false, LocalDateTime.of(2026, 2, 20, 8, 0)),
-                new Seed("Grace Lee", "grace@crm.com", "Sales007!", true, LocalDateTime.of(2026, 3, 25, 13, 30)),
-                new Seed("Henry Clark", "henry@crm.com", "Sales008!", false, LocalDateTime.of(2026, 1, 5, 16, 0)),
-                new Seed("Ivy Adams", "ivy@crm.com", "Sales009!", true, LocalDateTime.of(2026, 4, 1, 10, 0)),
-                new Seed("Jack Turner", "jack@crm.com", "Sales010!", true, LocalDateTime.of(2026, 4, 5, 11, 30))
+                new Seed("Alice Johnson", "alice@crm.com", "Sales001!", true, TWO_MONTHS_AGO.plusDays(15)),
+                new Seed("Bob Martinez", "bob@crm.com", "Sales002!", true, TWO_MONTHS_AGO.plusDays(25)),
+                new Seed("Carol Smith", "carol@crm.com", "Sales003!", true, TWO_MONTHS_AGO.plusDays(35)),
+                new Seed("David Brown", "david@crm.com", "Sales004!", true, TWO_MONTHS_AGO.plusDays(45)),
+                new Seed("Emma Wilson", "emma@crm.com", "Sales005!", true, TWO_MONTHS_AGO.plusDays(50)),
+                new Seed("Frank Miller", "frank@crm.com", "Sales006!", false, TWO_MONTHS_AGO.plusDays(40)),
+                new Seed("Grace Lee", "grace@crm.com", "Sales007!", true, TWO_MONTHS_AGO.plusDays(55)),
+                new Seed("Henry Clark", "henry@crm.com", "Sales008!", false, TWO_MONTHS_AGO.plusDays(5)),
+                new Seed("Ivy Adams", "ivy@crm.com", "Sales009!", true, TWO_MONTHS_AGO.plusDays(58)),
+                new Seed("Jack Turner", "jack@crm.com", "Sales010!", true, TWO_MONTHS_AGO.plusDays(60))
         );
 
         salespersons.forEach(s -> {
@@ -139,265 +144,61 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private List<Template> seedTemplates(User admin, List<User> salespersons) {
+        // Mantener templates existentes sin cambios
         List<Template> templates = new ArrayList<>();
 
         // ==================== PLANTILLAS ADMIN (GLOBALES) ====================
 
-        // 1. Email y Whatsapp - Bienvenida para nuevos leads
         templates.add(createTemplate(admin, "Email de bienvenida - Lead", Channel.EMAIL,
                 "✅ Bienvenido a nuestro ecosistema",
-                """
-                Hola {{name}},
-                
-                Gracias por contactarte con nosotros. Hemos recibido tu consulta y será derivada a nuestro equipo de ventas.
-                
-                En las próximas horas, un asesor se comunicará contigo.
-                
-                Mientras tanto, puedes responder este correo si tenés alguna pregunta.
-                
-                Saludos cordiales,
-                Equipo de Ventas
-                """,
+                "Hola {{name}},\n\nGracias por contactarte con nosotros. Hemos recibido tu consulta y será derivada a nuestro equipo de ventas.\n\nEn las próximas horas, un asesor se comunicará contigo.\n\nSaludos cordiales,\nEquipo de Ventas",
                 "{\"name\":\"string\"}"));
 
         templates.add(createTemplate(admin, "Bienvenida automática - WhatsApp", Channel.WHATSAPP,
                 null,
-                """
-                👋 Hola {{name}}! Gracias por contactarte con nosotros.
-                
-                Soy el asistente virtual de CRM Cross-Industry. 🚀
-                
-                Te informo que tu consulta ha sido recibida y será derivada a uno de nuestros asesores comerciales en breve.
-                
-                Mientras tanto, ¿podrías contarnos un poco más sobre lo que necesitas? Así podemos ayudarte mejor.
-                
-                📌 *Importante:* Un agente te responderá a la brevedad.
-                
-                ¡Gracias por tu paciencia!
-                """,
+                "👋 Hola {{name}}! Gracias por contactarte con nosotros.\n\nSoy el asistente virtual de CRM Cross-Industry. 🚀\n\nTe informo que tu consulta ha sido recibida y será derivada a uno de nuestros asesores comerciales en breve.\n\n¡Gracias por tu paciencia!",
                 "{\"name\":\"string\"}"));
 
-        // 2. WhatsApp - Primer contacto con lead activo
         templates.add(createTemplate(admin, "WhatsApp - Primer contacto", Channel.WHATSAPP,
                 null,
-                """
-                👋 Hola {{name}}! Soy {{salesperson}}, asesor de la empresa.
-                
-                Recibimos tu consulta y queremos ayudarte.
-                
-                ¿Podrías contarnos un poco más sobre lo que necesitas?
-                
-                ¡Quedo atento a tu respuesta!
-                """,
+                "👋 Hola {{name}}! Soy {{salesperson}}, asesor de la empresa.\n\nRecibimos tu consulta y queremos ayudarte.\n\n¿Podrías contarnos un poco más sobre lo que necesitas?\n\n¡Quedo atento a tu respuesta!",
                 "{\"name\":\"string\",\"salesperson\":\"string\"}"));
 
-        // 3. Email - Seguimiento post-reunión
         templates.add(createTemplate(admin, "Email - Seguimiento post-reunión", Channel.EMAIL,
                 "📌 Seguimiento de nuestra reunión",
-                """
-                Hola {{name}},
-                
-                Fue un placer reunirnos. Como quedamos, te envío la propuesta en archivo adjunto.
-                
-                Quedo atento a tus comentarios para avanzar con los siguientes pasos.
-                
-                Saludos,
-                {{salesperson}}
-                """,
+                "Hola {{name}},\n\nFue un placer reunirnos. Quedo atento a tus comentarios.\n\nSaludos,\n{{salesperson}}",
                 "{\"name\":\"string\",\"salesperson\":\"string\"}"));
 
-        // 4. WhatsApp - Recordatorio de seguimiento
-        templates.add(createTemplate(admin, "WhatsApp - Recordatorio de seguimiento", Channel.WHATSAPP,
-                null,
-                """
-                📅 Hola {{name}}! Te recuerdo que tenemos pendiente el seguimiento de tu caso.
-                
-                ¿Cómo vamos con lo que hablamos? ¿Necesitas algo más?
-                
-                ¡Quedo atento!
-                """,
-                "{\"name\":\"string\"}"));
-
-        // 5. Email - Propuesta comercial
         templates.add(createTemplate(admin, "Email - Propuesta comercial", Channel.EMAIL,
                 "📊 Propuesta comercial para {{company}}",
-                """
-                Hola {{name}},
-                
-                Adjunto encontrarás la propuesta comercial para {{company}}.
-                
-                Quedo atento a tu confirmación para coordinar los próximos pasos.
-                
-                Saludos,
-                {{salesperson}}
-                """,
+                "Hola {{name}},\n\nAdjunto encontrarás la propuesta comercial para {{company}}.\n\nSaludos,\n{{salesperson}}",
                 "{\"name\":\"string\",\"company\":\"string\",\"salesperson\":\"string\"}"));
 
-        // 6. WhatsApp - Cliente en seguimiento (post-venta)
-        templates.add(createTemplate(admin, "WhatsApp - Cliente en seguimiento", Channel.WHATSAPP,
-                null,
-                """
-                🎯 Hola {{name}}! Pasamos para saber cómo vas con nuestra solución.
-                
-                ¿Has tenido alguna dificultad? ¿Necesitas asistencia?
-                
-                Estamos aquí para ayudarte.
-                """,
-                "{\"name\":\"string\"}"));
-
-        // 7. Email - Newsletter mensual
-        templates.add(createTemplate(admin, "Email - Newsletter mensual", Channel.EMAIL,
-                "📰 Novedades del mes - {{month}}",
-                """
-                Hola {{name}},
-                
-                Este mes te traemos:
-                • Nueva integración con WhatsApp
-                • Reportes avanzados
-                • Plantillas dinámicas
-                
-                ¿Querés conocer más? Agendá una demo con nosotros.
-                
-                Saludos,
-                Equipo CRM
-                """,
-                "{\"name\":\"string\",\"month\":\"string\"}"));
-
-        // 8. WhatsApp - Cierre positivo de venta
-        templates.add(createTemplate(admin, "WhatsApp - Felicitaciones cierre", Channel.WHATSAPP,
-                null,
-                """
-                🎉 Excelente {{name}}! 🎉
-                
-                ¡Bienvenido oficialmente a la familia!
-                
-                En las próximas horas recibirás tus credenciales de acceso y la guía de primeros pasos.
-                
-                ¡Éxitos en esta nueva etapa!
-                """,
-                "{\"name\":\"string\"}"));
-
-        // 9. Email - Encuesta de satisfacción
-        templates.add(createTemplate(admin, "Email - Encuesta de satisfacción", Channel.EMAIL,
-                "⭐ ¿Cómo calificas tu experiencia?",
-                """
-                Hola {{name}},
-                
-                Valoramos mucho tu opinión. ¿Podrías tomarte 2 minutos para responder nuestra encuesta?
-                
-                🔗 {{survey_link}}
-                
-                ¡Gracias por ayudarnos a mejorar!
-                
-                Saludos,
-                Equipo CRM
-                """,
-                "{\"name\":\"string\",\"survey_link\":\"string\"}"));
-
-        // 10. WhatsApp - Lead frío (reactivación)
-        templates.add(createTemplate(admin, "WhatsApp - Reactivación de lead", Channel.WHATSAPP,
-                null,
-                """
-                🔄 Hola {{name}}! Hace tiempo que no hablamos.
-                
-                Queremos saber si aún te interesa nuestra solución o si necesitas algo de nosotros.
-                
-                ¡Estamos a tu disposición!
-                """,
-                "{\"name\":\"string\"}"));
-
-        // WhatsApp - Bienvenida y propósito
         templates.add(createTemplate(admin, "WhatsApp - Bienvenida y propósito", Channel.WHATSAPP,
                 null,
-                """
-                🎉 Hola {{name}}! Bienvenido a CRM Cross-Industry.
-                
-                Soy {{salesperson}}, tu asesor comercial.
-                
-                ¿Podemos coordinar una breve charla?
-                
-                ¡Quedo atento!
-                """,
+                "🎉 Hola {{name}}! Bienvenido a CRM Cross-Industry.\n\nSoy {{salesperson}}, tu asesor comercial.\n\n¿Podemos coordinar una breve charla?\n\n¡Quedo atento!",
                 "{\"name\":\"string\",\"salesperson\":\"string\"}"));
 
-// Email - Bienvenida y propósito
         templates.add(createTemplate(admin, "Email - Bienvenida y propósito", Channel.EMAIL,
                 "🎯 Te contactamos para ayudarte a crecer",
-                """
-                Hola {{name}},
-                
-                Nos comunicamos porque creemos que podemos ayudarte a potenciar tus resultados.
-                
-                Soy {{salesperson}}, tu asesor comercial.
-                
-                ¿Podemos coordinar una breve reunión?
-                
-                ¡Esperamos tu respuesta!
-                
-                Saludos,
-                {{salesperson}}
-                """,
+                "Hola {{name}},\n\nNos comunicamos para ayudarte a potenciar tus resultados.\n\nSoy {{salesperson}}, tu asesor comercial.\n\n¿Podemos coordinar una breve reunión?\n\nSaludos,\n{{salesperson}}",
                 "{\"name\":\"string\",\"salesperson\":\"string\"}"));
 
-        // ==================== PLANTILLAS DE VENDEDORES (PERSONALES) ====================
-
-        // Vendedor 1 (Alice) - 3 plantillas personales
+        // Mantener plantillas de vendedores
         User alice = salespersons.stream().filter(u -> u.getEmail().equals("alice@crm.com")).findFirst().orElse(null);
         if (alice != null) {
             templates.add(createTemplate(alice, "Alice - Demo agendada", Channel.EMAIL,
                     "Demo CRM - {{date}}",
                     "Hola {{name}}, agendamos la demo para el {{date}} a las {{time}}. Te espero.",
                     "{\"name\":\"string\",\"date\":\"string\",\"time\":\"string\"}"));
-            templates.add(createTemplate(alice, "Alice - Propuesta personalizada", Channel.WHATSAPP, null,
-                    "Hola {{name}}, te envié la propuesta personalizada a tu correo. ¿La recibiste?",
-                    "{\"name\":\"string\"}"));
-            templates.add(createTemplate(alice, "Alice - Recordatorio de cierre", Channel.EMAIL,
-                    "Recordatorio - Oferta vigente",
-                    "Hola {{name}}, la oferta que te comenté vence en {{days}} días. ¿Avanzamos?",
-                    "{\"name\":\"string\",\"days\":\"string\"}"));
         }
 
-        // Vendedor 2 (Bob) - 3 plantillas personales
-        User bob = salespersons.stream().filter(u -> u.getEmail().equals("bob@crm.com")).findFirst().orElse(null);
-        if (bob != null) {
-            templates.add(createTemplate(bob, "Bob - Contacto inicial rápido", Channel.WHATSAPP, null,
-                    "👋 Hola {{name}}, soy Bob de Ventas. ¿Conectamos para una breve charla?",
-                    "{\"name\":\"string\"}"));
-            templates.add(createTemplate(bob, "Bob - Envío de materiales", Channel.EMAIL,
-                    "Materiales solicitados",
-                    "Hola {{name}}, adjunto los materiales que solicitaste. Quedo atento a tus comentarios.",
-                    "{\"name\":\"string\"}"));
-            templates.add(createTemplate(bob, "Bob - Llamada pendiente", Channel.WHATSAPP, null,
-                    "📞 Hola {{name}}, te llamo para coordinar la llamada pendiente. ¿Cuándo te queda bien?",
-                    "{\"name\":\"string\"}"));
-        }
-
-        // Vendedor 3 (Carol) - 3 plantillas personales
-        User carol = salespersons.stream().filter(u -> u.getEmail().equals("carol@crm.com")).findFirst().orElse(null);
-        if (carol != null) {
-            templates.add(createTemplate(carol, "Carol - Newsletter personal", Channel.EMAIL,
-                    "Info para {{company}}",
-                    "Hola {{name}}, encontré información que puede interesarle a {{company}}. ¿Te la comparto?",
-                    "{\"name\":\"string\",\"company\":\"string\"}"));
-            templates.add(createTemplate(carol, "Carol - Consulta rápida", Channel.WHATSAPP, null,
-                    "Hola {{name}}, ¿recibiste mi mail? Quedo atento a tu respuesta.",
-                    "{\"name\":\"string\"}"));
-            templates.add(createTemplate(carol, "Carol - Seguimiento de propuesta", Channel.EMAIL,
-                    "Seguimiento de propuesta",
-                    "Hola {{name}}, paso a consultar si tuviste tiempo de revisar la propuesta que te envié.",
-                    "{\"name\":\"string\"}"));
-        }
-
-        // Guardar todas las plantillas
         List<Template> savedTemplates = new ArrayList<>();
         for (Template template : templates) {
             if (!templateRepository.existsByNameAndCreatedByRole(template.getName(), template.getCreatedBy().getRole())) {
                 savedTemplates.add(templateRepository.save(template));
-                log.info("Template seeded: '{}' by {}", template.getName(), template.getCreatedBy().getEmail());
             }
         }
-
-        log.info("Templates seeded: {} total (10 admin + 9 salespersons)", savedTemplates.size());
         return savedTemplates;
     }
 
@@ -409,353 +210,379 @@ public class DataSeeder implements ApplicationRunner {
                 .body(body)
                 .variables(variables)
                 .createdBy(createdBy)
-                .createdAt(LocalDateTime.now())
+                .createdAt(NOW.minusDays(RANDOM.nextInt(50)))
                 .build();
     }
 
-    private Template createTemplate(User admin, String name, Channel channel, LocalDateTime createdAt) {
-        return Template.builder()
-                .name(name)
-                .channel(channel)
-                .body("Contenido de " + name)
-                .variables("{}")
-                .createdBy(admin)
-                .createdAt(createdAt)
-                .build();
-    }
-
-    private List<Contact> seedContactsWithDates(List<User> salespersons, List<Tag> tags) {
+    private List<Contact> seedContactsWithProgressiveDates(List<User> salespersons, List<Tag> tags, User admin) {
         List<Contact> contacts = new ArrayList<>();
 
-        // FECHAS REALISTAS - Período base (Enero-Febrero)
-        LocalDateTime jan1 = LocalDateTime.of(2026, 1, 5, 10, 0);
-        LocalDateTime jan15 = LocalDateTime.of(2026, 1, 15, 14, 0);
-        LocalDateTime feb1 = LocalDateTime.of(2026, 2, 1, 9, 0);
-        LocalDateTime feb15 = LocalDateTime.of(2026, 2, 15, 11, 0);
-        LocalDateTime feb28 = LocalDateTime.of(2026, 2, 28, 16, 0);
+        // 30 contactos totales
+        // NEW_LEAD: 10 (creados recientemente, owner = admin)
+        // CONTACTED: 5
+        // IN_NEGOTIATION: 5
+        // PROPOSAL_SENT: 4
+        // CLOSED_WON: 3
+        // CLOSED_LOST: 3
 
-// FECHAS REALISTAS - Período anterior (Marzo)
-        LocalDateTime mar5 = LocalDateTime.of(2026, 3, 5, 10, 0);
-        LocalDateTime mar12 = LocalDateTime.of(2026, 3, 12, 14, 0);
-        LocalDateTime mar18 = LocalDateTime.of(2026, 3, 18, 9, 30);
-        LocalDateTime mar22 = LocalDateTime.of(2026, 3, 22, 11, 0);
-        LocalDateTime mar28 = LocalDateTime.of(2026, 3, 28, 15, 0);
-
-// FECHAS REALISTAS - Período actual (Abril)
-        LocalDateTime apr3 = LocalDateTime.of(2026, 4, 3, 10, 0);
-        LocalDateTime apr5 = LocalDateTime.of(2026, 4, 5, 14, 0);
-        LocalDateTime apr6 = LocalDateTime.of(2026, 4, 6, 11, 0);
-        LocalDateTime apr7 = LocalDateTime.of(2026, 4, 7, 14, 0);
-        LocalDateTime apr8 = LocalDateTime.of(2026, 4, 8, 9, 0);
-        LocalDateTime apr9 = LocalDateTime.of(2026, 4, 9, 16, 0);
-        LocalDateTime apr10 = LocalDateTime.of(2026, 4, 10, 9, 0);
-        LocalDateTime apr11 = LocalDateTime.of(2026, 4, 11, 15, 0);
-        LocalDateTime apr12 = LocalDateTime.of(2026, 4, 12, 11, 0);
-        LocalDateTime apr14 = LocalDateTime.of(2026, 4, 14, 13, 0);
-
-        Object[][] contactData = {
-                // ========== CONTACTOS ENERO-FEBRERO (base) ==========
-                {"Carlos", "Rodríguez", "carlos@techcorp.com", "541123456701", "TechCorp", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 0, new int[]{0}, jan1},
-                {"Ana", "Martínez", "ana@ecomstore.com", "541123456702", "EcomStore", FunnelStatus.CLOSED_WON, Channel.EMAIL, 1, new int[]{1}, jan15},
-                {"Martín", "González", "martin@fintech.io", "541123456703", "Fintech IO", FunnelStatus.CLOSED_LOST, Channel.WHATSAPP, 2, new int[]{2}, feb1},
-                {"Laura", "Fernández", "laura@startup.com", "541123456704", "StartupX", FunnelStatus.CLOSED_LOST, Channel.EMAIL, 3, new int[]{3}, feb15},
-                {"Javier", "López", "javier@saas.com", "541123456705", "SaaS Solutions", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 4, new int[]{4}, feb28},
-
-                // ========== CONTACTOS MARZO (período anterior - 15 contactos) ==========
-                // NEW_LEAD: 4
-                {"Pedro", "Ramírez", "pedro@cloud.com", "541123456711", "Cloud Solutions", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, mar5},
-                {"Lucía", "Castillo", "lucia@dev.com", "541123456712", "Dev House", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{1}, mar12},
-                {"Mateo", "Ortiz", "mateo@ai.com", "541123456713", "AI Labs", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 2, new int[]{2}, mar18},
-                {"Renata", "Silva", "renata@data.com", "541123456714", "Data Corp", FunnelStatus.NEW_LEAD, Channel.EMAIL, 3, new int[]{3}, mar28},
-
-                // CONTACTED: 3
-                {"Diego", "Sánchez", "diego@logistica.com", "541123456707", "Logística Express", FunnelStatus.CONTACTED, Channel.WHATSAPP, 1, new int[]{1}, mar5},
-                {"Valentina", "Pérez", "valentina@health.com", "541123456708", "Health Tech", FunnelStatus.CONTACTED, Channel.EMAIL, 2, new int[]{2}, mar18},
-                {"Nicolás", "Romero", "nico@marketing.com", "541123456709", "Marketing Pro", FunnelStatus.CONTACTED, Channel.WHATSAPP, 3, new int[]{3}, mar28},
-
-                // IN_NEGOTIATION: 3
-                {"Sofía", "Díaz", "sofia@retail.com", "541123456706", "Retail Plus", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 0, new int[]{0}, mar12},
-                {"Camila", "Morales", "camila@consulting.com", "541123456710", "Consulting Group", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 4, new int[]{4}, mar22},
-                {"Bruno", "Rojas", "bruno@logistics.com", "541123456725", "Logistics Pro", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 4, new int[]{4}, mar28},
-
-                // PROPOSAL_SENT: 3
-                {"Elena", "Suárez", "elena@cyber.com", "541123456728", "Cyber Security", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 2, new int[]{2}, mar5},
-                {"Fabián", "Luna", "fabian@robotics.com", "541123456729", "Robotics", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 3, new int[]{3}, mar18},
-                {"Gloria", "Paz", "gloria@space.com", "541123456730", "Space Tech", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 4, new int[]{4}, mar28},
-
-                // CLOSED_WON: 1
-                {"Irene", "Castro", "irene@nanotech.com", "541123456732", "NanoTech", FunnelStatus.CLOSED_WON, Channel.EMAIL, 1, new int[]{1}, mar22},
-
-                // CLOSED_LOST: 1
-                {"Facundo", "Núñez", "facundo@blockchain.com", "541123456715", "Blockchain Tech", FunnelStatus.CLOSED_LOST, Channel.WHATSAPP, 4, new int[]{4}, mar12},
-
-                // ========== CONTACTOS ABRIL (período actual - 20 contactos) ==========
-                // NEW_LEAD: 8 (↑100% desde 4)
-                {"Agustina", "Paz", "agustina@biotech.com", "541123456716", "BioTech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 0, new int[]{0}, apr3},
-                {"Tomás", "Ríos", "tomas@green.com", "541123456717", "Green Energy", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 1, new int[]{1}, apr3},
-                {"Florencia", "Molina", "flor@media.com", "541123456718", "Media Group", FunnelStatus.NEW_LEAD, Channel.EMAIL, 2, new int[]{2}, apr7},
-                {"Santiago", "Vega", "santiago@games.com", "541123456719", "Game Studio", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 3, new int[]{3}, apr7},
-                {"Victoria", "Luna", "victoria@travel.com", "541123456720", "Travel Tech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 4, new int[]{4}, apr10},
-                {"Gabriel", "Flores", "gabriel@realestate.com", "541123456721", "Real Estate", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, apr10},
-                {"Julieta", "Aguirre", "julieta@legal.com", "541123456722", "Legal Tech", FunnelStatus.NEW_LEAD, Channel.EMAIL, 1, new int[]{1}, apr12},
-                {"Hugo", "Mora", "hugo@quantum.com", "541123456731", "Quantum Computing", FunnelStatus.NEW_LEAD, Channel.WHATSAPP, 0, new int[]{0}, apr14},
-
-                // CONTACTED: 4 (↑33% desde 3)
-                {"Emiliano", "Correa", "emiliano@construction.com", "541123456723", "Construcción", FunnelStatus.CONTACTED, Channel.WHATSAPP, 2, new int[]{2}, apr3},
-                {"Mora", "Giménez", "mora@fashion.com", "541123456724", "Fashion Tech", FunnelStatus.CONTACTED, Channel.EMAIL, 3, new int[]{3}, apr7},
-                {"Clara", "Vidal", "clara@edtech.com", "541123456726", "EdTech", FunnelStatus.CONTACTED, Channel.EMAIL, 0, new int[]{0}, apr10},
-                {"Daniel", "Ponce", "daniel@agrotech.com", "541123456727", "AgroTech", FunnelStatus.CONTACTED, Channel.WHATSAPP, 1, new int[]{1}, apr14},
-
-                // IN_NEGOTIATION: 4 (↑33% desde 3)
-                {"Lucas", "Miranda", "lucas@cleantech.com", "541123456733", "CleanTech", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 2, new int[]{2}, apr5},
-                {"Paula", "Ramos", "paula@insurtech.com", "541123456734", "InsurTech", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 3, new int[]{3}, apr8},
-                {"Ricardo", "Vega", "ricardo@proptech.com", "541123456735", "PropTech", FunnelStatus.IN_NEGOTIATION, Channel.WHATSAPP, 4, new int[]{4}, apr11},
-                {"Silvia", "Méndez", "silvia@foodtech.com", "541123456736", "FoodTech", FunnelStatus.IN_NEGOTIATION, Channel.EMAIL, 0, new int[]{0}, apr14},
-
-                // PROPOSAL_SENT: 4 (↑33% desde 3)
-                {"Oscar", "Ponce", "oscar@adtech.com", "541123456737", "AdTech", FunnelStatus.PROPOSAL_SENT, Channel.WHATSAPP, 1, new int[]{1}, apr6},
-                {"Nora", "Luna", "nora@martech.com", "541123456738", "MarTech", FunnelStatus.PROPOSAL_SENT, Channel.EMAIL, 2, new int[]{2}, apr9},
-
-                // CLOSED_WON: 2 (↑100% desde 1)
-                {"Mario", "Gil", "mario@legaltech.com", "541123456739", "LegalTech", FunnelStatus.CLOSED_WON, Channel.WHATSAPP, 3, new int[]{3}, apr12},
-                {"Olga", "Paz", "olga@edtech.com", "541123456740", "EduTech", FunnelStatus.CLOSED_WON, Channel.EMAIL, 4, new int[]{4}, apr14},
-
-                // CLOSED_LOST: 0 (↓100% desde 1 - mejora)
+        String[][] contactNames = {
+                {"TechCorp", "Carlos", "Rodríguez", "carlos@techcorp.com", "541123456701"},
+                {"EcomStore", "Ana", "Martínez", "ana@ecomstore.com", "541123456702"},
+                {"Fintech IO", "Martín", "González", "martin@fintech.io", "541123456703"},
+                {"StartupX", "Laura", "Fernández", "laura@startup.com", "541123456704"},
+                {"SaaS Solutions", "Javier", "López", "javier@saas.com", "541123456705"},
+                {"Retail Plus", "Sofía", "Díaz", "sofia@retail.com", "541123456706"},
+                {"Logística Express", "Diego", "Sánchez", "diego@logistica.com", "541123456707"},
+                {"Health Tech", "Valentina", "Pérez", "valentina@health.com", "541123456708"},
+                {"Marketing Pro", "Nicolás", "Romero", "nico@marketing.com", "541123456709"},
+                {"Consulting Group", "Camila", "Morales", "camila@consulting.com", "541123456710"},
+                {"Cloud Solutions", "Pedro", "Ramírez", "pedro@cloud.com", "541123456711"},
+                {"Dev House", "Lucía", "Castillo", "lucia@dev.com", "541123456712"},
+                {"AI Labs", "Mateo", "Ortiz", "mateo@ai.com", "541123456713"},
+                {"Data Corp", "Renata", "Silva", "renata@data.com", "541123456714"},
+                {"Blockchain Tech", "Facundo", "Núñez", "facundo@blockchain.com", "541123456715"},
+                {"BioTech", "Agustina", "Paz", "agustina@biotech.com", "541123456716"},
+                {"Green Energy", "Tomás", "Ríos", "tomas@green.com", "541123456717"},
+                {"Media Group", "Florencia", "Molina", "flor@media.com", "541123456718"},
+                {"Game Studio", "Santiago", "Vega", "santiago@games.com", "541123456719"},
+                {"Travel Tech", "Victoria", "Luna", "victoria@travel.com", "541123456720"},
+                {"Real Estate", "Gabriel", "Flores", "gabriel@realestate.com", "541123456721"},
+                {"Legal Tech", "Julieta", "Aguirre", "julieta@legal.com", "541123456722"},
+                {"Construcción", "Emiliano", "Correa", "emiliano@construction.com", "541123456723"},
+                {"Fashion Tech", "Mora", "Giménez", "mora@fashion.com", "541123456724"},
+                {"Logistics Pro", "Bruno", "Rojas", "bruno@logistics.com", "541123456725"},
+                {"EdTech", "Clara", "Vidal", "clara@edtech.com", "541123456726"},
+                {"AgroTech", "Daniel", "Ponce", "daniel@agrotech.com", "541123456727"},
+                {"Cyber Security", "Elena", "Suárez", "elena@cyber.com", "541123456728"},
+                {"Robotics", "Fabián", "Luna", "fabian@robotics.com", "541123456729"},
+                {"Space Tech", "Gloria", "Paz", "gloria@space.com", "541123456730"}
         };
 
-        for (Object[] data : contactData) {
-            User owner = salespersons.get((Integer) data[7]);
-            LocalDateTime createdAt = (LocalDateTime) data[9];
+        List<FunnelStatus> funnelDistribution = new ArrayList<>();
+        // 10 NEW_LEAD (owner = admin, creados recientemente)
+        for (int i = 0; i < 10; i++) funnelDistribution.add(FunnelStatus.NEW_LEAD);
+        // 5 CONTACTED
+        for (int i = 0; i < 5; i++) funnelDistribution.add(FunnelStatus.CONTACTED);
+        // 5 IN_NEGOTIATION
+        for (int i = 0; i < 5; i++) funnelDistribution.add(FunnelStatus.IN_NEGOTIATION);
+        // 4 PROPOSAL_SENT
+        for (int i = 0; i < 4; i++) funnelDistribution.add(FunnelStatus.PROPOSAL_SENT);
+        // 3 CLOSED_WON
+        for (int i = 0; i < 3; i++) funnelDistribution.add(FunnelStatus.CLOSED_WON);
+        // 3 CLOSED_LOST
+        for (int i = 0; i < 3; i++) funnelDistribution.add(FunnelStatus.CLOSED_LOST);
+
+        Collections.shuffle(funnelDistribution);
+
+        for (int i = 0; i < 30 && i < contactNames.length; i++) {
+            String[] data = contactNames[i];
+            FunnelStatus funnelStatus = funnelDistribution.get(i);
+
+            LocalDateTime createdAt;
+            User owner;
+
+            if (funnelStatus == FunnelStatus.NEW_LEAD) {
+                // NEW_LEAD: creados en los últimos 3 días, owner = admin
+                createdAt = NOW.minusDays(RANDOM.nextInt(3));
+                owner = admin;
+            } else {
+                // Contactos avanzados: fechas distribuidas en los últimos 2 meses
+                createdAt = TWO_MONTHS_AGO.plusDays(RANDOM.nextInt(55));
+                // Asignar a un vendedor aleatorio
+                owner = salespersons.get(RANDOM.nextInt(salespersons.size()));
+            }
+
+            Channel preferredChannel = RANDOM.nextBoolean() ? Channel.WHATSAPP : Channel.EMAIL;
+            int tagIndex = RANDOM.nextInt(tags.size());
 
             Contact contact = Contact.builder()
-                    .name((String) data[0])
-                    .lastName((String) data[1])
-                    .email((String) data[2])
-                    .phone((String) data[3])
-                    .company((String) data[4])
-                    .funnelStatus((FunnelStatus) data[5])
-                    .preferredChannel((Channel) data[6])
+                    .name(data[1])
+                    .lastName(data[2])
+                    .email(data[3])
+                    .phone(data[4])
+                    .company(data[0])
+                    .funnelStatus(funnelStatus)
+                    .preferredChannel(preferredChannel)
                     .owner(owner)
                     .createdAt(createdAt)
                     .build();
 
-            int[] tagIndices = (int[]) data[8];
             Set<Tag> contactTags = new HashSet<>();
-            for (int idx : tagIndices) {
-                if (idx < tags.size()) contactTags.add(tags.get(idx));
+            contactTags.add(tags.get(tagIndex));
+            if (RANDOM.nextBoolean() && tagIndex + 1 < tags.size()) {
+                contactTags.add(tags.get(tagIndex + 1));
             }
             contact.setTags(contactTags);
 
             contacts.add(contactRepository.save(contact));
+            log.info("Contact seeded: {} - {} - creado: {}", contact.getName(), contact.getFunnelStatus(), contact.getCreatedAt());
         }
 
         log.info("Contacts seeded: {} total", contacts.size());
         return contacts;
     }
 
-    private void seedConversationsAndMessages(List<Contact> contacts, List<User> salespersons, List<Template> templates) {
-        Random random = new Random();
-
-        String[] inboundMessages = {
-                "Perfecto, gracias por la info!",
-                "¿Me podés contar más sobre los precios?",
+    private void seedConversationsWithProgressiveMessages(List<Contact> contacts, List<User> salespersons,
+                                                          List<Template> templates, User admin) {
+        List<String> inboundPhrases = List.of(
+                "Hola, me interesa saber más sobre sus servicios.",
+                "¿Podrían enviarme más información?",
                 "¿Cuánto cuesta la implementación?",
-                "Me interesa avanzar con la propuesta",
-                "¿Tienen disponible una demo esta semana?",
-                "Lo reviso con mi equipo y te confirmo",
-                "Buenísimo! Me parece excelente",
-                "¿Cómo seguimos con el contrato?",
+                "¿Tienen disponible una demo?",
+                "Me interesa avanzar con la propuesta.",
                 "¿Hay algún descuento por pago anual?",
-                "Gracias por toda la información"
-        };
+                "Lo reviso con mi equipo y te confirmo.",
+                "Perfecto, gracias por la información.",
+                "¿Cómo seguimos con el contrato?",
+                "¡Excelente! Me parece muy bien."
+        );
 
-        String[] outboundMessages = {
-                "Genial, te cuento los detalles del plan",
-                "Te paso la propuesta comercial completa",
-                "Podemos coordinar una demo para mañana",
-                "Te envío el contrato para revisar",
-                "Trabajamos con empresas similares a la tuya",
-                "Quedo atento a tu respuesta",
-                "Te explico cómo funciona la integración",
-                "Avancemos con la firma del contrato",
-                "Te paso el link de pago",
-                "Gracias por tu interés en nuestros servicios"
-        };
-
-        int totalMessages = 0;
+        List<String> outboundPhrases = List.of(
+                "Gracias por contactarte. Te cuento los detalles del plan.",
+                "Te paso la propuesta comercial completa.",
+                "Podemos coordinar una demo para esta semana.",
+                "Te envío el contrato para revisar.",
+                "Quedo atento a tu respuesta.",
+                "Te explico cómo funciona la integración.",
+                "Avancemos con la firma del contrato.",
+                "¡Bienvenido! Me alegra que te guste.",
+                "Te paso el link de pago.",
+                "Gracias por tu interés."
+        );
 
         for (Contact contact : contacts) {
-            // WhatsApp conversation
-            Conversation whatsappConv = Conversation.builder()
-                    .contact(contact)
-                    .channel(Channel.WHATSAPP)
-                    .status(ConversationStatus.OPEN)
-                    .assignedTo(contact.getOwner())
-                    .lastInteraction(contact.getCreatedAt().plusDays(1))
-                    .createdAt(contact.getCreatedAt())
-                    .build();
-            conversationRepository.save(whatsappConv);
+            boolean hasPhone = contact.getPhone() != null && !contact.getPhone().isBlank();
+            boolean hasEmail = contact.getEmail() != null && !contact.getEmail().isBlank();
 
-            // Email conversation
-            Conversation emailConv = Conversation.builder()
-                    .contact(contact)
-                    .channel(Channel.EMAIL)
-                    .status(ConversationStatus.OPEN)
-                    .assignedTo(contact.getOwner())
-                    .lastInteraction(contact.getCreatedAt().plusDays(1))
-                    .createdAt(contact.getCreatedAt())
-                    .build();
-            conversationRepository.save(emailConv);
+            boolean isNewLead = contact.getFunnelStatus() == FunnelStatus.NEW_LEAD;
+            User owner = contact.getOwner();
+            LocalDateTime contactCreatedAt = contact.getCreatedAt();
 
-            Template whatsappTemplate = templates.stream()
-                    .filter(t -> t.getChannel() == Channel.WHATSAPP)
-                    .findFirst()
-                    .orElse(null);
+            // Determinar número de mensajes según el estado del funnel
+            int messageCount = switch (contact.getFunnelStatus()) {
+                case NEW_LEAD -> 1;
+                case CONTACTED -> 3 + RANDOM.nextInt(3);
+                case IN_NEGOTIATION -> 6 + RANDOM.nextInt(4);
+                case PROPOSAL_SENT -> 10 + RANDOM.nextInt(5);
+                case CLOSED_WON, CLOSED_LOST -> 15 + RANDOM.nextInt(8);
+                default -> 2 + RANDOM.nextInt(3);
+            };
 
-            // First outbound message
-            Message outbound = Message.builder()
-                    .conversation(whatsappConv)
-                    .direction(MessageDirection.OUTBOUND)
-                    .body("Hola " + contact.getName() + "! Soy " + contact.getOwner().getName() + " de CRM Cross-Industry. ¿Cómo estás? Me contacto para conocer más sobre " + contact.getCompany() + ".")
-                    .deliveryStatus(DeliveryStatus.DELIVERED)
-                    .template(whatsappTemplate)
-                    .sender(contact.getOwner())
-                    .providerId(generateWhatsAppProviderId())
-                    .sentAt(contact.getCreatedAt().plusHours(2))
-                    .build();
-            messageRepository.save(outbound);
-            totalMessages++;
-
-            // First inbound message
-            Message inbound = Message.builder()
-                    .conversation(whatsappConv)
-                    .direction(MessageDirection.INBOUND)
-                    .body("Hola! Gracias por contactarte. Me interesa saber más sobre sus servicios para " + contact.getCompany() + ".")
-                    .deliveryStatus(DeliveryStatus.READ)
-                    .providerId(generateWhatsAppProviderId())
-                    .sentAt(contact.getCreatedAt().plusDays(1))
-                    .build();
-            messageRepository.save(inbound);
-            totalMessages++;
-
-            // Additional messages (3-8 por contacto)
-            int additionalCount = 3 + random.nextInt(6);
-            for (int i = 0; i < additionalCount; i++) {
-                boolean isOutbound = i % 2 == 0;
-                Message extraMessage = Message.builder()
-                        .conversation(whatsappConv)
-                        .direction(isOutbound ? MessageDirection.OUTBOUND : MessageDirection.INBOUND)
-                        .body(isOutbound
-                                ? outboundMessages[random.nextInt(outboundMessages.length)]
-                                : inboundMessages[random.nextInt(inboundMessages.length)])
-                        .deliveryStatus(isOutbound ? DeliveryStatus.DELIVERED : DeliveryStatus.READ)
-                        .template(isOutbound ? whatsappTemplate : null)
-                        .sender(isOutbound ? contact.getOwner() : null)
-                        .providerId(generateWhatsAppProviderId())
-                        .sentAt(contact.getCreatedAt().plusDays(1).plusHours(i * 3L))
-                        .build();
-                messageRepository.save(extraMessage);
-                totalMessages++;
+            // Si es NEW_LEAD, solo crear conversación WhatsApp (o email) con un mensaje inbound
+            if (isNewLead) {
+                if (hasPhone) {
+                    createWhatsAppConversationWithMessages(contact, admin, List.of(inboundPhrases.get(0)),
+                            contactCreatedAt.plusHours(1), true, 0);
+                }
+                if (hasEmail) {
+                    createEmailConversationWithMessages(contact, admin, List.of(inboundPhrases.get(0)),
+                            contactCreatedAt.plusHours(2), true, 0);
+                }
+                continue;
             }
 
-            // Email message (1 por contacto)
-            Template emailTemplate = templates.stream()
-                    .filter(t -> t.getChannel() == Channel.EMAIL)
-                    .findFirst()
-                    .orElse(null);
+            // Para contactos avanzados, crear conversaciones completas
+            List<String> inboundMessages = new ArrayList<>();
+            List<String> outboundMessages = new ArrayList<>();
 
-            Message emailOutbound = Message.builder()
-                    .conversation(emailConv)
-                    .direction(MessageDirection.OUTBOUND)
-                    .body("Hola " + contact.getName() + ",\n\nTe escribo para presentarte nuestras soluciones para " + contact.getCompany() + ". Quedo atento a tu respuesta.\n\nSaludos,\n" + contact.getOwner().getName())
-                    .deliveryStatus(DeliveryStatus.DELIVERED)
-                    .template(emailTemplate)
-                    .sender(contact.getOwner())
-                    .providerId(generateEmailProviderId())
-                    .sentAt(contact.getCreatedAt().plusDays(2))
-                    .build();
-            messageRepository.save(emailOutbound);
-            totalMessages++;
+            // Generar mensajes según el estado
+            int inboundCount = messageCount / 2;
+            int outboundCount = messageCount - inboundCount;
+
+            for (int i = 0; i < inboundCount; i++) {
+                inboundMessages.add(inboundPhrases.get(RANDOM.nextInt(inboundPhrases.size())));
+            }
+            for (int i = 0; i < outboundCount; i++) {
+                outboundMessages.add(outboundPhrases.get(RANDOM.nextInt(outboundPhrases.size())));
+            }
+
+            // Intercalar mensajes
+            List<String> allMessages = new ArrayList<>();
+            for (int i = 0; i < Math.max(inboundCount, outboundCount); i++) {
+                if (i < inboundMessages.size()) allMessages.add("INBOUND:" + inboundMessages.get(i));
+                if (i < outboundMessages.size()) allMessages.add("OUTBOUND:" + outboundMessages.get(i));
+            }
+
+            // Crear conversaciones y mensajes
+            if (hasPhone) {
+                createWhatsAppConversationWithMessages(contact, owner, allMessages, contactCreatedAt, false, messageCount);
+            }
+            if (hasEmail) {
+                createEmailConversationWithMessages(contact, owner, allMessages, contactCreatedAt, false, messageCount);
+            }
         }
 
-        log.info("Messages seeded: {} total messages", totalMessages);
+        log.info("Conversations and messages seeded");
     }
 
-    private void seedTasksWithDates(List<Contact> contacts, List<User> salespersons) {
-        Random random = new Random();
-        LocalDateTime now = LocalDateTime.of(2026, 4, 15, 10, 0);
+    private void createWhatsAppConversationWithMessages(Contact contact, User sender, List<String> messages,
+                                                        LocalDateTime startTime, boolean onlyInbound, int expectedCount) {
+        Conversation conversation = Conversation.builder()
+                .contact(contact)
+                .channel(Channel.WHATSAPP)
+                .status(ConversationStatus.OPEN)
+                .assignedTo(sender)
+                .lastInteraction(startTime)
+                .createdAt(startTime.minusMinutes(5))
+                .build();
+        conversation = conversationRepository.save(conversation);
 
+        LocalDateTime messageTime = startTime;
+        int messageIndex = 0;
+
+        for (String msg : messages) {
+            boolean isInbound = msg.startsWith("INBOUND:") || (onlyInbound && messageIndex == 0);
+            String body = msg.replace("INBOUND:", "").replace("OUTBOUND:", "");
+
+            Message message = Message.builder()
+                    .conversation(conversation)
+                    .direction(isInbound ? MessageDirection.INBOUND : MessageDirection.OUTBOUND)
+                    .body(body)
+                    .deliveryStatus(isInbound ? DeliveryStatus.READ : DeliveryStatus.DELIVERED)
+                    .sender(isInbound ? null : sender)
+                    .providerId(generateWhatsAppProviderId())
+                    .sentAt(messageTime)
+                    .build();
+            messageRepository.save(message);
+
+            messageTime = messageTime.plusHours(RANDOM.nextInt(24) + 1);
+            messageIndex++;
+        }
+
+        conversation.setLastInteraction(messageTime.minusHours(1));
+        conversationRepository.save(conversation);
+    }
+
+    private void createEmailConversationWithMessages(Contact contact, User sender, List<String> messages,
+                                                     LocalDateTime startTime, boolean onlyInbound, int expectedCount) {
+        Conversation conversation = Conversation.builder()
+                .contact(contact)
+                .channel(Channel.EMAIL)
+                .status(ConversationStatus.OPEN)
+                .assignedTo(sender)
+                .lastInteraction(startTime)
+                .createdAt(startTime.minusMinutes(5))
+                .build();
+        conversation = conversationRepository.save(conversation);
+
+        LocalDateTime messageTime = startTime;
+
+        for (String msg : messages) {
+            boolean isInbound = msg.startsWith("INBOUND:") || onlyInbound;
+            String body = msg.replace("INBOUND:", "").replace("OUTBOUND:", "");
+
+            Message message = Message.builder()
+                    .conversation(conversation)
+                    .direction(isInbound ? MessageDirection.INBOUND : MessageDirection.OUTBOUND)
+                    .body(body)
+                    .deliveryStatus(isInbound ? DeliveryStatus.READ : DeliveryStatus.DELIVERED)
+                    .sender(isInbound ? null : sender)
+                    .providerId(generateEmailProviderId())
+                    .sentAt(messageTime)
+                    .build();
+            messageRepository.save(message);
+
+            messageTime = messageTime.plusHours(RANDOM.nextInt(24) + 1);
+        }
+
+        conversation.setLastInteraction(messageTime.minusHours(1));
+        conversationRepository.save(conversation);
+    }
+
+    private void seedTasksWithProgressiveDates(List<Contact> contacts, List<User> salespersons) {
         int totalTasks = 0;
 
-        // ================= COMPLETED (pasadas y coherentes)
-        for (int i = 0; i < 20; i++) {
-            Contact contact = contacts.get(random.nextInt(contacts.size()));
-            User assignedTo = contact.getOwner();
-
-            LocalDateTime dueDate = now.minusDays(5 + random.nextInt(10));
-            LocalDateTime completedAt = dueDate.plusHours(1 + random.nextInt(5));
-
-            Task task = Task.builder()
-                    .title("Seguimiento completado")
-                    .description("Tarea ya realizada con " + contact.getName())
-                    .type(TaskType.CALL)
-                    .status(TaskStatus.COMPLETED)
-                    .dueDate(dueDate)
-                    .completedAt(completedAt)
-                    .contact(contact)
-                    .assignedTo(assignedTo)
-                    .createdAt(dueDate.minusDays(2))
-                    .build();
-
-            taskRepository.save(task);
-            totalTasks++;
-        }
-
-        // ================= PENDING (futuras)
-        for (int i = 0; i < 25; i++) {
-            Contact contact = contacts.get(random.nextInt(contacts.size()));
-            User assignedTo = contact.getOwner();
-
-            LocalDateTime dueDate = now.plusDays(1 + random.nextInt(10));
-
-            Task task = Task.builder()
-                    .title("Tarea pendiente")
-                    .description("Pendiente con " + contact.getName())
-                    .type(TaskType.EMAIL)
-                    .status(TaskStatus.PENDING)
-                    .dueDate(dueDate)
-                    .contact(contact)
-                    .assignedTo(assignedTo)
-                    .createdAt(now.minusDays(random.nextInt(3)))
-                    .build();
-
-            taskRepository.save(task);
-            totalTasks++;
-        }
-
-        // ================= OVERDUE (pasadas sin completar)
+        // Tareas vencidas (fechas pasadas)
         for (int i = 0; i < 15; i++) {
-            Contact contact = contacts.get(random.nextInt(contacts.size()));
+            Contact contact = contacts.get(RANDOM.nextInt(contacts.size()));
             User assignedTo = contact.getOwner();
-
-            LocalDateTime dueDate = now.minusDays(1 + random.nextInt(7));
+            LocalDateTime dueDate = NOW.minusDays(RANDOM.nextInt(30) + 1);
 
             Task task = Task.builder()
-                    .title("Tarea vencida")
-                    .description("No se contactó a tiempo a " + contact.getName())
+                    .title("Llamada de seguimiento pendiente")
+                    .description("Contactar a " + contact.getName() + " para resolver dudas")
                     .type(TaskType.CALL)
                     .status(TaskStatus.OVERDUE)
                     .dueDate(dueDate)
                     .contact(contact)
                     .assignedTo(assignedTo)
-                    .createdAt(dueDate.minusDays(2))
+                    .createdAt(dueDate.minusDays(RANDOM.nextInt(5)))
                     .build();
-
             taskRepository.save(task);
             totalTasks++;
         }
 
-        log.info("Tasks seeded (FIXED): {} total", totalTasks);
+        // Tareas para hoy
+        for (int i = 0; i < 8; i++) {
+            Contact contact = contacts.get(RANDOM.nextInt(contacts.size()));
+            User assignedTo = contact.getOwner();
+
+            Task task = Task.builder()
+                    .title("Enviar propuesta comercial")
+                    .description("Enviar propuesta a " + contact.getName() + " de " + contact.getCompany())
+                    .type(TaskType.EMAIL)
+                    .status(TaskStatus.PENDING)
+                    .dueDate(NOW.plusHours(RANDOM.nextInt(12)))
+                    .contact(contact)
+                    .assignedTo(assignedTo)
+                    .createdAt(NOW.minusDays(1))
+                    .build();
+            taskRepository.save(task);
+            totalTasks++;
+        }
+
+        // Tareas futuras (próximos días)
+        String[] taskTitles = {
+                "Coordinar reunión de seguimiento",
+                "Enviar materiales adicionales",
+                "Llamada de cierre",
+                "Revisar contrato con el cliente",
+                "Agendar demo del producto",
+                "Seguimiento post-venta"
+        };
+
+        for (int i = 0; i < 20; i++) {
+            Contact contact = contacts.get(RANDOM.nextInt(contacts.size()));
+            User assignedTo = contact.getOwner();
+            LocalDateTime dueDate = NOW.plusDays(RANDOM.nextInt(14) + 1);
+
+            Task task = Task.builder()
+                    .title(taskTitles[RANDOM.nextInt(taskTitles.length)])
+                    .description("Seguimiento con " + contact.getName() + " - " + contact.getCompany())
+                    .type(RANDOM.nextBoolean() ? TaskType.CALL : TaskType.EMAIL)
+                    .status(TaskStatus.PENDING)
+                    .dueDate(dueDate)
+                    .contact(contact)
+                    .assignedTo(assignedTo)
+                    .createdAt(NOW.minusDays(RANDOM.nextInt(3)))
+                    .build();
+            taskRepository.save(task);
+            totalTasks++;
+        }
+
+        // Tareas completadas
+        for (int i = 0; i < 12; i++) {
+            Contact contact = contacts.get(RANDOM.nextInt(contacts.size()));
+            User assignedTo = contact.getOwner();
+            LocalDateTime dueDate = NOW.minusDays(RANDOM.nextInt(20) + 1);
+            LocalDateTime completedAt = dueDate.plusHours(RANDOM.nextInt(48));
+
+            Task task = Task.builder()
+                    .title("Reunión con cliente completada")
+                    .description("Reunión con " + contact.getName() + " para presentar la solución")
+                    .type(TaskType.MEETING)
+                    .status(TaskStatus.COMPLETED)
+                    .dueDate(dueDate)
+                    .completedAt(completedAt)
+                    .contact(contact)
+                    .assignedTo(assignedTo)
+                    .createdAt(dueDate.minusDays(RANDOM.nextInt(5)))
+                    .build();
+            taskRepository.save(task);
+            totalTasks++;
+        }
+
+        log.info("Tasks seeded: {} total tasks", totalTasks);
     }
 
     private String generateWhatsAppProviderId() {
@@ -763,7 +590,7 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private String generateEmailProviderId() {
-        return "<" + System.currentTimeMillis() + "." + new Random().nextInt(100000) + "@smtp-relay.brevo.com>";
+        return "<" + System.currentTimeMillis() + "." + RANDOM.nextInt(100000) + "@smtp-relay.brevo.com>";
     }
 
     private void seedSavedViews(User admin, User salesperson, List<Tag> tags) {
