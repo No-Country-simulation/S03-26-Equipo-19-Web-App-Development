@@ -37,15 +37,15 @@ export interface TagRequest {
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
 export type ExportFormat = 'CSV' | 'PDF';
 export type ExportEntity =
-  | 'contacts'
-  | 'users'
-  | 'tasks'
-  | 'salespersons'
-  | 'conversations';
+  | 'CONTACTS'
+  | 'USERS'
+  | 'TASKS'
+  | 'SALESPERSONS'
+  | 'CONVERSATIONS';
 
 export interface ExportRequest {
   format: ExportFormat;
-  entity: ExportEntity;
+  entityType: ExportEntity;   // antes se llamaba "entity"
   filters?: Record<string, unknown>;
 }
 
@@ -189,12 +189,6 @@ export interface AgentMetrics {
   status: "active" | "inactive";
   messagesSent: number;
   responseRate: number;
-}
-
-export interface ExportRequest {
-  format: ExportFormat;
-  entity: ExportEntity;
-  filters?: Record<string, unknown>;
 }
 
 type TaskFilters = {
