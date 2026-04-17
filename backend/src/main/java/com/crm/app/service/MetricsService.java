@@ -346,17 +346,35 @@ public class MetricsService {
         long previousTotalContacts = previousContactStats.values().stream().mapToLong(Long::longValue).sum();
 
         LocalDateTime currentStart = currentEnd.minusDays(DEFAULT_DAYS);
-        long currentTotalMessages = getMessageCount(owner, currentStart, currentEnd, true) + getMessageCount(owner, currentStart, currentEnd, false);
-        long previousTotalMessages = getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS), currentStart.minusSeconds(1), true) +
-                getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS), currentStart.minusSeconds(1), false);
+        long currentTotalMessages = getMessageCount(owner, currentStart, currentEnd, true) +
+                getMessageCount(owner, currentStart, currentEnd, false);
+        long previousTotalMessages = getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS),
+                currentStart.minusSeconds(1), true) +
+                getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS),
+                        currentStart.minusSeconds(1), false);
 
-        long currentUpcomingTasks = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, currentEnd) + getTaskDueTodayCount(owner);
+        long currentUpcomingTasks = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, currentEnd) +
+                getTaskDueTodayCount(owner);
         long previousUpcomingTasks = getTaskCountByStatusWithDate(owner, TaskStatus.PENDING, previousEnd);
+
+        long currentSent = getMessageCount(owner, currentStart, currentEnd, true);
+        long previousSent = getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS),
+                currentStart.minusSeconds(1), true);
+        long currentReceived = getMessageCount(owner, currentStart, currentEnd, false);
+        long previousReceived = getMessageCount(owner, currentStart.minusDays(DEFAULT_DAYS),
+                currentStart.minusSeconds(1), false);
+
+        double currentResponseRate = currentSent > 0 ?
+                Math.round((currentReceived * 100.0 / currentSent) * 10) / 10.0 : 0.0;
+        double previousResponseRate = previousSent > 0 ?
+                Math.round((previousReceived * 100.0 / previousSent) * 10) / 10.0 : 0.0;
 
         return new MetricsDTOs.PanelMetrics(
                 calculateMetric(currentTotalContacts, previousTotalContacts),
                 calculateMetric(currentTotalMessages, previousTotalMessages),
-                calculateMetric(currentUpcomingTasks, previousUpcomingTasks));
+                calculateMetric(currentUpcomingTasks, previousUpcomingTasks),
+                calculateMetricDouble(currentResponseRate, previousResponseRate)
+        );
     }
 
     // ==================== GLOBAL METRICS ====================
