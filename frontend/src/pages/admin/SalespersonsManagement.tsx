@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { SalespersonsForm } from '../../components/salespersons_management/SalespersonsForm';
-import type { SalespersonFormData } from '../../components/salespersons_management/SalespersonsForm';
+import { SalespersonsForm } from '../../components/salespersons_management/SalesPersonsForm';
+import type { SalespersonFormData } from '../../components/salespersons_management/SalesPersonsForm';
 import { SalespersonsMutationsService } from '../../services/use_mutations/salespersons-mutation';
 import { useGetSalespersons } from '../../services/use_queries/salespersons-query';
 import { PaginationControls } from '../../components/ui/PaginationControls';
