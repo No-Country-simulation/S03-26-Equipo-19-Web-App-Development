@@ -149,7 +149,10 @@ public class MetricsDTOs {
             MetricValue totalMessages,
 
             @Schema(description = "Próximas tareas (pendientes + para hoy) con tendencia")
-            MetricValue upcomingTasks
+            MetricValue upcomingTasks,
+
+            @Schema(description = "Tasa de respuesta (%) con tendencia")
+            MetricValueDouble responseRate
     ) {}
 
     // En MetricsDTOs.java - Agrega estos records
