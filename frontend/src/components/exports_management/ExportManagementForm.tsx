@@ -18,14 +18,13 @@ type Props = {
 
 const ENTITY_OPTIONS: { value: ExportEntity; label: string }[] = [
   { value: 'contacts', label: 'Contactos' },
-  { value: 'users', label: 'Usuarios' },
-  { value: 'tasks', label: 'Tareas' },
-  { value: 'salespersons', label: 'Vendedores' },
   { value: 'conversations', label: 'Conversaciones' },
+  { value: 'messages', label: 'Mensajes' },
+  { value: 'tasks', label: 'Tareas' },
 ];
 
 export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
-  const [format, setFormat] = useState<ExportFormat>('CSV');
+  const [format, setFormat] = useState<ExportFormat>('PDF');
   const [entity, setEntity] = useState<ExportEntity>('contacts');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -45,8 +44,8 @@ export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-white">
-            <SelectItem value="CSV">CSV</SelectItem>
             <SelectItem value="PDF">PDF</SelectItem>
+            <SelectItem value="CSV">CSV</SelectItem>
           </SelectContent>
         </Select>
       </div>

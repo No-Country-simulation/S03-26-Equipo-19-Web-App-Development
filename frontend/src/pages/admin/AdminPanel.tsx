@@ -28,23 +28,23 @@ export const AdminPanel = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const { data: metricsPanel } = useGetPanelAdminMetrics();
 
-  // Mutación para exportar datos
+  // Mutación para exportar datos - CORREGIDA
   const exportMutation = useMutation({
-    mutationFn: ({ format, entity }: { format: ExportFormat; entity: ExportEntity }) =>
-      exportData({ format, entity }),
-    onSuccess: (blob, { format, entity }) => {
-      downloadBlob(blob, `export_${entity}_${Date.now()}.${format.toLowerCase()}`);
-      setExportModalOpen(false);
-    },
-    onError: (error) => {
-      console.error('Error al exportar:', error);
-      alert('Error al exportar los datos. Por favor, intenta nuevamente.');
-    },
-  });
+  mutationFn: ({ format, entityType }: { format: ExportFormat; entityType: ExportEntity }) =>
+    exportData({ format, entityType }),  // ← Usar 'entityType'
+  onSuccess: (blob, { format, entityType }) => {
+    downloadBlob(blob, `export_${entityType}_${Date.now()}.${format.toLowerCase()}`);
+    setExportModalOpen(false);
+  },
+  onError: (error) => {
+    console.error('Error al exportar:', error);
+    alert('Error al exportar los datos. Por favor, intenta nuevamente.');
+  },
+});
 
-  const handleExport = (format: ExportFormat, entity: ExportEntity) => {
-    exportMutation.mutate({ format, entity });
-  };
+  const handleExport = (format: ExportFormat, entityType: ExportEntity) => {
+  exportMutation.mutate({ format, entityType });
+};
 
   return (
     <div>
