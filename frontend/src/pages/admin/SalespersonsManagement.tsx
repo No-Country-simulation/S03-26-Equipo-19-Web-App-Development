@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   UserPlus,
   Download,
@@ -12,14 +12,18 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { SalespersonsForm } from '../../components/salespersons_management/SalespersonsForm';
+import { SalespersonsForm } from '../../components/salespersons_management/SalesPersonsForm';
+import type { SalespersonFormData } from '../../components/salespersons_management/SalesPersonsForm';
 import { SalespersonsMutationsService } from '../../services/use_mutations/salespersons-mutation';
 import { useGetSalespersons } from '../../services/use_queries/salespersons-query';
+import { PaginationControls } from '../../components/ui/PaginationControls';
+import { usePagination } from '../../hooks/usePagination';
 import type {
   SalespersonResponse,
   CreateSalespersonRequest,
   UpdateSalespersonRequest,
 } from '../../types/admin.types';
+import axios from 'axios';
 
 // ─── SUBCOMPONENTES ───────────────────────────────────────────────────────────
 const KpiCard = ({
@@ -80,16 +84,38 @@ const ResponseBar = ({ rate }: { rate: number }) => (
 export const SalespersonsManagement = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'INACTIVE'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSalesperson, setEditingSalesperson] = useState<SalespersonResponse | null>(null);
 
-  const { data: salespersons = [], isLoading, isError } = useGetSalespersons();
-  const { mutationCreateSalesperson, mutationUpdateSalesperson, mutationDeleteSalesperson } =
-    SalespersonsMutationsService();
+  const { data: rawSalespersons = [], isLoading, isError } = useGetSalespersons();
 
-  // Filtrado
-  const filtered = salespersons.filter((s: SalespersonResponse) => {
+  // ─── NORMALIZACIÓN ROBUSTA DE ESTADO (SIN `any`) ─────────────────────────────
+  const salespersons: SalespersonResponse[] = rawSalespersons.map((s) => {
+    let normalizedStatus: 'ACTIVE' | 'INACTIVE' = 'INACTIVE';
+
+    // Verificar si existe la propiedad 'status' como string
+    if (typeof s.status === 'string') {
+      const lower = s.status.toLowerCase();
+      normalizedStatus = lower === 'active' ? 'ACTIVE' : 'INACTIVE';
+    }
+    // Verificar propiedad 'active' como boolean (usando type guard)
+    else if ('active' in s && typeof (s as Record<string, unknown>).active === 'boolean') {
+      normalizedStatus = (s as Record<string, unknown>).active ? 'ACTIVE' : 'INACTIVE';
+    }
+    // Verificar propiedad 'isActive' como boolean
+    else if ('isActive' in s && typeof (s as Record<string, unknown>).isActive === 'boolean') {
+      normalizedStatus = (s as Record<string, unknown>).isActive ? 'ACTIVE' : 'INACTIVE';
+    }
+
+    console.log('Original status:', s.status, '→ Normalized:', normalizedStatus);
+    return {
+      ...s,
+      status: normalizedStatus,
+    };
+  });
+
+  // ─── FILTRADO ────────────────────────────────────────────────────────────────
+  const filtered = salespersons.filter((s) => {
     const matchSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.email.toLowerCase().includes(search.toLowerCase());
@@ -97,7 +123,21 @@ export const SalespersonsManagement = () => {
     return matchSearch && matchStatus;
   });
 
-  // KPIs
+  // ─── PAGINACIÓN ──────────────────────────────────────────────────────────────
+  const {
+    page,
+    totalPages,
+    paginatedData,
+    nextPage,
+    prevPage,
+    resetPage,
+  } = usePagination({ data: filtered, pageSize: 10 });
+
+  useEffect(() => {
+    resetPage();
+  }, [search, statusFilter, resetPage]);
+
+  // ─── KPIs ────────────────────────────────────────────────────────────────────
   const active = salespersons.filter((s) => s.status === 'ACTIVE');
   const totalMessages = salespersons.reduce((acc, s) => acc + (s.messagesSent ?? 0), 0);
   const avgResponse = salespersons.length
@@ -107,37 +147,16 @@ export const SalespersonsManagement = () => {
     : 0;
 
   const kpiData = [
-    {
-      icon: <Users size={20} className="text-blue-600" />,
-      label: 'Total de vendedores',
-      value: String(salespersons.length),
-      trend: '',
-      isPositive: true,
-    },
-    {
-      icon: <UserCheck size={20} className="text-blue-600" />,
-      label: 'Vendedores activos',
-      value: String(active.length),
-      trend: '',
-      isPositive: true,
-    },
-    {
-      icon: <MessageSquare size={20} className="text-blue-600" />,
-      label: 'Mensajes enviados',
-      value: totalMessages.toLocaleString(),
-      trend: '',
-      isPositive: true,
-    },
-    {
-      icon: <TrendingUp size={20} className="text-blue-600" />,
-      label: 'Tasa de respuesta promedio',
-      value: `${avgResponse}%`,
-      trend: '',
-      isPositive: true,
-    },
+    { icon: <Users size={20} className="text-blue-600" />, label: 'Total de vendedores', value: String(salespersons.length), trend: '', isPositive: true },
+    { icon: <UserCheck size={20} className="text-blue-600" />, label: 'Vendedores activos', value: String(active.length), trend: '', isPositive: true },
+    { icon: <MessageSquare size={20} className="text-blue-600" />, label: 'Mensajes enviados', value: totalMessages.toLocaleString(), trend: '', isPositive: true },
+    { icon: <TrendingUp size={20} className="text-blue-600" />, label: 'Tasa de respuesta promedio', value: `${avgResponse}%`, trend: '', isPositive: true },
   ];
 
-  // Handlers del modal
+  const { mutationCreateSalesperson, mutationUpdateSalesperson, mutationDeleteSalesperson } =
+    SalespersonsMutationsService();
+
+  // ─── HANDLERS DEL MODAL ─────────────────────────────────────────────────────
   const handleOpenCreate = () => {
     setEditingSalesperson(null);
     setModalOpen(true);
@@ -153,13 +172,7 @@ export const SalespersonsManagement = () => {
     setEditingSalesperson(null);
   };
 
-  // Submit del formulario (sin `any`)
-  const handleSubmit = (formData: {
-    name: string;
-    email: string;
-    password?: string;
-    status: 'ACTIVE' | 'INACTIVE';
-  }) => {
+  const handleSubmit = (formData: SalespersonFormData) => {
     if (editingSalesperson) {
       const updateData: UpdateSalespersonRequest = {
         name: formData.name,
@@ -168,7 +181,13 @@ export const SalespersonsManagement = () => {
       };
       mutationUpdateSalesperson.mutate(
         { id: editingSalesperson.id, data: updateData },
-        { onSuccess: handleCloseModal }
+        {
+          onSuccess: () => handleCloseModal(),
+          onError: (error: unknown) => {
+            alert('Error al actualizar vendedor. Intenta nuevamente.');
+            console.error(error);
+          },
+        }
       );
     } else {
       if (!formData.password) return;
@@ -177,16 +196,32 @@ export const SalespersonsManagement = () => {
         email: formData.email,
         password: formData.password,
       };
-      mutationCreateSalesperson.mutate(createData, { onSuccess: handleCloseModal });
+      mutationCreateSalesperson.mutate(createData, {
+        onSuccess: () => handleCloseModal(),
+        onError: (error: unknown) => {
+          let errorMessage = 'Error al crear vendedor. Intenta nuevamente.';
+          if (axios.isAxiosError(error)) {
+            const data = error.response?.data;
+            const msg = data?.validationErrors?.message || data?.message;
+            if (msg?.includes('already exists')) {
+              errorMessage = 'El email ingresado ya está registrado. Por favor usa otro.';
+            } else if (msg) {
+              errorMessage = msg;
+            }
+          }
+          alert(errorMessage);
+        },
+      });
     }
   };
 
   const handleDelete = (id: number) => {
-    if (confirm('¿Estás seguro de eliminar este vendedor?')) {
+    if (confirm('¿Estás seguro de desactivar este vendedor?')) {
       mutationDeleteSalesperson.mutate(id);
     }
   };
 
+  // ─── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <div>
       {/* Encabezado */}
@@ -277,14 +312,14 @@ export const SalespersonsManagement = () => {
                     Error al cargar vendedores
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : paginatedData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-10 text-center text-slate-400">
                     No se encontraron vendedores
                   </td>
                 </tr>
               ) : (
-                filtered.map((sp: SalespersonResponse) => {
+                paginatedData.map((sp) => {
                   const initials = sp.name
                     .split(' ')
                     .map((n) => n[0])
@@ -292,10 +327,7 @@ export const SalespersonsManagement = () => {
                     .slice(0, 2)
                     .toUpperCase();
                   return (
-                    <tr
-                      key={sp.id}
-                      className="border-b border-slate-50 hover:bg-slate-50 transition-colors"
-                    >
+                    <tr key={sp.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0">
@@ -347,37 +379,17 @@ export const SalespersonsManagement = () => {
         </div>
 
         {/* Paginación */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
-          <p className="text-sm text-slate-500">
-            Mostrando {filtered.length} de {salespersons.length} vendedores
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors text-sm"
-            >
-              {'<'}
-            </button>
-            {[1, 2, 3].map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === page
-                    ? 'bg-[#13316b] text-white'
-                    : 'text-slate-500 hover:bg-slate-100'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition-colors text-sm"
-            >
-              {'>'}
-            </button>
+        <div className="px-6 py-4 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              Mostrando {paginatedData.length} de {filtered.length} vendedores
+            </p>
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              onNext={nextPage}
+              onPrev={prevPage}
+            />
           </div>
         </div>
       </div>
@@ -386,15 +398,9 @@ export const SalespersonsManagement = () => {
       <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-400">
         <span>© 2026 Conversa CRM. Todos los derechos reservados.</span>
         <div className="flex gap-4">
-          <button className="hover:text-slate-600 transition-colors">
-            Política de Privacidad
-          </button>
-          <button className="hover:text-slate-600 transition-colors">
-            Términos y Condiciones de Uso
-          </button>
-          <button className="hover:text-slate-600 transition-colors">
-            Preguntas Frecuentes
-          </button>
+          <button className="hover:text-slate-600 transition-colors">Política de Privacidad</button>
+          <button className="hover:text-slate-600 transition-colors">Términos y Condiciones de Uso</button>
+          <button className="hover:text-slate-600 transition-colors">Preguntas Frecuentes</button>
         </div>
       </div>
 

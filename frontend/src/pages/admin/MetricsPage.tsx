@@ -1,10 +1,12 @@
-import { Users, MessageSquare, CheckSquare, TrendingUp, TrendingDown, Minus, Filter } from 'lucide-react';
+// src/pages/admin/MetricsPage.tsx
+import { Users, MessageSquare, CheckSquare, TrendingUp, TrendingDown, Minus, Filter, Award } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
 import { useGetGLobalMetrics, useGetMetricsByPeriod, useGetPanelAdminMetrics } from '../../services/use_queries/metrics-query';
 import { useGetSalespersons } from '../../services/use_queries/salespersons-query';
 import type { SalespersonResponse } from '../../types/admin.types';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { KpiCardTopSaler } from '../../components/ui/KpiCardTopSaler';
+import type { Metric } from '../../types/metric.types';
 
 // --- SUBCOMPONENTES ---
 
@@ -25,12 +27,10 @@ const StatusDot = ({ status }: { status: string }) => (
 
 // --- PÁGINA PRINCIPAL ---
 export const MetricsPage = () => {
-  const { data: globalMetrics, } = useGetGLobalMetrics();
-  const { data: panelMetrics} = useGetPanelAdminMetrics();
-
+  const { data: globalMetrics } = useGetGLobalMetrics();
+  const { data: panelMetrics } = useGetPanelAdminMetrics();
   const { data: periodData = [] } = useGetMetricsByPeriod('2026-01-01', '2026-03-31');
-  const { data: salespersons = [] } = useGetSalespersons(true);
-
+  const { data: salespersons = [] } = useGetSalespersons();
 
   // Adaptar period data al formato del gráfico
   const chartData = periodData.map((p) => ({
@@ -38,6 +38,25 @@ export const MetricsPage = () => {
     salientes: p.outbound,
     entrantes: p.inbound,
   }));
+
+  // Construir métricas para las KPI cards
+  const totalConversationsMetric: Metric = globalMetrics?.totalConversations ?? {
+    value: 0,
+    changePercent: 0,
+    trend: 'stable'
+  };
+
+  const responseRateMetric: Metric = globalMetrics?.responseRate ?? {
+    value: 0,
+    changePercent: 0,
+    trend: 'stable'
+  };
+
+  const completedTasksMetric: Metric = globalMetrics?.completedTasks ?? {
+    value: 0,
+    changePercent: 0,
+    trend: 'stable'
+  };
 
   return (
     <div>
@@ -55,26 +74,45 @@ export const MetricsPage = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-         <KpiCard
-          title="Tasa de conversión"
-          metric={globalMetrics?.totalConversations ?? { value: 0, changePercent: 0, trend: 'stable' }}
+        {/* Card 1: Total Conversaciones */}
+        <KpiCard
+          title="Total Conversaciones"
+          metric={totalConversationsMetric}
           color="primary"
           icon={<Users size={28} />}
+          impact="positive"
         />
+
+        {/* Card 2: Tasa de respuesta */}
         <KpiCard
           title="Tasa de respuesta"
-          metric={globalMetrics?.responseRate ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          metric={responseRateMetric}
           color="secondary"
           icon={<MessageSquare size={28} />}
+          impact="positive"
         />
+
+        {/* Card 3: Tareas completadas */}
         <KpiCard
           title="Tareas completadas"
-          metric={globalMetrics?.completedTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          metric={completedTasksMetric}
           color="secondary"
           icon={<CheckSquare size={28} />}
+          impact="positive"
         />
-        {globalMetrics?.topSalesperson && <KpiCardTopSaler person={globalMetrics.topSalesperson} />}
 
+        {/* Card 4: Mejor Vendedor */}
+        {globalMetrics?.topSalesperson ? (
+          <KpiCardTopSaler person={globalMetrics.topSalesperson} />
+        ) : (
+          <KpiCard
+            title="Mejor Vendedor"
+            metric={{ value: 0, changePercent: 0, trend: 'stable' }}
+            color="secondary"
+            icon={<Award size={28} />}
+            impact="positive"
+          />
+        )}
       </div>
 
       {/* Gráficos */}
@@ -133,7 +171,7 @@ export const MetricsPage = () => {
                 <th className="px-6 py-4 font-medium">Mensajes enviados</th>
                 <th className="px-6 py-4 font-medium">Tasa de respuesta</th>
                 <th className="px-6 py-4 font-medium">Tendencia</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {salespersons.length === 0 ? (
@@ -173,6 +211,7 @@ export const MetricsPage = () => {
         </div>
       </div>
 
+      {/* Footer */}
       <div className="mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-400">
         <span>© 2026 Conversa CRM. Todos los derechos reservados.</span>
         <div className="flex gap-4">

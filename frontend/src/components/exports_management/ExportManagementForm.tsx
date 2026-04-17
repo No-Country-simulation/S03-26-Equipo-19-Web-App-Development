@@ -18,21 +18,19 @@ type Props = {
 
 const ENTITY_OPTIONS: { value: ExportEntity; label: string }[] = [
   { value: 'contacts', label: 'Contactos' },
-  { value: 'users', label: 'Usuarios' },
-  { value: 'tasks', label: 'Tareas' },
-  { value: 'salespersons', label: 'Vendedores' },
   { value: 'conversations', label: 'Conversaciones' },
+  { value: 'messages', label: 'Mensajes' },
+  { value: 'tasks', label: 'Tareas' },
 ];
 
 export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
-  const [format, setFormat] = useState<ExportFormat>('CSV');
+  const [format, setFormat] = useState<ExportFormat>('PDF');
   const [entity, setEntity] = useState<ExportEntity>('contacts');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
   const handleSubmit = () => {
-    // Si tu backend acepta filtros de fecha, podrías incluirlos aquí.
-    // Por ahora solo enviamos formato y entidad.
+    // Si el backend acepta filtros de fecha, deberías incluirlos en el payload
     onSuccess(format, entity);
   };
 
@@ -45,8 +43,8 @@ export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-white">
-            <SelectItem value="CSV">CSV</SelectItem>
             <SelectItem value="PDF">PDF</SelectItem>
+            <SelectItem value="CSV">CSV</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -67,7 +65,6 @@ export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
         </Select>
       </div>
 
-      {/* Opcional: filtros por fecha (si el backend los soporta) */}
       <div className="grid grid-cols-2 gap-3">
         <Input
           label="Fecha desde"

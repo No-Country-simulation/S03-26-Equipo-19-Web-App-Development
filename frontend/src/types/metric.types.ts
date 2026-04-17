@@ -83,15 +83,41 @@ export interface UsersResType {
 export interface PanelResType {
   totalContacts: Metric;
   totalMessages: Metric;
-  uncomingTasks: Metric;
+  upcomingTasks: Metric;
+  responseRate: Metric;
 }
 
+export interface MetricValue {
+  value: number;
+  changePercent: number;
+  trend: 'up' | 'down' | 'stable';
+}
 export type TopSalesPerson = {
     id: number;
     name: string;
     email: string;
     messagesSent: number;
     performanceScore: number; 
+}
+
+export interface GlobalMetricsResponse {
+  totalConversations: MetricValue;
+  responseRate: MetricValue;
+  completedTasks: MetricValue;
+  topSalesperson: TopSalesPerson | null;
+}
+
+export interface PanelMetricsResponse {
+  totalContacts: MetricValue;
+  totalMessages: MetricValue;
+  upcomingTasks: MetricValue;
+  responseRate: MetricValue;
+}
+
+export interface PeriodMetric {
+  date: string;
+  inbound: number;
+  outbound: number;
 }
 
 export interface GlobalMetricsResType {

@@ -49,17 +49,17 @@ export const ExportsManagement = () => {
   const [nextId, setNextId] = useState(1);
   const [modalOpen, setModalOpen] = useState(false); // 👈 estado del modal
 
-  const mutation = useMutation({
-    mutationFn: ({ format, entity }: { format: ExportFormat; entity: ExportEntity }) =>
-      exportData({ format, entity }),
-    onMutate: ({ format, entity }) => {
+    const mutation = useMutation({
+    mutationFn: ({ format, entityType }: { format: ExportFormat; entityType: ExportEntity }) =>
+      exportData({ format, entityType: entityType }),
+    onMutate: ({ format, entityType }) => {
       const id = nextId;
       setNextId((n) => n + 1);
       setJobs((prev) => [
         {
           id,
           format,
-          entity,
+          entity: entityType,  // ← Usar entityType para almacenar
           date: new Date().toLocaleString('es-AR'),
           status: 'loading',
         },
@@ -67,10 +67,11 @@ export const ExportsManagement = () => {
       ]);
       return { id };
     },
-    onSuccess: (blob, { format, entity }, context) => {
+    onSuccess: (blob, { format, entityType }, context) => {
       const { id } = context as { id: number };
       setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status: 'done' } : j)));
-      downloadBlob(blob, `export_${entity}_${Date.now()}.${format.toLowerCase()}`);
+      downloadBlob(blob, `export_${entityType}_${Date.now()}.${format.toLowerCase()}`);
+      setModalOpen(false);
     },
     onError: (_err, _vars, context) => {
       const { id } = context as { id: number };
@@ -78,9 +79,8 @@ export const ExportsManagement = () => {
     },
   });
 
-  const handleExport = (format: ExportFormat, entity: ExportEntity) => {
-    mutation.mutate({ format, entity });
-    setModalOpen(false);
+  const handleExport = (format: ExportFormat, entityType: ExportEntity) => {
+    mutation.mutate({ format, entityType });
   };
 
   const csvCount = jobs.filter(j => j.format === 'CSV').length;
@@ -162,7 +162,7 @@ export const ExportsManagement = () => {
                       {job.status === 'error' && (
                         <button
                           className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors"
-                          onClick={() => mutation.mutate({ format: job.format, entity: job.entity })}
+                          onClick={() => mutation.mutate({ format: job.format, entityType: job.entity })}
                         >
                           <RefreshCw size={15} />
                         </button>
@@ -170,7 +170,7 @@ export const ExportsManagement = () => {
                       {job.status === 'done' && (
                         <button
                           className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors"
-                          onClick={() => mutation.mutate({ format: job.format, entity: job.entity })}
+                          onClick={() => mutation.mutate({ format: job.format, entityType: job.entity })}
                         >
                           <Download size={15} />
                         </button>
