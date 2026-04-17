@@ -88,20 +88,20 @@ export const AdminPanel = () => {
           icon={<Users size={28} />}
         />
         <KpiCard
-          title="Total de contactos"
+          title="Total de Mensajes"
           metric={metricsPanel?.totalMessages ?? { value: 0, changePercent: 0, trend: 'stable' }}
           color="secondary"
           icon={<Mail size={28} />}
         />
         <KpiCard
           title="Tareas pendientes"
-          metric={metricsPanel?.uncomingTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          metric={metricsPanel?.upcomingTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
           color="secondary"
           icon={<Calendar size={28} />}
         />
         <KpiCard
           title="Tasa de respuesta"
-          metric={metricsPanel?.uncomingTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          metric={metricsPanel?.upcomingTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
           color="secondary"
           icon={<Settings size={28} />}
         />

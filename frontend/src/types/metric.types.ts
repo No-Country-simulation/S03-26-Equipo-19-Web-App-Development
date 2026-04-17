@@ -83,7 +83,7 @@ export interface UsersResType {
 export interface PanelResType {
   totalContacts: Metric;
   totalMessages: Metric;
-  uncomingTasks: Metric;
+  upcomingTasks: Metric;
 }
 
 export type TopSalesPerson = {
