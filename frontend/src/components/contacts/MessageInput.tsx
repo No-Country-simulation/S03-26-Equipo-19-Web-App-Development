@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu"
 import type { Channel, ContactResType } from "../../types/contact.types"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useGetTemplates } from "../../services/use_queries/templates-query"
 import { parseTemplate } from "../../utils/parseTemplate"
 import { useMessagesMutationsService } from "../../services/use_mutations/messages-mutation";
@@ -61,17 +61,29 @@ export function MessageInput({ activeChannel, contact, activeConversation }: Pro
 
     const conversationId = activeConversation?.id;
 
-    if (!conversationId) return;
-
-    mutationPostMessage.mutate({
-      data: {
-        contactId: contact.id,
-        channel: activeChannel,
-        content: { body: message },
+    mutationPostMessage.mutate(
+      {
+        data: {
+          contactId: contact.id,
+          channel: activeChannel,
+          content: { body: message },
+        },
+        conversationId,
       },
-      conversationId,
-    });
+      {
+        onSuccess: () => {
+          setMessage("");
+        },
+        onError: () => {
+          alert("Error al enviar el mensaje. Por favor, inténtalo de nuevo.");
+        }
+      }
+    );
   };
+
+  useEffect(() => {
+    setMessage("");
+  }, [activeConversation?.id])
 
 
   if (isLoading) return <div className="flex items-center justify-center">

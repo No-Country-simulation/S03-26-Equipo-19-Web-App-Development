@@ -5,78 +5,113 @@ import {
   readAllMessagesInConversationById,
 } from "../use_cases/messages-service";
 
-
 export const useMessagesMutationsService = () => {
   const queryClient = useQueryClient();
 
- const mutationPostMessage = useMutation({
-  mutationFn: ({
-    data,
-  }: {
-    data: MessageReqType;
-    conversationId: number;
-  }) => postMessage(data),
+  const mutationPostMessage = useMutation({
+    mutationFn: async ({
+      data,
+    }: {
+      data: MessageReqType;
+      conversationId?: number;
+    }) => {
+      return postMessage(data);
+    },
 
-  onMutate: async ({ data, conversationId }) => {
-    await queryClient.cancelQueries({
-      queryKey: ["messages", conversationId],
-    });
+    onMutate: async ({ data, conversationId }) => {
+      await queryClient.cancelQueries({
+        queryKey: ["messages", conversationId],
+      });
 
-    const previous = queryClient.getQueryData<MessageResType[]>([
-      "messages",
-      conversationId,
-    ]);
+      const previous = queryClient.getQueryData<MessageResType[]>([
+        "messages",
+        conversationId,
+      ]);
 
-    const optimisticMessage: MessageResType = {
-      id: Date.now(),
-      userId: 0,
-      conversation: {
-        id: conversationId,
-        channel: data.channel,
-      } as MessageResType["conversation"],
-      direction: "OUTBOUND",
-      body: data.content.body,
-      deliveryStatus: "SENT",
-      sentAt: new Date().toISOString(),
-      providerId: "",
-      sender: null,
-      template: null,
-    };
+      const optimisticMessage: MessageResType = {
+        id: Date.now(),
+        userId: 0,
+        conversation: {
+          id: conversationId,
+          channel: data.channel,
+        } as MessageResType["conversation"],
+        direction: "OUTBOUND",
+        body: data.content.body,
+        deliveryStatus: "SENT",
+        sentAt: new Date().toISOString(),
+        providerId: "",
+        sender: null,
+        template: null,
+      };
 
-    queryClient.setQueryData<MessageResType[]>(
-      ["messages", conversationId],
-      (old = []) => [...old, optimisticMessage]
-    );
+      queryClient.setQueryData<MessageResType[]>(
+        ["messages", conversationId],
+        (old = []) => [...old, optimisticMessage],
+      );
 
-    return { previous, conversationId };
-  },
+      if (conversationId) {
+        queryClient.setQueryData<any[]>(["conversations-inbox"], (old = []) => {
+          const exists = old.some((c) => c.conversationId === conversationId);
 
-  onError: (_err, _vars, context) => {
-    if (!context) return;
+          if (exists) {
+            return old.map((c) =>
+              c.conversationId === conversationId
+                ? {
+                    ...c,
+                    lastMessagePreview: data.content.body,
+                    lastMessageAt: new Date().toISOString(),
+                  }
+                : c,
+            );
+          }
 
-    queryClient.setQueryData(
-      ["messages", context.conversationId],
-      context.previous
-    );
-  },
+          return [
+            {
+              conversationId,
+              channel: data.channel,
+              lastMessagePreview: data.content.body,
+              lastMessageAt: new Date().toISOString(),
+              contactId: data.contactId,
+              contactName: "",
+              contactIdentifier: "",
+            },
+            ...old,
+          ];
+        });
+      }
 
-  onSuccess: (_data, _vars, context) => {
-    if (!context) return;
+      return { previous, conversationId };
+    },
 
-    queryClient.invalidateQueries({
-      queryKey: ["messages", context.conversationId],
-    });
+    onError: (_err, _vars, context) => {
+      if (!context) return;
 
-    queryClient.invalidateQueries({
-      queryKey: ["conversations"],
-    });
-  },
-});
+      queryClient.setQueryData(
+        ["messages", context.conversationId],
+        context.previous,
+      );
+    },
+
+    onSuccess: (_data, _vars, context) => {
+      if (!context) return;
+
+      queryClient.invalidateQueries({
+        queryKey: ["conversations"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["contacts"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["contacts-dashboard"],
+      });
+    },
+  });
 
   const mutationReadAllMessages = useMutation({
     mutationFn: (conversationId: number) =>
       readAllMessagesInConversationById(conversationId),
-    
 
     onSuccess: (_, conversationId) => {
       queryClient.setQueryData(["conversations"], (old: any[]) =>
@@ -85,16 +120,11 @@ export const useMessagesMutationsService = () => {
         ),
       );
 
-      queryClient.invalidateQueries({
-        queryKey: ["messages", conversationId],
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["conversations"],
-      });
-      console.log("invalidate conversationId:", conversationId);
+      queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations-inbox"] });
     },
-    
   });
 
   return {

@@ -57,7 +57,7 @@ const MessagePanel = ({ conversations, contact, activeChatId, onBack, isAdminVie
             queryClient.invalidateQueries({
                 queryKey: ["messages", conversationId],
             });
-        }, 5000);
+        }, 3000);
         
         return () => clearInterval(interval);
     }, [conversationId]);

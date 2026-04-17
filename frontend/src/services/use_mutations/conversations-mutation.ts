@@ -27,21 +27,21 @@ const mutationCloseConversationById = useMutation({
       queryKey: ["conversations"],
     });
 
-    const previousByContact = queryClient.getQueriesData<ConversationResType[]>({
+   /*  const previousByContact = queryClient.getQueriesData<ConversationResType[]>({
       queryKey: ["conversation"],
-    });
+    }); */
 
     queryClient.setQueriesData(
       { queryKey: ["conversations"] },
       (old: ConversationResType[] | undefined) => updateConversationStatusInCache(old, id, "CLOSED")
     );
 
-    queryClient.setQueriesData(
+  /*   queryClient.setQueriesData(
       { queryKey: ["conversation"] },
       (old: ConversationResType[] | undefined) => updateConversationStatusInCache(old, id, "CLOSED")
-    );
+    ); */
 
-    return { previousConversations, previousByContact };
+    return { previousConversations/* , previousByContact  */};
   },
 
   onError: (_err, _vars, context) => {
@@ -49,14 +49,15 @@ const mutationCloseConversationById = useMutation({
       queryClient.setQueryData(key, data);
     });
 
-    context?.previousByContact?.forEach(([key, data]) => {
+    /* context?.previousByContact?.forEach(([key, data]) => {
       queryClient.setQueryData(key, data);
-    });
+    }); */
   },
 
   onSettled: () => {
     queryClient.invalidateQueries({ queryKey: ["conversations"] });
     queryClient.invalidateQueries({ queryKey: ["conversation"] });
+     queryClient.invalidateQueries({queryKey: ["contacts-dashboard"] });
     queryClient.invalidateQueries({ queryKey: ["conversations-inbox"] });
     queryClient.invalidateQueries({ queryKey: ["metrics-conversations"] });
   },
@@ -102,6 +103,7 @@ const mutationReopenConversationById = useMutation({
   onSettled: () => {
     queryClient.invalidateQueries({ queryKey: ["conversations"] });
     queryClient.invalidateQueries({ queryKey: ["conversation"] });
+      queryClient.invalidateQueries({queryKey: ["contacts-dashboard"] });
     queryClient.invalidateQueries({ queryKey: ["conversations-inbox"] });
     queryClient.invalidateQueries({ queryKey: ["metrics-conversations"] });
   },

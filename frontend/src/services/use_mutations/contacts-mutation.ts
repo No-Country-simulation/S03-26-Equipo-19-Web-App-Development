@@ -16,6 +16,7 @@ export const ContactsMutationsService = () => {
     mutationFn: (data: ContactReqType) => postContact(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
@@ -25,7 +26,8 @@ export const ContactsMutationsService = () => {
       updateContactById(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
@@ -35,7 +37,8 @@ export const ContactsMutationsService = () => {
       updateFunnelStatusByContactId(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
@@ -46,7 +49,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({
-        queryKey: ["contact", variables.contactId],
+        queryKey: ["contacts", variables.contactId],
       });
     },
   });
@@ -57,7 +60,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({
-        queryKey: ["contact", variables.contactId],
+        queryKey: ["contacts", variables.contactId],
       });
     },
   });
@@ -74,11 +77,10 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({
-        queryKey: ["contact", variables.contactId],
+        queryKey: ["contacts", variables.contactId],
       });
-
-      // opcional: podés loguear o manejar estado en UI
-      console.log("Contacto reasignado correctamente");
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations-inbox"] });
     },
 
     onError: (error: Error) => {

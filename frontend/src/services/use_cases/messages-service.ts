@@ -9,8 +9,7 @@ export const postMessage = async (data: MessageReqType) => {
   if (!token) {
     throw new Error("No hay token de autenticación.");
   }
-  console.log("Mensaje", { data });
-
+ 
   try {
     const res = await apiMessagesService.post("/send", data, {
       headers: {
