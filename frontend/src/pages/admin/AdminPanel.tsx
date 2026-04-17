@@ -1,42 +1,17 @@
+// src/pages/admin/AdminPanel.tsx
 import { Download, Plus, Users, Mail, Calendar, Settings, UserPlus, Tag, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { useGetConversations } from '../../services/use_queries/conversations-query';
 import { useAuthStore } from '../../store/useAuthStore';
-import type { ConversationResType } from '../../types/conversation.types';
 import { useGetPanelAdminMetrics } from '../../services/use_queries/metrics-query';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { useState } from 'react';
 import { AdminPanelForm } from '../../components/admin_panel/AdminPanelForm';
-
-
-
-const InboxRow = ({ conv }: { conv: ConversationResType }) => {
-  const contactName = conv.contact?.name ?? '?';
-  const initials = contactName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <tr className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0">
-            {initials}
-          </div>
-          <span className="text-slate-600 text-sm truncate max-w-[200px]">{contactName}</span>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-slate-500 text-sm">{conv.contact?.email ?? '—'}</td>
-      <td className="px-4 py-3 text-slate-500 text-sm">
-        {conv.lastInteraction ? new Date(conv.lastInteraction).toLocaleDateString('es-AR') : '—'}
-      </td>
-      <td className="px-4 py-3 text-slate-500 text-sm capitalize">{conv.channel ?? '—'}</td>
-      <td className="px-4 py-3">
-        <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
-          <Users size={13} className="text-slate-500" />
-        </div>
-      </td>
-    </tr>
-  );
-};
+import { InboxTable } from '../../components/dashboard/InboxTable';
+import { ExportForm } from '../../components/exports_management/ExportManagementForm';
+import { useMutation } from '@tanstack/react-query';
+import { exportData, downloadBlob } from '../../services/use_cases/export-service';
+import type { ExportEntity, ExportFormat } from '../../types/admin.types';
 
 const recentActivity = [
   { id: 1, icon: <UserPlus size={14} />, iconBg: 'bg-blue-100 text-blue-600', title: 'Panel activo', description: 'Datos cargados desde la API.', time: 'ahora' },
@@ -50,10 +25,26 @@ const recentActivity = [
 export const AdminPanel = () => {
   const user = useAuthStore(s => s.user);
   const [modalOpen, setModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const { data: metricsPanel } = useGetPanelAdminMetrics();
-  const { data: conversations = [] } = useGetConversations();
 
-   const inboxPreview = (conversations as ConversationResType[]).slice(0, 5);
+  // Mutación para exportar datos
+  const exportMutation = useMutation({
+    mutationFn: ({ format, entity }: { format: ExportFormat; entity: ExportEntity }) =>
+      exportData({ format, entity }),
+    onSuccess: (blob, { format, entity }) => {
+      downloadBlob(blob, `export_${entity}_${Date.now()}.${format.toLowerCase()}`);
+      setExportModalOpen(false);
+    },
+    onError: (error) => {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos. Por favor, intenta nuevamente.');
+    },
+  });
+
+  const handleExport = (format: ExportFormat, entity: ExportEntity) => {
+    exportMutation.mutate({ format, entity });
+  };
 
   return (
     <div>
@@ -65,21 +56,27 @@ export const AdminPanel = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="sm" className="border border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center gap-2">
+          {/* Botón Exportar Reporte con la lógica de exportación */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="border border-blue-600 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+            onClick={() => setExportModalOpen(true)}
+          >
             <Download size={15} /> Exportar Reporte
           </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          className="flex items-center gap-2"
-          onClick={() => {
-            setModalOpen(true);
-          }}>
-          <Plus size={15} /> Nueva Campaña
-        </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => setModalOpen(true)}
+          >
+            <Plus size={15} /> Nueva Campaña
+          </Button>
         </div>
       </div>
 
+      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard
           title="Total de contactos"
@@ -101,50 +98,27 @@ export const AdminPanel = () => {
         />
         <KpiCard
           title="Tasa de respuesta"
-          metric={metricsPanel?.upcomingTasks ?? { value: 0, changePercent: 0, trend: 'stable' }}
+          metric={metricsPanel?.responseRate ?? { value: 0, changePercent: 0, trend: 'stable' }}
           color="secondary"
           icon={<Settings size={28} />}
         />
       </div>
 
+      {/* Contenido principal - InboxTable */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex flex-col gap-6">
-
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
-              <h2 className="text-base font-bold text-[#13316b]">Bandeja de entrada</h2>
-              <button className="text-slate-400 hover:text-slate-600 transition-colors"><Settings size={18} /></button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <tbody>
-                  {inboxPreview.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">No hay conversaciones recientes</td></tr>
-                  ) : (
-                    inboxPreview.map((conv: ConversationResType) => <InboxRow key={conv.id} conv={conv} />)
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-5 py-3 border-t border-slate-100 flex justify-end">
-              <button className="text-blue-600 text-sm font-semibold hover:underline">VER TODO</button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h2 className="text-base font-bold text-[#13316b] mb-1">Rendimiento del Equipo</h2>
-            <p className="text-xs text-slate-500 mb-4">Tasa de respuesta promedio por agente</p>
-            <p className="text-sm text-slate-400">
-              Visitá <span className="text-blue-600 font-medium">Métricas Globales</span> para ver el rendimiento detallado por agente.
-            </p>
-          </div>
+        {/* Columna izquierda (2/3) - InboxTable */}
+        <div className="lg:col-span-2">
+          <InboxTable maxItems={5} showViewAllButton={true} />
         </div>
 
+        {/* Columna derecha (1/3) - Actividad Reciente */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <h2 className="text-base font-bold text-[#13316b] mb-5">Actividad Reciente</h2>
           {recentActivity.map(item => (
             <div key={item.id} className="flex gap-3 mb-4">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${item.iconBg}`}>{item.icon}</div>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${item.iconBg}`}>
+                {item.icon}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-700">{item.title}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
@@ -157,26 +131,42 @@ export const AdminPanel = () => {
           </button>
         </div>
       </div>
+
+      {/* Sección de Rendimiento del Equipo */}
+      <div className="mt-6">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h2 className="text-base font-bold text-[#13316b] mb-1">Rendimiento del Equipo</h2>
+          <p className="text-xs text-slate-500 mb-4">Tasa de respuesta promedio por agente</p>
+          <p className="text-sm text-slate-400">
+            Visitá <span className="text-blue-600 font-medium">Métricas Globales</span> para ver el rendimiento detallado por agente.
+          </p>
+        </div>
+      </div>
       
+      {/* Modal para nueva campaña */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-        }}
+        onClose={() => setModalOpen(false)}
         title="Nueva Campaña"
       >
         <AdminPanelForm
-          onSubmit={() => {
-            setModalOpen(false);
-            
-          }}
-          onCancel={() => {
-            setModalOpen(false);
-          }}       
+          onSubmit={() => setModalOpen(false)}
+          onCancel={() => setModalOpen(false)}       
         />
       </Modal>
 
-      
+      {/* Modal para exportar reporte */}
+      <Modal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title="Exportar Reporte"
+      >
+        <ExportForm
+          onCancel={() => setExportModalOpen(false)}
+          onSuccess={handleExport}
+          isPending={exportMutation.isPending}
+        />
+      </Modal>
     </div>
   );
 };
