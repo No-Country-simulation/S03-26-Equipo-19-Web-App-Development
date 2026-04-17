@@ -30,8 +30,7 @@ export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
   const [dateTo, setDateTo] = useState('');
 
   const handleSubmit = () => {
-    // Si tu backend acepta filtros de fecha, podrías incluirlos aquí.
-    // Por ahora solo enviamos formato y entidad.
+    // Si el backend acepta filtros de fecha, deberías incluirlos en el payload
     onSuccess(format, entity);
   };
 
@@ -66,7 +65,6 @@ export const ExportForm = ({ onCancel, onSuccess, isPending }: Props) => {
         </Select>
       </div>
 
-      {/* Opcional: filtros por fecha (si el backend los soporta) */}
       <div className="grid grid-cols-2 gap-3">
         <Input
           label="Fecha desde"
