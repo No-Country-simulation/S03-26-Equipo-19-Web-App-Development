@@ -4,7 +4,6 @@ import { apiAuthService } from "../general_api";
 export const postLogin = async (data: LoginType) => {
   try {
     const res = await apiAuthService.post("/login", data);
-    console.log("Inició sesión exitosamente");
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";

@@ -47,14 +47,11 @@ export const createTask = async (data: TaskReqType): Promise<TaskResType> => {
     throw new Error("No hay token de autenticación.");
   }
   try {
-    console.log("Data crea tarea", data);
-
     const res = await apiTasksService.post("", data, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log("Se creó exitosamente la tarea");
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
@@ -79,7 +76,6 @@ export const updateTaskById = async (
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log("Se actualizó exitosamente la tarea");
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";

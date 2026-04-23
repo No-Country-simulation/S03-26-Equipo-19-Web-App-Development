@@ -15,7 +15,6 @@ export const postContact = async (data: ContactReqType) => {
       },
     });
 
-    console.log("Se registró exitosamente el contacto");
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
@@ -148,8 +147,7 @@ export const addTagByContactId = async ( contactId: number, tagId: number) => {
         },
       }
     );
-    console.log("Se agregó tag a contacto");
-    
+      
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
@@ -174,7 +172,6 @@ export const removeTagFromContactId = async ( contactId: number, tagId: number) 
         },
       }
     );
-    console.log("Se eliminó tag del contacto");
     
     return res.data;
   } catch (error: unknown) {
@@ -199,7 +196,7 @@ export const assignContactToSalesperson = async (contactId: number, newOwnerId: 
         },
       }
     );
-    console.log("Contacto reasignado exitosamente");
+
     return res.data;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Error de conexión";
