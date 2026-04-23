@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '../ui/dropdown-menu';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface InboxTableProps {
   maxItems?: number;           // Límite de elementos a mostrar inicialmente
@@ -24,12 +24,14 @@ interface InboxTableProps {
 export const InboxTable = ({ maxItems = 5, showViewAllButton = true }: InboxTableProps) => {
   const { data: conversationsInbox, isLoading } = useGetConversationsInbox();
   const navigate = useNavigate();
-  
+
   // Estado para controlar si mostrar todos o solo los primeros
   const [showAll, setShowAll] = useState(false);
 
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [channelFilter, setChannelFilter] = useState<'ALL' | 'WHATSAPP' | 'EMAIL'>('ALL');
+
+  const [highlightedIds, setHighlightedIds] = useState<number[]>([]);
 
   const filteredConversations = useMemo(() => {
     if (!conversationsInbox) return [];
@@ -62,9 +64,46 @@ export const InboxTable = ({ maxItems = 5, showViewAllButton = true }: InboxTabl
     setShowAll(true);
   };
 
+
+
+  const prevDataRef = useRef<ConversationInboxItemType[] | null>(null);
+
+  useEffect(() => {
+    if (!conversationsInbox) return;
+
+    const prev = prevDataRef.current;
+
+    if (prev) {
+      const changedIds: number[] = [];
+
+      conversationsInbox.forEach((conv) => {
+        const old = prev.find(p => p.conversationId === conv.conversationId);
+
+        // 🔥 detectamos cambios relevantes
+        if (
+          !old ||
+          old.lastMessageAt !== conv.lastMessageAt
+        ) {
+          changedIds.push(conv.conversationId);
+        }
+      });
+
+      if (changedIds.length > 0) {
+        setHighlightedIds(changedIds);
+
+        // ⏱ quitar highlight después de 1.5s
+        setTimeout(() => {
+          setHighlightedIds([]);
+        }, 1500);
+      }
+    }
+
+    prevDataRef.current = conversationsInbox;
+  }, [conversationsInbox]);
+
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full flex flex-col">
-      
+
       <div className='flex justify-between'>
         <h3 className="text-lg font-bold text-primary mb-4">
           Bandeja de entrada
@@ -78,7 +117,7 @@ export const InboxTable = ({ maxItems = 5, showViewAllButton = true }: InboxTabl
           </DropdownMenuTrigger>
 
           <DropdownMenuContent className="w-56 bg-white">
-            
+
             <DropdownMenuLabel>Orden</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => setSortOrder("desc")}>
               {sortOrder === "desc" && "✓ "} Más recientes
@@ -136,7 +175,12 @@ export const InboxTable = ({ maxItems = 5, showViewAllButton = true }: InboxTabl
               displayedConversations.map((conversation: ConversationInboxItemType) => (
                 <tr
                   key={conversation.conversationId}
-                  className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors text-slate-600"
+                  className={`
+                   border-b border-slate-50 last:border-0 transition-colors
+                  ${highlightedIds.includes(conversation.conversationId)
+                      ? "bg-neutro-3"
+                      : "hover:bg-slate-50"}
+                   `}
                 >
                   <td className="py-4 px-1">
                     {conversation.channel === 'WHATSAPP' ? (

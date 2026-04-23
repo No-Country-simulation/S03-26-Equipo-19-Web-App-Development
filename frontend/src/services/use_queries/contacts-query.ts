@@ -18,6 +18,7 @@ export const useGetContactsDashboard = () => {
     queryKey: ["contacts-dashboard"],
     queryFn: () => getContactsDashboard(token!),
     enabled: !!token,
+    refetchInterval: 3000
   });
 };
 
@@ -25,7 +26,7 @@ export const useGetContactsDashboard = () => {
 export const useGetContactById = (contactId: number) => {
   const token = useAuthStore((state) => state.token);
   return useQuery<ContactResType>({
-    queryKey: ["contacts", contactId],
+    queryKey: ["contact", contactId],
     queryFn: () => getContactById(token!, contactId),
     enabled: !!token && !!contactId,
   });

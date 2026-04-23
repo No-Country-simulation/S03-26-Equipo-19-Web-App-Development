@@ -17,7 +17,9 @@ export const useTagsMutations = () => {
 
   const remove = useMutation({
     mutationFn: (id: number) => deleteTag(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tags"] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tags"] });
+   },
+    
   });
 
   return { create, update, remove };

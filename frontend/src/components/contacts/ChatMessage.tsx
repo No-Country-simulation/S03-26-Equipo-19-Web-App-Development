@@ -15,7 +15,6 @@ export function ChatMessage({ message, showChannelIndicator = false }: ChatMessa
   const StatusIcon = message.deliveryStatus === "READ" ? CheckCheck : Check
   const isEmail = message.conversation.channel === "EMAIL"
 
-  console.log({message});
   
   return (
     <div

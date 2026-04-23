@@ -107,7 +107,6 @@ export const SalespersonsManagement = () => {
       normalizedStatus = (s as Record<string, unknown>).isActive ? 'ACTIVE' : 'INACTIVE';
     }
 
-    console.log('Original status:', s.status, '→ Normalized:', normalizedStatus);
     return {
       ...s,
       status: normalizedStatus,

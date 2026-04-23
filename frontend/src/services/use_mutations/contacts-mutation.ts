@@ -27,7 +27,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contacts-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
@@ -38,7 +38,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contacts-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["contact", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["metrics-contacts"] });
     },
   });
@@ -49,7 +49,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({
-        queryKey: ["contacts", variables.contactId],
+        queryKey: ["contact", variables.contactId],
       });
     },
   });
@@ -60,7 +60,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({
-        queryKey: ["contacts", variables.contactId],
+        queryKey: ["contact", variables.contactId],
       });
     },
   });
@@ -77,7 +77,7 @@ export const ContactsMutationsService = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({
-        queryKey: ["contacts", variables.contactId],
+        queryKey: ["contact", variables.contactId],
       });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
       queryClient.invalidateQueries({ queryKey: ["conversations-inbox"] });

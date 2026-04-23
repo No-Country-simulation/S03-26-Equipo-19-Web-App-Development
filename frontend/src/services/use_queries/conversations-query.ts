@@ -37,5 +37,7 @@ export const useGetConversationsInbox = () => {
     queryKey: ["conversations-inbox"],
     queryFn: () => getConversationsInbox(token!),
     enabled: !!token,
+
+     refetchInterval: 3000,
   });
 };    

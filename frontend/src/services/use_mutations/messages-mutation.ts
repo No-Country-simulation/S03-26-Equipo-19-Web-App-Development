@@ -103,9 +103,9 @@ export const useMessagesMutationsService = () => {
         queryKey: ["contacts"],
       });
 
-      queryClient.invalidateQueries({
+      /*     queryClient.invalidateQueries({
         queryKey: ["contacts-dashboard"],
-      });
+      }); */
     },
   });
 
@@ -119,11 +119,47 @@ export const useMessagesMutationsService = () => {
           c.id === conversationId ? { ...c, unreadCount: 0 } : c,
         ),
       );
+      queryClient.setQueryData(["contacts-dashboard"], (old: any) => {
+        if (!old) return old;
 
+        return {
+          ...old,
+          contacts: old.contacts.map((contact: any) => {
+            const hasConversation = contact.conversations.some(
+              (conv: any) => conv.id === conversationId,
+            );
+
+            if (!hasConversation) return contact;
+
+            const updatedConversations = contact.conversations.map(
+              (conv: any) =>
+                conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv,
+            );
+
+            const newTotalUnread = updatedConversations.reduce(
+              (acc: number, conv: any) => acc + (conv.unreadCount || 0),
+              0,
+            );
+
+            return {
+              ...contact,
+              conversations: updatedConversations,
+              totalUnreadCount: newTotalUnread, 
+            };
+          }),
+        };
+      });
+      queryClient.setQueryData(["conversations-inbox"], (old: any[] = []) => {
+        return old.map((c) =>
+          c.conversationId === conversationId
+            ? {
+                ...c,
+                unreadCount: 0,
+              }
+            : c,
+        );
+      });
       queryClient.invalidateQueries({ queryKey: ["messages", conversationId] });
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["conversations-inbox"] });
     },
   });
 

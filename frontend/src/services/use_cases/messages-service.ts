@@ -17,7 +17,6 @@ export const postMessage = async (data: MessageReqType) => {
       },
     });
 
-    console.log("Se envió el mensaje correctamente");
     return res.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Error de conexión");
@@ -84,7 +83,6 @@ export const readAllMessagesInConversationById = async (
         headers: { Authorization: `Bearer ${token}` },
       },
     );
-console.log("Se cambio a READ todos los mensajes");
 
     return res.data;
   } catch (error: unknown) {

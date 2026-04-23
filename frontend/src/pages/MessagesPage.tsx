@@ -22,6 +22,8 @@ export const MessagesPage = ({ isAdminView = false }: MessagesPageProps) => {
 
   const activeConversations = activeContact?.conversations ?? [];
 
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
