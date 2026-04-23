@@ -87,7 +87,13 @@ public class Message {
     @JoinColumn(name = "sender_id")
     private User sender;
 
-    @CreationTimestamp
     @Column(name = "sent_at", updatable = false)
     private LocalDateTime sentAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (sentAt == null) {
+            sentAt = LocalDateTime.now();
+        }
+    }
 }

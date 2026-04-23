@@ -287,22 +287,45 @@ public class MessageService {
         }
     }
 
+    // En MessageService.java - Agrega más logs
+
     public void updateDeliveryStatus(String providerId, DeliveryStatus newStatus) {
-        log.info("📬 Actualizando estado de mensaje: providerId={}, newStatus={}", providerId, newStatus);
+        log.info("📬 Buscando mensaje con providerId: '{}' para actualizar a {}", providerId, newStatus);
+
+        if (providerId == null || providerId.isBlank()) {
+            log.warn("⚠️ providerId es null o vacío, no se puede actualizar");
+            return;
+        }
 
         try {
-            Message message = messageRepository.findByProviderId(providerId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Mensaje con providerId: " + providerId));
+            Optional<Message> messageOpt = messageRepository.findByProviderId(providerId);
 
+            if (messageOpt.isEmpty()) {
+                log.warn("⚠️ NO se encontró mensaje con providerId: '{}'", providerId);
+
+                // Opcional: Buscar todos los mensajes para debug
+                List<Message> allMessages = messageRepository.findAll();
+                log.debug("📬 Total de mensajes en BD: {}", allMessages.size());
+                for (Message m : allMessages) {
+                    log.debug("📬 Mensaje en BD: id={}, providerId='{}'", m.getId(), m.getProviderId());
+                }
+                return;
+            }
+
+            Message message = messageOpt.get();
             DeliveryStatus oldStatus = message.getDeliveryStatus();
+
+            if (oldStatus == newStatus) {
+                log.info("ℹ️ El mensaje ID={} ya estaba en estado {}", message.getId(), newStatus);
+                return;
+            }
+
             message.setDeliveryStatus(newStatus);
             messageRepository.save(message);
 
-            log.info("✅ Estado de mensaje actualizado: id={}, {} -> {}",
-                    message.getId(), oldStatus, newStatus);
+            log.info("✅ Estado actualizado: mensajeId={}, providerId='{}', {} -> {}",
+                    message.getId(), providerId, oldStatus, newStatus);
 
-        } catch (ResourceNotFoundException e) {
-            log.warn("⚠️ No se encontró mensaje con providerId: {}", providerId);
         } catch (Exception e) {
             log.error("❌ Error actualizando estado de mensaje: {}", e.getMessage(), e);
         }
@@ -417,7 +440,7 @@ public class MessageService {
 
             Template welcomeTemplate = welcomeTemplateOpt.get();
             String contactName = (contact.getName() != null && !contact.getName().isBlank())
-                    ? contact.getName() : "cliente";
+                    ? contact.getName() : "";
 
             String welcomeMessage = templateService.renderTemplate(welcomeTemplate, Map.of("name", contactName));
             String providerId = whatsAppService.sendMessage(contact.getPhone(), welcomeMessage);
@@ -445,7 +468,7 @@ public class MessageService {
     private void sendEmailWelcomeAutoReply(Contact contact, Conversation conversation, User admin) {
         try {
             Optional<Template> welcomeTemplateOpt = templateRepository.findByNameAndChannel(
-                    "Email de bienvenida", Channel.EMAIL);
+                    "Email de bienvenida - Lead", Channel.EMAIL);
 
             if (welcomeTemplateOpt.isEmpty()) {
                 log.warn("⚠️ No se encontró plantilla de bienvenida para Email.");
@@ -513,5 +536,83 @@ public class MessageService {
         return conversationRepository.findById(conversationId)
                 .map(conv -> conv.getAssignedTo().getId().equals(currentUser.getId()))
                 .orElse(false);
+    }
+
+    // En MessageService.java - Agrega este método
+
+    // ==================== MARCAR MENSAJE COMO LEÍDO ====================
+
+    public MessageDTOs.MarkAsReadResponse markAsRead(Long messageId, String userEmail) {
+        // 1. Validar usuario autenticado
+        if (userEmail == null || userEmail.isBlank()) {
+            throw new UnauthorizedAccessException("Debes iniciar sesión para marcar mensajes como leídos");
+        }
+
+        User currentUser = getUserByEmail(userEmail);
+        log.info("📖 Usuario {} marcando mensaje ID={} como leído", currentUser.getEmail(), messageId);
+
+        // 2. Buscar el mensaje
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Mensaje", messageId));
+
+        // 3. Validar que el usuario tenga acceso a la conversación
+        Conversation conversation = message.getConversation();
+        if (!conversation.getAssignedTo().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
+            throw new UnauthorizedAccessException("No tienes acceso a este mensaje");
+        }
+
+        // 4. Validar que sea un mensaje INBOUND (del cliente al CRM)
+        if (message.getDirection() != MessageDirection.INBOUND) {
+            log.warn("⚠️ Intento de marcar mensaje OUTBOUND como leído: id={}", messageId);
+            throw new BusinessRuleViolationException(
+                    "Solo los mensajes recibidos (INBOUND) pueden marcarse como leídos por el vendedor"
+            );
+        }
+
+        // 5. Validar que no esté ya leído
+        if (message.getDeliveryStatus() == DeliveryStatus.READ) {
+            log.info("ℹ️ El mensaje ID={} ya estaba marcado como leído", messageId);
+            return new MessageDTOs.MarkAsReadResponse(
+                    message.getId(),
+                    message.getDeliveryStatus(),
+                    null
+            );
+        }
+
+        // 6. Actualizar estado a READ
+        DeliveryStatus oldStatus = message.getDeliveryStatus();
+        message.setDeliveryStatus(DeliveryStatus.READ);
+        messageRepository.save(message);
+
+        log.info("✅ Mensaje ID={} marcado como leído: {} -> READ", messageId, oldStatus);
+
+        return new MessageDTOs.MarkAsReadResponse(
+                message.getId(),
+                DeliveryStatus.READ,
+                LocalDateTime.now()
+        );
+    }
+
+    // ==================== MARCAR TODOS LOS MENSAJES DE UNA CONVERSACIÓN COMO LEÍDOS ====================
+
+    public int markAllAsRead(Long conversationId, String userEmail) {
+        // 1. Validar usuario autenticado
+        if (userEmail == null || userEmail.isBlank()) {
+            throw new UnauthorizedAccessException("Debes iniciar sesión para marcar mensajes como leídos");
+        }
+
+        User currentUser = getUserByEmail(userEmail);
+        log.info("📖 Usuario {} marcando todos los mensajes de conversación ID={} como leídos",
+                currentUser.getEmail(), conversationId);
+
+        // 2. Validar acceso a la conversación
+        Conversation conversation = conversationService.findByIdAndCheckAccess(conversationId, currentUser);
+
+        // 3. Actualizar todos los mensajes INBOUND no leídos
+        int updatedCount = messageRepository.updateInboundMessagesToRead(conversationId);
+
+        log.info("✅ {} mensajes marcados como leídos en conversación ID={}", updatedCount, conversationId);
+
+        return updatedCount;
     }
 }

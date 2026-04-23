@@ -3,6 +3,7 @@ package com.crm.app.controller;
 import com.crm.app.dto.ContactDTOs;
 import com.crm.app.model.Contact;
 import com.crm.app.model.User;
+import com.crm.app.model.enums.Channel;
 import com.crm.app.model.enums.FunnelStatus;
 import com.crm.app.service.ContactService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -99,25 +100,43 @@ public class ContactController {
 
     @GetMapping
     @Operation(
-            summary = "Listar mis contactos",
+            summary = "Listar contactos",
             description = """
-                    Retorna la lista de contactos del usuario autenticado.
-                    
-                    **Permisos:**
-                    - **ADMIN**: Ve todos los contactos del sistema
-                    - **VENDEDOR**: Solo ve sus propios contactos
-                    
-                    **Incluye:** Información del vendedor asignado y etiquetas del contacto
-                    """
+                Retorna la lista de contactos del usuario autenticado.
+                
+                **Permisos:**
+                - **ADMIN**: Lista TODOS los contactos del sistema
+                - **VENDEDOR**: Lista SOLO sus propios contactos
+                
+                **Filtros opcionales:**
+                - `funnelStatus`: NEW_LEAD, CONTACTED, IN_NEGOTIATION, PROPOSAL_SENT, CLOSED_WON, CLOSED_LOST
+                - `ownerId`: ID del vendedor (solo ADMIN)
+                - `tagIds`: IDs de etiquetas separados por coma
+                - `preferredChannel`: WHATSAPP o EMAIL
+                
+                **Orden (opcional):**
+                - `sortBy`: name, createdAt, funnelStatus (default: createdAt)
+                - `sortOrder`: ASC o DESC (default: ASC)
+                
+                **Ejemplos:**
+                - `/api/v1/contacts?funnelStatus=NEW_LEAD`
+                - `/api/v1/contacts?sortBy=name&sortOrder=DESC`
+                """
     )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista obtenida exitosamente"),
-            @ApiResponse(responseCode = "401", description = "No autenticado")
-    })
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ContactDTOs.ContactDetailResponse>> getMyContacts(
-            @AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(contactService.getMyContactsDetailResponse(currentUser));
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam(required = false) FunnelStatus funnelStatus,
+            @RequestParam(required = false) Long ownerId,
+            @RequestParam(required = false) List<Long> tagIds,
+            @RequestParam(required = false) Channel preferredChannel,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+
+        return ResponseEntity.ok(contactService.getFilteredContacts(
+                currentUser, funnelStatus, ownerId, tagIds, preferredChannel,
+                sortBy != null ? sortBy : "createdAt",
+                sortOrder != null ? sortOrder : "ASC"));
     }
 
     @GetMapping("/dashboard")
@@ -266,4 +285,69 @@ public class ContactController {
             @AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(contactService.reassignContact(id, newOwnerId, currentUser));
     }
+
+    // ==================== GESTIÓN DE ETIQUETAS ====================
+
+        @PostMapping("/{id}/tags/{tagId}")
+        @Operation(
+                summary = "Asignar etiqueta a contacto",
+                description = """
+                        Asigna una etiqueta existente a un contacto.
+
+                        **Permisos:**
+                        - ADMIN: Puede modificar cualquier contacto
+                        - VENDEDOR: Solo sus propios contactos
+
+                        **Reglas:**
+                        - No se puede asignar una etiqueta ya existente en el contacto
+                        """
+        )
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Etiqueta asignada correctamente"),
+                @ApiResponse(responseCode = "400", description = "La etiqueta ya está asignada"),
+                @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+                @ApiResponse(responseCode = "404", description = "Contacto o etiqueta no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
+        public ResponseEntity<ContactDTOs.ContactDetailResponse> addTagToContact(
+                @Parameter(description = "ID del contacto", example = "1", required = true)
+                @PathVariable Long id,
+                @Parameter(description = "ID de la etiqueta", example = "10", required = true)
+                @PathVariable Long tagId,
+                @AuthenticationPrincipal User currentUser) {
+
+        return ResponseEntity.ok(contactService.addTagToContact(id, tagId, currentUser));
+        }
+
+
+        @DeleteMapping("/{id}/tags/{tagId}")
+        @Operation(
+                summary = "Remover etiqueta de contacto",
+                description = """
+                        Elimina una etiqueta de un contacto.
+
+                        **Permisos:**
+                        - ADMIN: Puede modificar cualquier contacto
+                        - VENDEDOR: Solo sus propios contactos
+
+                        **Reglas:**
+                        - El contacto debe tener previamente la etiqueta
+                        """
+        )
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Etiqueta removida correctamente"),
+                @ApiResponse(responseCode = "400", description = "El contacto no tiene esta etiqueta"),
+                @ApiResponse(responseCode = "403", description = "Acceso denegado"),
+                @ApiResponse(responseCode = "404", description = "Contacto o etiqueta no encontrada")
+        })
+        @PreAuthorize("hasRole('ADMIN') or @contactService.isOwner(#id, principal)")
+        public ResponseEntity<ContactDTOs.ContactDetailResponse> removeTagFromContact(
+                @Parameter(description = "ID del contacto", example = "1", required = true)
+                @PathVariable Long id,
+                @Parameter(description = "ID de la etiqueta", example = "10", required = true)
+                @PathVariable Long tagId,
+                @AuthenticationPrincipal User currentUser) {
+
+        return ResponseEntity.ok(contactService.removeTagFromContact(id, tagId, currentUser));
+        }
 }

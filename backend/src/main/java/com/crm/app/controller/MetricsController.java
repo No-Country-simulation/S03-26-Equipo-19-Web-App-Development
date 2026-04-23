@@ -5,6 +5,8 @@ import com.crm.app.model.User;
 import com.crm.app.service.MetricsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -27,13 +29,13 @@ public class MetricsController {
     @GetMapping("/dashboard")
     @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Dashboard de métricas",
+            summary = "Dashboard completo de métricas",
             description = """
                     Retorna KPIs principales: contactos por funnel, mensajes, tasa respuesta, tareas.
                     
                     **Permisos:**
-                    - **Admin**: ve métricas globales, puede filtrar por vendedor y fecha
-                    - **Vendedor**: solo ve sus propias métricas
+                    - **ADMIN**: ve métricas globales, puede filtrar por vendedor y fecha
+                    - **VENDEDOR**: solo ve sus propias métricas
                     
                     **Filtros (solo Admin):**
                     - `salespersonEmail`: filtrar por vendedor específico
@@ -41,21 +43,143 @@ public class MetricsController {
                     - `endDate`: fecha fin (YYYY-MM-DD)
                     """
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dashboard obtenido exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
     public ResponseEntity<MetricsDTOs.DashboardMetrics> getDashboard(
             @AuthenticationPrincipal User currentUser,
-            @RequestParam(required = false) @Parameter(description = "Email del vendedor (solo Admin)") String salespersonEmail,
-            @RequestParam(required = false) @Parameter(description = "Fecha inicio (YYYY-MM-DD)") String startDate,
-            @RequestParam(required = false) @Parameter(description = "Fecha fin (YYYY-MM-DD)") String endDate
+            @RequestParam(required = false) @Parameter(description = "Email del vendedor (solo Admin)", example = "alice@crm.com") String salespersonEmail,
+            @RequestParam(required = false) @Parameter(description = "Fecha inicio (YYYY-MM-DD)", example = "2026-03-01") String startDate,
+            @RequestParam(required = false) @Parameter(description = "Fecha fin (YYYY-MM-DD)", example = "2026-04-14") String endDate
     ) {
         return ResponseEntity.ok(metricsService.getDashboardMetrics(currentUser, salespersonEmail, startDate, endDate));
+    }
+
+    @GetMapping("/contacts")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Métricas de contactos",
+            description = """
+                    Retorna métricas de contactos incluyendo:
+                    - Distribución por estado del funnel (NEW_LEAD, CONTACTED, IN_NEGOTIATION, PROPOSAL_SENT, CLOSED_WON, CLOSED_LOST)
+                    - Total de contactos activos (NEW_LEAD + CONTACTED + IN_NEGOTIATION + PROPOSAL_SENT)
+                    - Total de contactos (todos los estados)
+                    
+                    Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                    
+                    **Permisos:**
+                    - **ADMIN**: ve todos los contactos
+                    - **VENDEDOR**: solo ve sus propios contactos
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.ContactsMetricsResponse> getContactsMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getContactsMetrics(currentUser));
+    }
+
+    @GetMapping("/messages")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Métricas de mensajes",
+            description = """
+                    Retorna métricas de mensajes incluyendo:
+                    - Mensajes enviados (OUTBOUND)
+                    - Mensajes recibidos (INBOUND)
+                    - Tasa de respuesta (%)
+                    - Distribución por canal (WHATSAPP / EMAIL)
+                    - Total de mensajes (enviados + recibidos)
+                    
+                    Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                    
+                    **Permisos:**
+                    - **ADMIN**: ve todos los mensajes
+                    - **VENDEDOR**: solo ve mensajes de sus conversaciones
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.MessagesMetricsResponse> getMessagesMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getMessagesMetrics(currentUser));
+    }
+
+    @GetMapping("/tasks")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Métricas de tareas",
+            description = """
+                    Retorna métricas de tareas incluyendo:
+                    - Tareas completadas
+                    - Tareas vencidas (OVERDUE)
+                    - Tareas pendientes (PENDING)
+                    - Tareas para hoy
+                    - Total de tareas (completadas + pendientes + vencidas)
+                    
+                    Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                    
+                    **Permisos:**
+                    - **ADMIN**: ve todas las tareas
+                    - **VENDEDOR**: solo ve sus propias tareas
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.TasksMetricsResponse> getTasksMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getTasksMetrics(currentUser));
+    }
+
+    @GetMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Métricas de usuarios",
+            description = """
+                    Retorna métricas de usuarios incluyendo:
+                    - Total de usuarios
+                    - Usuarios activos
+                    - Usuarios inactivos
+                    - Nuevos usuarios (últimos 30 días)
+                    
+                    Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                    
+                    **Permisos:** Solo disponible para ADMIN
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Se requiere rol ADMIN")
+    })
+    public ResponseEntity<MetricsDTOs.UsersMetricsResponse> getUsersMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getUsersMetrics(currentUser));
     }
 
     @GetMapping("/period")
     @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "Métricas por período",
-            description = "Filtra métricas por rango de fechas"
+            description = """
+                    Retorna métricas filtradas por rango de fechas.
+                    
+                    **Permisos:**
+                    - **ADMIN**: puede ver cualquier período
+                    - **VENDEDOR**: solo ve sus propios datos en el período
+                    """
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
     public ResponseEntity<MetricsDTOs.PeriodMetrics> getPeriodMetrics(
             @AuthenticationPrincipal User currentUser,
             @RequestParam @Parameter(description = "Período (day/week/month)", example = "week") String period,
@@ -75,22 +199,27 @@ public class MetricsController {
                     **Formatos soportados:** csv, pdf
                     
                     **Permisos:**
-                    - **Admin**: exporta métricas globales
-                    - **Vendedor**: exporta solo sus métricas
+                    - **ADMIN**: exporta métricas globales
+                    - **VENDEDOR**: exporta solo sus métricas
                     
-                    **Filtros:**
-                    - `salespersonEmail`: filtrar por vendedor (solo Admin)
+                    **Filtros (solo Admin):**
+                    - `salespersonEmail`: filtrar por vendedor específico
                     - `startDate`: fecha inicio (YYYY-MM-DD)
                     - `endDate`: fecha fin (YYYY-MM-DD)
-                    - `format`: csv o pdf
                     """
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Exportación exitosa"),
+            @ApiResponse(responseCode = "400", description = "Formato no soportado"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado")
+    })
     public ResponseEntity<byte[]> exportMetrics(
             @AuthenticationPrincipal User currentUser,
-            @RequestParam(required = false) String salespersonEmail,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            @RequestParam(defaultValue = "csv") String format
+            @RequestParam(required = false) @Parameter(description = "Email del vendedor (solo Admin)", example = "alice@crm.com") String salespersonEmail,
+            @RequestParam(required = false) @Parameter(description = "Fecha inicio (YYYY-MM-DD)", example = "2026-03-01") String startDate,
+            @RequestParam(required = false) @Parameter(description = "Fecha fin (YYYY-MM-DD)", example = "2026-04-14") String endDate,
+            @RequestParam(defaultValue = "csv") @Parameter(description = "Formato de exportación: csv o pdf", example = "csv") String format
     ) {
         var export = metricsService.exportMetrics(currentUser, salespersonEmail, startDate, endDate, format);
 
@@ -109,5 +238,105 @@ public class MetricsController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + export.filename())
                 .contentType(mediaType)
                 .body(content);
+    }
+
+ /*   @DeleteMapping("/cache")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Limpiar caché de métricas",
+            description = "Limpia la caché del dashboard de métricas. Útil después de seedear nuevos datos."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Caché limpiada exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Se requiere rol ADMIN")
+    })
+    public ResponseEntity<Void> clearCache() {
+        metricsService.clearCache();
+        return ResponseEntity.noContent().build();
+    }*/
+
+    // En MetricsController.java - Agrega este endpoint
+
+    @GetMapping("/panel")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Panel resumido de métricas",
+            description = """
+                Retorna métricas resumidas para el panel principal del dashboard:
+                - Total de contactos (todos los estados)
+                - Total de mensajes (enviados + recibidos)
+                - Próximas tareas (pendientes + tareas para hoy)
+                
+                Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                El período de comparación es de 30 días.
+                
+                **Permisos:**
+                - **ADMIN**: ve métricas globales
+                - **VENDEDOR**: solo ve sus propias métricas
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas del panel obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.PanelMetrics> getPanelMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getPanelMetrics(currentUser));
+    }
+
+    // En MetricsController.java - Agrega este endpoint
+
+    @GetMapping("/global-metrics")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Métricas globales del dashboard",
+            description = """
+                Retorna métricas globales para el dashboard principal:
+                - Total de conversaciones
+                - Tasa de respuesta (%)
+                - Tareas completadas
+                - Mejor vendedor del período (últimos 30 días)
+                
+                Cada métrica incluye valor actual, porcentaje de cambio y tendencia (up/down/stable).
+                El período de comparación es de 30 días.
+                
+                **Permisos:**
+                - **ADMIN**: ve métricas globales y el mejor vendedor
+                - **VENDEDOR**: ve sus propias métricas (mejor vendedor = null)
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas globales obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.GlobalMetricsResponse> getGlobalMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getGlobalMetrics(currentUser));
+    }
+
+    @GetMapping("/templates")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Métricas de plantillas",
+            description = """
+                Retorna métricas de plantillas incluyendo:
+                - Total de plantillas con tendencia
+                - Plantillas creadas este mes con tendencia
+                - Plantillas creadas hoy
+                - Promedio diario de plantillas creadas (últimos 30 días)
+                
+                **Permisos:**
+                - **ADMIN**: ve todas las plantillas
+                - **VENDEDOR**: ve plantillas globales + sus propias plantillas
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Métricas obtenidas exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    public ResponseEntity<MetricsDTOs.TemplatesMetricsResponse> getTemplatesMetrics(
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(metricsService.getTemplatesMetrics(currentUser));
     }
 }

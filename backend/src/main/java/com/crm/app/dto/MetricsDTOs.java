@@ -5,121 +5,216 @@ import java.util.Map;
 
 public class MetricsDTOs {
 
+    // ==================== METRIC VALUE WITH TREND ====================
+
+    @Schema(description = "Valor métrico con tendencia")
+    public record MetricValue(
+            @Schema(description = "Valor actual")
+            long value,
+            @Schema(description = "Porcentaje de cambio vs período anterior")
+            double changePercent,
+            @Schema(description = "Tendencia: up, down, stable")
+            String trend
+    ) {}
+
+    @Schema(description = "Valor métrico decimal con tendencia")
+    public record MetricValueDouble(
+            @Schema(description = "Valor actual")
+            double value,
+            @Schema(description = "Porcentaje de cambio vs período anterior")
+            double changePercent,
+            @Schema(description = "Tendencia: up, down, stable")
+            String trend
+    ) {}
+
     // ==================== MÉTRICAS DE CONTACTOS ====================
 
     @Schema(description = "Métricas de contactos por estado del funnel")
     public record FunnelMetrics(
-            @Schema(description = "Contactos por estado", example = "{\"NEW_LEAD\": 45, \"CONTACTED\": 38}")
-            Map<String, Long> byStatus,
-            @Schema(description = "Total de contactos activos", example = "156")
-            long totalActive
+            @Schema(description = "Contactos por estado con tendencia")
+            Map<String, MetricValue> byStatus,
+            @Schema(description = "Total de contactos activos con tendencia")
+            MetricValue totalActive,
+            @Schema(description = "Total de contactos (activos + inactivos) con tendencia")
+            MetricValue total
     ) {}
 
     // ==================== MÉTRICAS DE CONTACTOS - ESTADOS ESPECÍFICOS ====================
 
-    @Schema(description = "Métricas de contactos por estados específicos (negociación y cerrados)")
+    @Schema(description = "Métricas de contactos por estados específicos")
     public record ContactStatusMetrics(
-            @Schema(description = "Contactos en negociación", example = "23")
-            long inNegotiation,
-            @Schema(description = "Propuesta enviada", example = "18")
-            long proposalSent,
-            @Schema(description = "Cerrados ganados", example = "34")
-            long closedWon,
-            @Schema(description = "Cerrados perdidos", example = "12")
-            long closedLost,
-            @Schema(description = "Tasa de conversión (Won / Total cerrados)", example = "73.9")
-            double conversionRate
+            MetricValue inNegotiation,
+            MetricValue proposalSent,
+            MetricValue closedWon,
+            MetricValue closedLost,
+            MetricValueDouble conversionRate
     ) {}
 
     // ==================== MÉTRICAS DE TAREAS ====================
 
     @Schema(description = "Métricas de tareas")
     public record TaskMetrics(
-            @Schema(description = "Tareas completadas", example = "45")
-            long completed,
-            @Schema(description = "Tareas vencidas", example = "12")
-            long overdue,
-            @Schema(description = "Tareas pendientes", example = "28")
-            long pending,
-            @Schema(description = "Tareas para hoy", example = "8")
-            long dueToday
+            MetricValue completed,
+            MetricValue overdue,
+            MetricValue pending,
+            MetricValue dueToday,
+            @Schema(description = "Total de tareas (completadas + pendientes + vencidas) con tendencia")
+            MetricValue total
     ) {}
 
     // ==================== MÉTRICAS DE USUARIOS ====================
 
     @Schema(description = "Métricas de usuarios")
     public record UserMetrics(
-            @Schema(description = "Total de usuarios", example = "15")
-            long total,
-            @Schema(description = "Usuarios activos", example = "12")
-            long active,
-            @Schema(description = "Usuarios inactivos", example = "3")
-            long inactive,
-            @Schema(description = "Nuevos usuarios (últimos 30 días)", example = "2")
-            long newUsers
+            MetricValue total,
+            MetricValue active,
+            MetricValue inactive,
+            MetricValue newUsers
     ) {}
 
     // ==================== MÉTRICAS DE MENSAJES ====================
 
     @Schema(description = "Métricas de mensajes")
     public record MessageMetrics(
-            @Schema(description = "Mensajes enviados", example = "342")
-            long sent,
-            @Schema(description = "Mensajes recibidos", example = "234")
-            long received,
-            @Schema(description = "Tasa de respuesta (%)", example = "68.5")
-            double responseRate,
-            @Schema(description = "Por canal", example = "{\"WHATSAPP\": 210, \"EMAIL\": 132}")
-            Map<String, Long> byChannel
+            MetricValue sent,
+            MetricValue received,
+            MetricValueDouble responseRate,
+            @Schema(description = "Por canal con tendencia")
+            Map<String, MetricValue> byChannel,
+            @Schema(description = "Total de mensajes (enviados + recibidos) con tendencia")
+            MetricValue total
     ) {}
 
     // ==================== DASHBOARD PRINCIPAL ====================
 
     @Schema(description = "Dashboard completo de métricas")
     public record DashboardMetrics(
-            @Schema(description = "Métricas de contactos por funnel")
             FunnelMetrics funnel,
-            @Schema(description = "Métricas de contactos específicos (negociación y cerrados)")
             ContactStatusMetrics contactStatus,
-            @Schema(description = "Métricas de mensajes")
             MessageMetrics messages,
-            @Schema(description = "Métricas de tareas")
             TaskMetrics tasks,
-            @Schema(description = "Métricas de usuarios")
             UserMetrics users,
-            @Schema(description = "Período analizado", example = "2026-04-01 a 2026-04-07")
             String period,
-            @Schema(description = "Vendedor (null = todos)", example = "alice@crm.com")
             String salespersonEmail
     ) {}
 
     // ==================== MÉTRICAS POR PERÍODO ====================
 
-    @Schema(description = "Métricas filtradas por período")
     public record PeriodMetrics(
-            @Schema(description = "Período (day/week/month)", example = "week")
             String period,
-            @Schema(description = "Fecha de inicio", example = "2026-04-01")
             String startDate,
-            @Schema(description = "Fecha de fin", example = "2026-04-07")
             String endDate,
-            @Schema(description = "Mensajes enviados en el período", example = "89")
             long messagesSent,
-            @Schema(description = "Mensajes recibidos en el período", example = "61")
             long messagesReceived,
-            @Schema(description = "Nuevos contactos en el período", example = "23")
             long newContacts
     ) {}
 
     // ==================== EXPORTACIÓN ====================
 
-    @Schema(description = "Exportación de métricas")
     public record ExportMetrics(
-            @Schema(description = "Datos en formato CSV o PDF (Base64 para PDF)")
             String data,
-            @Schema(description = "Nombre del archivo", example = "metrics_2026-04-05.csv")
             String filename,
-            @Schema(description = "Tipo de contenido", example = "text/csv")
             String contentType
+    ) {}
+
+    // ==================== RESPUESTAS SEPARADAS ====================
+
+    @Schema(description = "Respuesta solo de métricas de contactos")
+    public record ContactsMetricsResponse(
+            FunnelMetrics funnel
+    ) {}
+
+    @Schema(description = "Respuesta solo de métricas de mensajes")
+    public record MessagesMetricsResponse(
+            MessageMetrics messages
+    ) {}
+
+    @Schema(description = "Respuesta solo de métricas de tareas")
+    public record TasksMetricsResponse(
+            TaskMetrics tasks
+    ) {}
+
+    @Schema(description = "Respuesta solo de métricas de usuarios")
+    public record UsersMetricsResponse(
+            UserMetrics users
+    ) {}
+
+
+    @Schema(description = "Métricas resumidas para el panel principal")
+    public record PanelMetrics(
+            @Schema(description = "Total de contactos con tendencia")
+            MetricValue totalContacts,
+
+            @Schema(description = "Total de mensajes con tendencia")
+            MetricValue totalMessages,
+
+            @Schema(description = "Próximas tareas (pendientes + para hoy) con tendencia")
+            MetricValue upcomingTasks,
+
+            @Schema(description = "Tasa de respuesta (%) con tendencia")
+            MetricValueDouble responseRate
+    ) {}
+
+    // En MetricsDTOs.java - Agrega estos records
+
+    @Schema(description = "Información del mejor vendedor")
+    public record TopSalespersonInfo(
+            @Schema(description = "ID del vendedor", example = "2")
+            Long id,
+
+            @Schema(description = "Nombre del vendedor", example = "Alice")
+            String name,
+
+            @Schema(description = "Email del vendedor", example = "alice@crm.com")
+            String email,
+
+            @Schema(description = "Cantidad de mensajes enviados en el período", example = "45")
+            long messagesSent,
+
+            @Schema(description = "Score de desempeño (0-100)", example = "85.5")
+            double performanceScore
+    ) {}
+
+    @Schema(description = "Métricas globales para el dashboard principal")
+    public record GlobalMetricsResponse(
+            @Schema(description = "Total de conversaciones con tendencia")
+            MetricValue totalConversations,
+
+            @Schema(description = "Tasa de respuesta (%) con tendencia")
+            MetricValueDouble responseRate,
+
+            @Schema(description = "Tareas completadas con tendencia")
+            MetricValue completedTasks,
+
+            @Schema(description = "Mejor vendedor del período (últimos 30 días)")
+            TopSalespersonInfo topSalesperson
+    ) {}
+
+    // En MetricsDTOs.java - Agrega estos records
+
+    // En MetricsDTOs.java - Actualiza TemplateMetrics
+
+    @Schema(description = "Métricas de plantillas")
+    public record TemplateMetrics(
+            @Schema(description = "Total de plantillas con tendencia")
+            MetricValue total,
+
+            @Schema(description = "Plantillas creadas este mes con tendencia")
+            MetricValue createdThisMonth,
+
+            @Schema(description = "Plantillas creadas hoy con tendencia")
+            MetricValue createdToday,
+
+            @Schema(description = "Promedio diario de plantillas creadas")
+            double dailyAverage,
+
+            @Schema(description = "Tendencia del promedio diario")
+            MetricValue dailyAverageTrend
+    ) {}
+
+    @Schema(description = "Respuesta de métricas de plantillas")
+    public record TemplatesMetricsResponse(
+            @Schema(description = "Métricas de plantillas")
+            TemplateMetrics templates
     ) {}
 }
